@@ -6,6 +6,7 @@ import { TeamLogo } from './TeamLogo';
 import { RoleEmblem } from './RoleEmblem';
 import { TraitBadge } from './TraitBadge';
 import { ROLE_NAMES_PT } from '../data/roleIcons';
+import { getPlayerPhotoUrl } from '../data/playerPhotos';
 
 interface PlayerModalProps {
   player: Player | null;
@@ -20,7 +21,15 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
   onClose,
   onAssignToRole,
 }) => {
+  const [imgErr, setImgErr] = React.useState(false);
+
+  React.useEffect(() => {
+    setImgErr(false);
+  }, [player?.id, player?.ign]);
+
   if (!player) return null;
+
+  const playerPhotoUrl = getPlayerPhotoUrl(player.ign);
 
   // Determine which roles this player can fit into
   const availableSlots: Role[] = [];
@@ -71,8 +80,24 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
 
         {/* Player Header - Tracker Profile Lockup */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="shrink-0">
-            <RoleEmblem role={player.primaryRole} size="xl" glow showBackground />
+          <div className="relative shrink-0">
+            {playerPhotoUrl && !imgErr ? (
+              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-[#1b2636] to-[#0c131d] border border-white/15 shadow-lg">
+                <img
+                  src={playerPhotoUrl}
+                  alt={player.ign}
+                  onError={() => setImgErr(true)}
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+            ) : (
+              <RoleEmblem role={player.primaryRole} size="xl" glow showBackground />
+            )}
+            {playerPhotoUrl && !imgErr && (
+              <div className="absolute -bottom-1.5 -right-1.5 rounded-full bg-[#0b0e14] p-0.5 border border-white/15 shadow">
+                <RoleEmblem role={player.primaryRole} size="xs" />
+              </div>
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Player } from '../types';
 import { AGENT_ICONS } from '../data/agentIcons';
+import { getPlayerPhotoUrl } from '../data/playerPhotos';
 
 interface PlayerAvatarProps {
   player: Player;
@@ -13,7 +14,13 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   size = 'md',
   showAgentBadge = false,
 }) => {
-  const [imgError, setImgError] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
+  const [agentError, setAgentError] = useState(false);
+
+  useEffect(() => {
+    setPhotoError(false);
+    setAgentError(false);
+  }, [player.id, player.ign]);
 
   const sizeClasses = {
     xs: 'w-6 h-6 text-[10px]',
@@ -22,6 +29,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
     lg: 'w-14 h-14 text-base',
   };
 
+  const playerPhotoUrl = getPlayerPhotoUrl(player.ign);
   const agentIconUrl = player.signatureAgent ? AGENT_ICONS[player.signatureAgent] : null;
 
   return (
@@ -29,13 +37,21 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
       <div
         className={`${sizeClasses[size]} rounded-xl overflow-hidden bg-gradient-to-br from-[#1b2636] to-[#0c131d] border border-[#2b3d56] flex items-center justify-center font-vct font-bold text-[#e2b714] shadow-md relative group`}
       >
-        {agentIconUrl && !imgError ? (
+        {playerPhotoUrl && !photoError ? (
+          <img
+            src={playerPhotoUrl}
+            alt={player.ign}
+            className="w-full h-full object-cover object-top hover:scale-105 transition-transform"
+            loading="lazy"
+            onError={() => setPhotoError(true)}
+          />
+        ) : agentIconUrl && !agentError ? (
           <img
             src={agentIconUrl}
             alt={player.signatureAgent}
             className="w-full h-full object-cover p-0.5 filter drop-shadow hover:scale-105 transition-transform"
             referrerPolicy="no-referrer"
-            onError={() => setImgError(true)}
+            onError={() => setAgentError(true)}
           />
         ) : (
           <span className="tracking-tighter">

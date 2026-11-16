@@ -4,6 +4,7 @@ import { X, Trophy, RotateCcw, Sparkles, Check } from 'lucide-react';
 import { Lineup, Role, Player } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { AGENT_FULL_PORTRAITS, AGENT_ICONS, ROLE_SILHOUETTES } from '../data/agentIcons';
+import { getPlayerPhotoUrl } from '../data/playerPhotos';
 import { calculateTeamStats } from '../utils/simulation';
 import { playSelectSound, playRosterCompleteSound } from '../utils/audio';
 import { RoleEmblem } from './RoleEmblem';
@@ -210,8 +211,13 @@ export const LineupBar: React.FC<LineupBarProps> = ({
             : null;
 
           const activePlayer = lockedPlayer || displayedPreviewPlayer;
-          const portraitUrl = activePlayer ? getAgentPortraitUrl(activePlayer.signatureAgent) : null;
-          const portraitKey = activePlayer ? `${activePlayer.id}-${activePlayer.signatureAgent}` : role;
+          const realPhotoUrl = activePlayer ? getPlayerPhotoUrl(activePlayer.ign) : null;
+          const fallbackAgentUrl = activePlayer ? getAgentPortraitUrl(activePlayer.signatureAgent) : null;
+          const portraitKey = activePlayer ? `${activePlayer.id}-${activePlayer.ign}` : role;
+          const portraitUrl =
+            realPhotoUrl && !imgErrors[`photo-${portraitKey}`] ? realPhotoUrl : fallbackAgentUrl;
+          const usingRealPhoto = portraitUrl === realPhotoUrl && !!realPhotoUrl;
+          const isCutoutPng = usingRealPhoto && portraitUrl!.toLowerCase().endsWith('.png');
 
           return (
             <div
@@ -317,15 +323,31 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                       className="relative w-full h-full flex items-end justify-center"
                     >
                       {portraitUrl && !imgErrors[portraitKey] ? (
-                        <img
-                          src={portraitUrl}
-                          alt={activePlayer.signatureAgent}
-                          referrerPolicy="no-referrer"
-                          onError={() => markImgError(portraitKey)}
-                          className={`h-full max-h-[92px] w-auto object-contain object-bottom select-none pointer-events-none ${
-                            lockedPlayer ? 'opacity-100' : 'opacity-75'
-                          }`}
-                        />
+                        usingRealPhoto && !isCutoutPng ? (
+                          <div className="my-auto w-[112px] h-[82px] rounded-xl overflow-hidden border border-white/20 shadow-lg relative">
+                            <img
+                              src={portraitUrl}
+                              alt={activePlayer.ign}
+                              onError={() => markImgError(`photo-${portraitKey}`)}
+                              className={`w-full h-full object-cover object-top select-none pointer-events-none ${
+                                lockedPlayer ? 'opacity-100' : 'opacity-75'
+                              }`}
+                            />
+                            <div className="absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                          </div>
+                        ) : (
+                          <img
+                            src={portraitUrl}
+                            alt={usingRealPhoto ? activePlayer.ign : activePlayer.signatureAgent}
+                            referrerPolicy="no-referrer"
+                            onError={() =>
+                              markImgError(usingRealPhoto ? `photo-${portraitKey}` : portraitKey)
+                            }
+                            className={`h-full max-h-[96px] w-auto object-contain object-bottom select-none pointer-events-none ${
+                              lockedPlayer ? 'opacity-100' : 'opacity-75'
+                            }`}
+                          />
+                        )
                       ) : (
                         <div className="my-auto">
                           <RoleEmblem role={role} size="md" />
