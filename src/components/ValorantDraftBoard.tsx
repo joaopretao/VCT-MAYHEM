@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Team, Player, Lineup, Role } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
@@ -42,11 +42,16 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
 }) => {
   const [localWarning, setLocalWarning] = useState<string | null>(null);
   const [hoveredPlayer, setHoveredPlayer] = useState<Player | null>(null);
+  const [mobileTeamIdx, setMobileTeamIdx] = useState<number>(0);
 
   const filledCount = Object.values(lineup).filter(p => p !== null).length;
   const currentRound = Math.min(5, filledCount + 1);
   const isLineupFull = filledCount === 5;
   const batchKey = availableTeams.map(t => t.id).join('|');
+
+  useEffect(() => {
+    setMobileTeamIdx(0);
+  }, [batchKey]);
 
   const flashWarning = (msg: string) => {
     setLocalWarning(msg);
@@ -101,7 +106,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
   const activeWarning = warningMessage || localWarning;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2.5 md:gap-4">
       {/* BLOCK 1: LOBBY */}
       <LineupBar
         lineup={lineup}
@@ -113,12 +118,12 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
       />
 
       {/* BLOCK 2: FAIXA DA RODADA */}
-      <Card padding="md" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <span className="vct-slash" aria-hidden />
-              <h2 className="font-display text-3xl sm:text-4xl leading-none text-white tracking-wide uppercase">
+      <Card padding="none" className="p-2.5 md:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 md:gap-4">
+        <div className="space-y-1 md:space-y-1.5">
+          <div className="flex items-center gap-3 md:gap-4 flex-wrap">
+            <div className="flex items-center gap-2 md:gap-2.5">
+              <span className="vct-slash h-5 md:h-[22px]" aria-hidden />
+              <h2 className="font-display text-2xl sm:text-3xl md:text-4xl leading-none text-white tracking-wide uppercase">
                 {isLineupFull ? (
                   <span className="text-[#10b981]">Line Fechada · 5/5</span>
                 ) : (
@@ -131,7 +136,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
             </div>
 
             {/* 5-Segment Progress Bar */}
-            <div className="flex gap-1.5 w-36 sm:w-44" aria-label={`Progresso do draft: ${filledCount} de 5`}>
+            <div className="flex gap-1.5 w-28 sm:w-36 md:w-44" aria-label={`Progresso do draft: ${filledCount} de 5`}>
               {Array.from({ length: 5 }).map((_, i) => {
                 const filled = i < filledCount;
                 const current = i === filledCount && !isLineupFull;
@@ -218,11 +223,52 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
         </div>
       </Card>
 
+      {/* MOBILE ONLY (< lg): 3-Team Tab Switcher so there is no 1,000px vertical team stack */}
+      {availableTeams.length > 0 && (
+        <div className="grid grid-cols-3 gap-1.5 lg:hidden">
+          {availableTeams.map((team, idx) => {
+            const active = idx === mobileTeamIdx;
+            return (
+              <button
+                key={`${team.id}-tab-${idx}`}
+                type="button"
+                onClick={() => {
+                  playSelectSound();
+                  setMobileTeamIdx(idx);
+                }}
+                className={`px-2 py-2 rounded-[3px] border text-left flex items-center gap-2 transition-colors cursor-pointer ${
+                  active
+                    ? 'bg-[#161c26] border-[#ff4655] text-white'
+                    : 'bg-[#0d1118] border-white/10 text-slate-300 hover:text-white'
+                }`}
+              >
+                <TeamLogo
+                  teamName={team.name}
+                  shortName={team.shortName}
+                  logoUrl={team.logoUrl}
+                  primaryColor={team.primaryColor}
+                  size="sm"
+                  className="shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="font-display text-base leading-none uppercase truncate">
+                    {team.shortName || team.name}
+                  </div>
+                  <div className="text-xs font-mono-vct text-slate-400 leading-none mt-0.5">
+                    '{team.year.toString().slice(2)}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* BLOCK 3: AS 3 EQUIPES */}
       <AnimatePresence mode="wait">
         <motion.div
           key={batchKey}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4"
           exit={{ opacity: 0, transition: { duration: 0.12 } }}
         >
           {availableTeams.map((team, idx) => {
@@ -233,10 +279,11 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.04, duration: 0.18 }}
+                className={idx === mobileTeamIdx ? 'block' : 'hidden lg:block'}
               >
-                <Card variant="interactive" padding="md" className="h-full flex flex-col gap-3.5">
+                <Card variant="interactive" padding="none" className="p-3 md:p-4 h-full flex flex-col gap-2.5 md:gap-3.5">
                   {/* Team Header */}
-                  <div className="flex items-center gap-3 pb-3 border-b border-white/[0.08]">
+                  <div className="flex items-center gap-3 pb-2.5 md:pb-3 border-b border-white/[0.08]">
                     <div className="w-11 h-11 rounded-[3px] bg-[#0d1118] border border-white/10 flex items-center justify-center p-1.5 shrink-0">
                       <TeamLogo
                         teamName={team.name}
@@ -264,7 +311,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                   </div>
 
                   {/* 5 Player Rows */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5 md:gap-2">
                     {team.roster.map(player => {
                       const drafted = isPlayerDrafted(player.id);
                       const banned = isPlayerBanned(player, bannedPlayers);
@@ -309,7 +356,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                               handleTileClick(player);
                             }
                           }}
-                          className={`group/player relative h-13 rounded-[3px] border px-2.5 flex items-center justify-between gap-2 transition-colors duration-150 outline-none ${rowCls}`}
+                          className={`group/player relative h-11 md:h-13 rounded-[3px] border px-2.5 flex items-center justify-between gap-2 transition-colors duration-150 outline-none ${rowCls}`}
                         >
                           {/* Left: Player Face + Name + Role + Agent */}
                           <div className="flex items-center gap-2.5 min-w-0">

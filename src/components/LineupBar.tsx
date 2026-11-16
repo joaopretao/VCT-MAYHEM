@@ -121,12 +121,12 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   };
 
   return (
-    <Card padding="md" className="relative overflow-hidden">
+    <Card padding="none" className="p-2.5 md:p-4 relative overflow-hidden">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="vct-slash" aria-hidden />
-          <h2 className="font-display text-3xl leading-none text-white tracking-wide uppercase">
+      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-4 mb-2.5 md:mb-4">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+          <span className="vct-slash h-5 md:h-[22px]" aria-hidden />
+          <h2 className="font-display text-2xl md:text-3xl leading-none text-white tracking-wide uppercase">
             Seu Time
           </h2>
           <span
@@ -136,7 +136,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                 : 'bg-white/[0.05] border-white/10 text-slate-300'
             }`}
           >
-            {filledCount}/5 {isComplete ? 'fechado' : 'escalados'}
+            {filledCount}/5 <span className="hidden sm:inline">{isComplete ? 'fechado' : 'escalados'}</span>
           </span>
 
           {stats.synergyBonuses.length > 0 && (
@@ -147,34 +147,37 @@ export const LineupBar: React.FC<LineupBarProps> = ({
         </div>
 
         {/* StatPills + Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 md:gap-2">
             <StatPill
               label="Química"
               value={stats.synergy ? `+${stats.synergy}` : '0'}
               color="#38bdf8"
               title="Sinergia entre jogadores do mesmo time ou composição completa"
             />
-            <StatPill
-              label="Clutch"
-              value={stats.clutch || '--'}
-              color="#ff4655"
-              title="Média do elenco em rounds decisivos"
-            />
+            <div className="hidden sm:block">
+              <StatPill
+                label="Clutch"
+                value={stats.clutch || '--'}
+                color="#ff4655"
+                title="Média do elenco em rounds decisivos"
+              />
+            </div>
           </div>
 
           {filledCount > 0 && (
             <SecondaryButton
               id="clear-roster-btn"
-              size="md"
+              size="sm"
               onClick={() => {
                 playSelectSound();
                 onClearLineup();
               }}
+              className="md:px-4 md:py-2 md:text-sm"
               title="Resetar escolhas e começar outro draft"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Limpar</span>
+              <span className="hidden sm:inline">Limpar</span>
             </SecondaryButton>
           )}
 
@@ -186,6 +189,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                 playSelectSound();
                 onStartTournament();
               }}
+              className="w-full sm:w-auto mt-1 sm:mt-0"
             >
               <Trophy className="w-4 h-4" />
               <span>Iniciar Campeonato</span>
@@ -194,8 +198,8 @@ export const LineupBar: React.FC<LineupBarProps> = ({
         </div>
       </div>
 
-      {/* 5 Album-Sticker Slots */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+      {/* 5 Album-Sticker Slots (Always 5 in 1 horizontal row so mobile matches PC without vertical scroll) */}
+      <div className="grid grid-cols-5 gap-1.5 md:gap-3">
         {ROLE_ORDER.map(role => {
           const lockedPlayer = lineup[role];
           const roleColor = ROLE_COLORS[role];
@@ -230,7 +234,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                   onInspectPlayer(lockedPlayer);
                 }
               }}
-              className={`group/slot relative h-[174px] rounded-[3px] border transition-colors duration-150 overflow-hidden flex flex-col justify-between select-none ${
+              className={`group/slot relative h-[96px] md:h-[174px] rounded-[3px] border transition-colors duration-150 overflow-hidden flex flex-col justify-between select-none ${
                 lockedPlayer
                   ? 'bg-[#0d1118] border-white/15 cursor-pointer hover:border-white/35'
                   : isPreviewTarget
@@ -259,11 +263,11 @@ export const LineupBar: React.FC<LineupBarProps> = ({
               />
 
               {/* Top Slot Bar */}
-              <div className="relative z-20 h-7 px-2.5 flex items-center justify-between gap-2 shrink-0">
+              <div className="relative z-20 h-6 md:h-7 px-1 md:px-2.5 flex items-center justify-between gap-1 md:gap-2 shrink-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <RoleEmblem role={role} size="xs" showBackground={false} />
                   <span
-                    className="font-mono-vct text-xs font-bold uppercase tracking-wider truncate"
+                    className="hidden md:inline font-mono-vct text-xs font-bold uppercase tracking-wider truncate"
                     style={{ color: roleColor }}
                   >
                     {ROLE_NAMES_PT[role]}
@@ -279,22 +283,22 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                       playSelectSound();
                       onRemovePlayer(role);
                     }}
-                    className="p-1 rounded-[2px] text-slate-400 hover:text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                    className="p-0.5 md:p-1 rounded-[2px] text-slate-400 hover:text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer"
                     title={`Tirar ${lockedPlayer.ign}`}
                     aria-label={`Remover ${lockedPlayer.ign}`}
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-3 h-3 md:w-3.5 md:h-3.5" />
                   </button>
                 ) : isPreviewTarget ? (
-                  <span className="font-mono-vct text-xs font-bold text-[#ff4655] uppercase">
+                  <span className="hidden md:inline font-mono-vct text-xs font-bold text-[#ff4655] uppercase">
                     Prévia
                   </span>
                 ) : isShiftedDestination ? (
-                  <span className="font-mono-vct text-xs font-bold text-[#38bdf8] uppercase">
+                  <span className="hidden md:inline font-mono-vct text-xs font-bold text-[#38bdf8] uppercase">
                     Troca
                   </span>
                 ) : isNextSlot ? (
-                  <span className="font-mono-vct text-xs font-bold text-[#e2b714] uppercase">
+                  <span className="hidden md:inline font-mono-vct text-xs font-bold text-[#e2b714] uppercase">
                     Próximo
                   </span>
                 ) : null}
@@ -323,7 +327,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                     >
                       {portraitUrl && !imgErrors[portraitKey] ? (
                         usingRealPhoto && !isCutoutPng ? (
-                          <div className="my-auto w-[112px] h-[82px] rounded-[2px] overflow-hidden border border-white/15 relative">
+                          <div className="my-auto w-11 h-11 md:w-[112px] md:h-[82px] rounded-[2px] overflow-hidden border border-white/15 relative">
                             <img
                               src={portraitUrl}
                               alt={activePlayer.ign}
@@ -332,7 +336,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                                 lockedPlayer ? 'opacity-100' : 'opacity-75'
                               }`}
                             />
-                            <div className="absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-[#0b0e14]/70 to-transparent pointer-events-none" />
+                            <div className="hidden md:block absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-[#0b0e14]/70 to-transparent pointer-events-none" />
                           </div>
                         ) : (
                           <img
@@ -342,25 +346,25 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                             onError={() =>
                               markImgError(usingRealPhoto ? `photo-${portraitKey}` : portraitKey)
                             }
-                            className={`h-full max-h-[96px] w-auto object-contain object-bottom select-none pointer-events-none ${
+                            className={`h-full max-h-[44px] md:max-h-[96px] w-auto object-contain object-bottom select-none pointer-events-none ${
                               lockedPlayer ? 'opacity-100' : 'opacity-75'
                             }`}
                           />
                         )
                       ) : (
                         <div className="my-auto">
-                          <RoleEmblem role={role} size="md" />
+                          <RoleEmblem role={role} size="sm" />
                         </div>
                       )}
 
                       {lockedPlayer && (
-                        <div className="absolute top-1 left-2 z-20 flex items-center gap-1 px-1 py-0.5 rounded-[2px] bg-[#0b0e14]/90 border border-white/10">
+                        <div className="hidden md:flex absolute top-1 left-2 z-20 items-center gap-1 px-1 py-0.5 rounded-[2px] bg-[#0b0e14]/90 border border-white/10">
                           <TeamLogo teamName={lockedPlayer.team} size="xs" />
                         </div>
                       )}
 
                       {lockedPlayer?.trait && (
-                        <div className="absolute top-1 right-2 z-20">
+                        <div className="hidden md:block absolute top-1 right-2 z-20">
                           <TraitBadge trait={lockedPlayer.trait} iconOnly size="xs" />
                         </div>
                       )}
@@ -379,11 +383,11 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                           alt={silhouette.agentName}
                           referrerPolicy="no-referrer"
                           onError={() => markImgError(`sil-${role}`)}
-                          className="absolute inset-x-0 bottom-0 mx-auto h-full max-h-[86px] w-auto object-contain opacity-[0.08] brightness-0 invert pointer-events-none select-none"
+                          className="hidden md:block absolute inset-x-0 bottom-0 mx-auto h-full max-h-[86px] w-auto object-contain opacity-[0.08] brightness-0 invert pointer-events-none select-none"
                         />
                       )}
                       <div
-                        className={`relative z-10 w-10 h-10 rounded-[3px] border flex items-center justify-center ${
+                        className={`relative z-10 w-7 h-7 md:w-10 md:h-10 rounded-[3px] border flex items-center justify-center ${
                           isNextSlot
                             ? 'bg-[#e2b714]/10 border-[#e2b714]/50'
                             : 'bg-[#11151d] border-white/10 opacity-55'
@@ -397,33 +401,38 @@ export const LineupBar: React.FC<LineupBarProps> = ({
               </div>
 
               {/* Bottom Sticker Nameplate */}
-              <div className="relative z-20 h-12 px-2.5 bg-[#090c11] border-t border-white/[0.08] flex flex-col justify-center shrink-0">
+              <div className="relative z-20 h-6 md:h-12 px-1 md:px-2.5 bg-[#090c11] border-t border-white/[0.08] flex flex-col justify-center shrink-0">
                 {activePlayer ? (
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-center md:justify-between gap-1 md:gap-2">
                     <div className="min-w-0">
                       <div
-                        className={`font-display text-xl leading-none tracking-wide truncate ${
+                        className={`font-display text-sm md:text-xl leading-none tracking-wide truncate text-center md:text-left ${
                           lockedPlayer ? 'text-white' : 'text-[#e2b714]'
                         }`}
                       >
                         {activePlayer.ign}
                       </div>
-                      <div className="text-xs text-slate-300 truncate leading-tight mt-0.5">
+                      <div className="hidden md:block text-xs text-slate-300 truncate leading-tight mt-0.5">
                         {activePlayer.team} · {activePlayer.signatureAgent}
                       </div>
                     </div>
                     {lockedPlayer && (
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <Check className="hidden md:block w-4 h-4 text-emerald-400 shrink-0" />
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-center md:justify-between gap-2">
                     <span
                       className={`text-xs font-semibold truncate ${
                         isNextSlot ? 'text-[#e2b714]' : 'text-slate-400'
                       }`}
                     >
-                      {isNextSlot ? 'Vaga aberta' : 'Vazio'}
+                      <span className="md:hidden font-mono-vct" style={{ color: roleColor }}>
+                        {ROLE_NAMES_PT[role].slice(0, 4)}
+                      </span>
+                      <span className="hidden md:inline">
+                        {isNextSlot ? 'Vaga aberta' : 'Vazio'}
+                      </span>
                     </span>
                   </div>
                 )}

@@ -60,14 +60,14 @@ export const StageQualifiedScreen: React.FC<StageQualifiedScreenProps> = ({
 
         {/* Lineup showcase with real player portraits */}
         {lineup && (
-          <div className="grid grid-cols-5 gap-2 w-full mb-6">
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-2 w-full mb-5 sm:mb-6">
             {ROLE_ORDER.map(role => {
               const p = lineup[role];
               if (!p) return null;
               return (
                 <div
                   key={role}
-                  className="surface-sub p-2 flex flex-col items-center gap-1 border-b-2"
+                  className="surface-sub p-1.5 sm:p-2 flex flex-col items-center gap-1 border-b-2"
                   style={{ borderBottomColor: ROLE_COLORS[role] }}
                 >
                   <PlayerAvatar player={p} size="sm" />

@@ -129,39 +129,41 @@ export const TriviaMode: React.FC = () => {
   }).slice(0, 7);
 
   return (
-    <div className="max-w-3xl mx-auto my-4 space-y-4">
+    <div className="max-w-3xl mx-auto my-1 sm:my-4 space-y-3 sm:space-y-4">
       {/* Confetti on victory */}
       <Confetti fire={isGameOver && Boolean(guesses[0]?.isCorrect)} />
 
       {/* Header Banner */}
-      <div className="text-center space-y-1.5">
+      <div className="text-center space-y-1 sm:space-y-1.5">
         <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-[#38bdf8] block">
           Trivia VCT
         </span>
-        <h2 className="text-3xl sm:text-4xl font-display font-bold uppercase text-white tracking-wide leading-none">
+        <h2 className="text-2xl sm:text-4xl font-display font-bold uppercase text-white tracking-wide leading-none">
           Descubra o Pro Player
         </h2>
-        <p className="text-sm text-slate-300 max-w-md mx-auto">
+        <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto">
           8 tentativas usando time, região, temporada, função e agente assinatura.
         </p>
       </div>
 
       {/* Mode Selector & Streak */}
-      <Card padding="md" className="flex flex-wrap items-center justify-between gap-4 text-xs sm:text-sm">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" />
+      <Card padding="none" className="p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 text-xs sm:text-sm">
+        <div className="flex items-center gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
             <span className="text-slate-300">
-              Sequência: <strong className="text-amber-400 font-bold font-mono-vct">{streak} vitórias</strong>
+              <span className="hidden sm:inline">Sequência: </span>
+              <strong className="text-amber-400 font-bold font-mono-vct">{streak} vitórias</strong>
             </span>
           </div>
           <span className="text-slate-500">|</span>
           <span className="text-slate-300 font-mono-vct">
-            Tentativas: <strong className="text-white">{guesses.length}/8</strong>
+            <span className="hidden sm:inline">Tentativas: </span>
+            <strong className="text-white">{guesses.length}/8</strong>
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
           {guesses.length >= 3 && !isGameOver && targetPlayer && (
             <SecondaryButton
               size="sm"
@@ -324,11 +326,11 @@ export const TriviaMode: React.FC = () => {
 
       {/* Pre-First-Guess Guide Panel (6 Clue Columns Explanation) */}
       {guesses.length === 0 && !isGameOver && (
-        <Card padding="md" className="animate-fadeIn">
-          <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <Card padding="none" className="p-3 sm:p-4 animate-fadeIn">
+          <div className="flex items-center justify-between gap-2 mb-2.5 sm:mb-4 flex-wrap">
             <div className="flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-[#38bdf8]" />
-              <h3 className="text-sm font-mono-vct font-bold uppercase tracking-wider text-white">
+              <h3 className="text-xs sm:text-sm font-mono-vct font-bold uppercase tracking-wider text-white">
                 Guia das 6 Colunas de Pistas
               </h3>
             </div>
@@ -337,7 +339,7 @@ export const TriviaMode: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-center mb-4">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5 sm:gap-2 text-center mb-3 sm:mb-4">
             {[
               { col: 'Jogador', desc: 'Foto e Nick do pro player' },
               { col: 'Equipe', desc: 'Organização no Champions' },
@@ -348,19 +350,19 @@ export const TriviaMode: React.FC = () => {
             ].map(item => (
               <div
                 key={item.col}
-                className="tracker-subcard p-3 flex flex-col items-center justify-center"
+                className="tracker-subcard p-2 sm:p-3 flex flex-col items-center justify-center"
               >
-                <span className="text-xs font-mono-vct font-bold uppercase text-[#e2b714] mb-1">
+                <span className="text-xs font-mono-vct font-bold uppercase text-[#e2b714] mb-0.5 sm:mb-1">
                   {item.col}
                 </span>
-                <span className="text-xs text-slate-300 leading-tight">
+                <span className="text-xs text-slate-300 leading-tight line-clamp-2 sm:line-clamp-none">
                   {item.desc}
                 </span>
               </div>
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-3 border-t border-white/10 text-xs font-mono-vct">
+          <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 pt-2.5 sm:pt-3 border-t border-white/10 text-xs font-mono-vct">
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-sm bg-emerald-500/40 border border-emerald-400 inline-block" />
               <span className="text-slate-300">Verde = Pista Exata</span>
@@ -379,7 +381,11 @@ export const TriviaMode: React.FC = () => {
 
       {/* Guess Feedback Table */}
       {guesses.length > 0 && (
-        <div className="overflow-x-auto">
+        <div>
+          <span className="block sm:hidden text-xs font-mono-vct text-slate-400 mb-1 text-right">
+            Deslize a tabela lateralmente →
+          </span>
+          <div className="overflow-x-auto">
           <div className="min-w-[640px] bg-[#11151d] border border-white/10 rounded-[3px] p-3.5">
             {/* Table Header */}
             <div className="grid grid-cols-6 gap-2 text-center text-xs font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-white/[0.08]">
@@ -475,6 +481,7 @@ export const TriviaMode: React.FC = () => {
                 );
               })}
             </div>
+          </div>
           </div>
         </div>
       )}

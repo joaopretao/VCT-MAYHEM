@@ -278,7 +278,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 py-4 flex flex-col relative z-10">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-2.5 py-2.5 md:px-4 md:py-4 flex flex-col relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentTab === 'draft' ? (isTournamentActive ? 'tournament' : 'draft') : currentTab}

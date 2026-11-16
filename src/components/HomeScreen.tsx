@@ -43,16 +43,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const activeDiff = DIFFICULTY_OPTIONS.find(d => d.id === difficulty) || DIFFICULTY_OPTIONS[0];
 
   return (
-    <div className="flex-1 flex flex-col justify-center max-w-6xl w-full mx-auto py-3 sm:py-5 gap-5">
+    <div className="flex-1 flex flex-col justify-start md:justify-center max-w-6xl w-full mx-auto py-1 md:py-5 gap-3 md:gap-5">
       {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-3 px-0.5">
-        <div className="flex items-center gap-3">
-          <span className="vct-slash h-7" aria-hidden />
+      <div className="flex flex-wrap items-center md:items-end justify-between gap-2 md:gap-3 px-0.5">
+        <div className="flex items-center gap-2.5 md:gap-3">
+          <span className="vct-slash h-6 md:h-7" aria-hidden />
           <div>
-            <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-slate-400 block">
+            <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-slate-400 hidden md:block">
               VCT 2022–2026
             </span>
-            <h2 className="font-display text-3xl sm:text-4xl text-white uppercase tracking-wide leading-none">
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl text-white uppercase tracking-wide leading-none">
               Escolha o modo
             </h2>
           </div>
@@ -60,9 +60,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         <div className="flex items-center gap-2">
           {totalCampaigns > 0 && (
-            <div className="surface-sub px-3 py-1.5 flex items-center gap-2 text-xs font-mono-vct text-slate-200">
+            <div className="surface-sub px-2.5 py-1 md:px-3 md:py-1.5 flex items-center gap-1.5 text-xs font-mono-vct text-slate-200">
               <Trophy className="w-3.5 h-3.5 text-[#e2b714]" />
-              <span>
+              <span className="md:hidden">
+                {trophiesCount}/{totalCampaigns}
+              </span>
+              <span className="hidden md:inline">
                 {trophiesCount} {trophiesCount === 1 ? 'título' : 'títulos'} em {totalCampaigns}{' '}
                 {totalCampaigns === 1 ? 'campanha' : 'campanhas'}
               </span>
@@ -77,7 +80,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }}
           >
             <HelpCircle className="w-4 h-4 text-slate-300" />
-            <span>Como jogar</span>
+            <span className="hidden sm:inline">Como jogar</span>
           </SecondaryButton>
         </div>
       </div>
@@ -89,29 +92,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         transition={{ duration: 0.22 }}
       >
         <Card
-          padding="lg"
+          padding="none"
           cutCorner
-          className="relative overflow-hidden border-[#ff4655]/35"
+          className="p-3.5 md:p-6 relative overflow-hidden border-[#ff4655]/35"
         >
-          {/* Left tactical red bar */}
           <div className="absolute inset-y-0 left-0 w-1 bg-[#ff4655]" aria-hidden />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center pl-1">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-center pl-1.5 md:pl-1">
             {/* Left Content */}
-            <div className="lg:col-span-7 space-y-4">
-              <div className="space-y-1.5">
+            <div className="lg:col-span-7 space-y-3 md:space-y-4">
+              <div className="space-y-1">
                 <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-[#ff4655] block">
                   Modo Principal
                 </span>
-                <h1 className="font-display text-5xl sm:text-6xl leading-[0.92] text-white uppercase tracking-wide">
+                <h1 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[0.92] text-white uppercase tracking-wide">
                   CHAMPIONS MAYHEM
                 </h1>
-                <p className="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed">
-                  Cinco picks, três times por rodada. Monta tua line com jogadores reais do VCT (2022–2026), busca química entre companheiros e tenta levar o caneco.
+                <p className="text-xs sm:text-sm md:text-base text-slate-300 max-w-xl leading-relaxed">
+                  Cinco picks, três times por rodada. Monta tua line com jogadores reais do VCT (2022–2026) e busca o título mundial.
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 text-xs font-mono-vct text-slate-300">
+              <div className="hidden sm:flex flex-wrap items-center gap-3 text-xs font-mono-vct text-slate-300">
                 <span>5 funções</span>
                 <span className="text-slate-600">/</span>
                 <span>Overall oculto na run</span>
@@ -120,7 +122,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </div>
 
               {/* Difficulty & Primary CTA */}
-              <div className="pt-1 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="pt-0.5 flex flex-col sm:flex-row sm:items-center gap-2.5 md:gap-3">
                 <PrimaryButton
                   id="home-play-mayhem-btn"
                   size="lg"
@@ -129,13 +131,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     playSelectSound();
                     onSelectMode('draft');
                   }}
-                  className="text-base px-8 py-3.5"
+                  className="w-full sm:w-auto text-sm md:text-base px-6 py-2.5 md:px-8 md:py-3.5"
                 >
                   <span>JOGAR MAYHEM</span>
                   <ArrowRight className="w-4 h-4" />
                 </PrimaryButton>
 
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-row sm:flex-col items-center sm:items-start justify-between gap-2 sm:gap-1">
                   <div className="flex items-center gap-1 p-1 rounded-[3px] bg-[#0b0e14] border border-white/10 w-fit">
                     {DIFFICULTY_OPTIONS.map(opt => {
                       const active = opt.id === difficulty;
@@ -147,7 +149,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                             playSelectSound();
                             onDifficultyChange(opt.id);
                           }}
-                          className={`px-3 py-1 rounded-[2px] font-mono-vct text-xs font-bold transition-colors cursor-pointer ${
+                          className={`px-2.5 md:px-3 py-1 rounded-[2px] font-mono-vct text-xs font-bold transition-colors cursor-pointer ${
                             active ? '' : 'text-slate-300 hover:text-white'
                           }`}
                           style={active ? { backgroundColor: opt.color, color: opt.text } : undefined}
@@ -157,15 +159,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       );
                     })}
                   </div>
-                  <span className="text-xs font-mono-vct text-slate-400 pl-0.5">
+                  <span className="text-xs font-mono-vct text-slate-400">
                     {activeDiff.hint}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Right: Champion Crests Showcase */}
-            <div className="lg:col-span-5">
+            {/* Right: Champion Crests Showcase (Desktop / Tablet large only so mobile never scrolls) */}
+            <div className="hidden lg:block lg:col-span-5">
               <div className="surface-sub p-4 space-y-3">
                 <div className="flex items-center justify-between text-xs font-mono-vct">
                   <span className="text-slate-300 font-bold uppercase tracking-wider">
@@ -193,93 +195,96 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </Card>
       </motion.div>
 
-      {/* SECONDARY MODES */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* SECONDARY MODES: Compact 1-line strips on mobile, full 3-column cards on md+ desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 md:gap-4">
         <Card
           variant="interactive"
-          padding="md"
+          padding="none"
           onMouseEnter={() => playHoverSound()}
           onClick={() => {
             playSelectSound();
             onSelectMode('grid');
           }}
-          className="h-full flex flex-col justify-between gap-4 cursor-pointer hover:border-[#e2b714]/55"
+          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-[#e2b714]/55"
         >
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-mono-vct">
+          <div className="space-y-0.5 md:space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
               <span className="text-[#e2b714] font-bold uppercase tracking-wider">3×3</span>
               <span className="text-slate-400">5 tabuleiros</span>
             </div>
-            <h3 className="font-display text-3xl leading-none text-white uppercase tracking-wide">
+            <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
               GRID VCT
             </h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="hidden md:block text-sm text-slate-300 leading-relaxed">
               Cruza camisas, janelas de transferência e nacionalidades sem dar um chute aleatório.
             </p>
           </div>
 
-          <SecondaryButton id="home-play-grid-btn" size="sm" className="w-full justify-between">
-            <span>Abrir Grid</span>
+          <SecondaryButton id="home-play-grid-btn" size="sm" className="shrink-0 md:w-full md:justify-between">
+            <span className="md:hidden">Jogar</span>
+            <span className="hidden md:inline">Abrir Grid</span>
             <ArrowRight className="w-4 h-4 text-[#e2b714]" />
           </SecondaryButton>
         </Card>
 
         <Card
           variant="interactive"
-          padding="md"
+          padding="none"
           onMouseEnter={() => playHoverSound()}
           onClick={() => {
             playSelectSound();
             onSelectMode('trivia');
           }}
-          className="h-full flex flex-col justify-between gap-4 cursor-pointer hover:border-[#38bdf8]/55"
+          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-[#38bdf8]/55"
         >
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-mono-vct">
+          <div className="space-y-0.5 md:space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
               <span className="text-[#38bdf8] font-bold uppercase tracking-wider">Diário</span>
               <span className="text-slate-400">8 chances</span>
             </div>
-            <h3 className="font-display text-3xl leading-none text-white uppercase tracking-wide">
+            <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
               TRIVIA DOS PROS
             </h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="hidden md:block text-sm text-slate-300 leading-relaxed">
               Descobre o jogador misterioso pelas pistas de time, região, função e agente assinatura.
             </p>
           </div>
 
-          <SecondaryButton id="home-play-trivia-btn" size="sm" className="w-full justify-between">
-            <span>Jogar Trivia</span>
+          <SecondaryButton id="home-play-trivia-btn" size="sm" className="shrink-0 md:w-full md:justify-between">
+            <span className="md:hidden">Jogar</span>
+            <span className="hidden md:inline">Jogar Trivia</span>
             <ArrowRight className="w-4 h-4 text-[#38bdf8]" />
           </SecondaryButton>
         </Card>
 
         <Card
           variant="interactive"
-          padding="md"
+          padding="none"
           onMouseEnter={() => playHoverSound()}
           onClick={() => {
             playSelectSound();
             onSelectMode('history');
           }}
-          className="h-full flex flex-col justify-between gap-4 cursor-pointer hover:border-[#10b981]/55"
+          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-[#10b981]/55"
         >
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-mono-vct">
+          <div className="space-y-0.5 md:space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
               <span className="text-[#10b981] font-bold uppercase tracking-wider">Histórico</span>
               <span className="text-slate-400">
                 {trophiesCount} {trophiesCount === 1 ? 'título' : 'títulos'}
               </span>
             </div>
-            <h3 className="font-display text-3xl leading-none text-white uppercase tracking-wide">
+            <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
               SALA DE TROFÉUS
             </h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="hidden md:block text-sm text-slate-300 leading-relaxed">
               Teus campeões salvos, MVPs de cada campanha e conquistas desbloqueadas.
             </p>
           </div>
 
-          <SecondaryButton id="home-open-history-btn" size="sm" className="w-full justify-between">
-            <span>Ver Troféus</span>
+          <SecondaryButton id="home-open-history-btn" size="sm" className="shrink-0 md:w-full md:justify-between">
+            <span className="md:hidden">Abrir</span>
+            <span className="hidden md:inline">Ver Troféus</span>
             <ArrowRight className="w-4 h-4 text-[#10b981]" />
           </SecondaryButton>
         </Card>

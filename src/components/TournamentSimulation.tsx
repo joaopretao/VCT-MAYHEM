@@ -305,67 +305,70 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     displayedOpponentWins >= targetWinsToCloseSeries;
 
   return (
-    <div className="flex flex-col gap-4 pb-4">
+    <div className="flex flex-col gap-2.5 md:gap-4 pb-4">
       <Confetti fire={isChampionshipWon} />
 
       {/* TOP FULL-WIDTH SCOREBOARD */}
-      <Card padding="md" className="w-full">
+      <Card padding="none" className="p-2.5 md:p-4 w-full">
         {/* Small Stage & Format Labels */}
-        <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
+        <div className="flex items-center justify-center gap-2 mb-2 md:mb-3 flex-wrap">
           <Badge tone="red">{series.stageTitle}</Badge>
-          <Badge tone="neutral">Série · Melhor de {series.bestOf}</Badge>
+          <Badge tone="neutral">MD{series.bestOf}</Badge>
         </div>
 
-        {/* SEU ELENCO vs SÉRIE SCORE vs ADVERSÁRIO (Full Name, up to 2 lines, never truncated) */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4">
+        {/* SEU ELENCO vs SÉRIE SCORE vs ADVERSÁRIO (Always horizontal 3-col so mobile stays compact) */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 md:gap-4">
           {/* Left: Seu Elenco */}
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#ff4655]/15 border border-[#ff4655]/40 flex items-center justify-center shrink-0">
-              <Trophy className="w-6 h-6 text-[#ff4655]" />
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <div className="hidden sm:flex w-10 h-10 md:w-12 md:h-12 rounded-[3px] bg-[#ff4655]/15 border border-[#ff4655]/40 items-center justify-center shrink-0">
+              <Trophy className="w-5 h-5 md:w-6 md:h-6 text-[#ff4655]" />
             </div>
-            <div>
-              <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#38bdf8] block">
+            <div className="min-w-0">
+              <span className="hidden md:block font-mono-vct text-xs font-bold uppercase tracking-wider text-[#38bdf8]">
                 Sua Equipe
               </span>
-              <h2 className="font-display text-3xl leading-none text-white uppercase tracking-wide">
+              <h2 className="font-display text-xl sm:text-2xl md:text-3xl leading-none text-white uppercase tracking-wide truncate">
                 SEU ELENCO
               </h2>
-              <span className="font-mono-vct text-xs text-slate-300 mt-0.5 block">
+              <span className="hidden md:block font-mono-vct text-xs text-slate-300 mt-0.5">
                 Força Geral: <strong className="text-slate-400">Oculta na Run</strong>
               </span>
             </div>
           </div>
 
           {/* Center: Large Series Score */}
-          <div className="glass-film flex flex-col items-center justify-center px-6 py-2 rounded-xl mx-auto">
-            <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-slate-300 mb-0.5">
+          <div className="surface-sub flex flex-col items-center justify-center px-3 py-1.5 md:px-6 md:py-2 mx-auto">
+            <span className="hidden md:block font-mono-vct text-xs font-bold uppercase tracking-widest text-slate-300 mb-0.5">
               Placar da Série
             </span>
-            <div className="font-mono-vct text-3xl sm:text-4xl font-black tracking-wider leading-none flex items-center gap-3">
+            <div className="font-mono-vct text-2xl sm:text-3xl md:text-4xl font-black tracking-wider leading-none flex items-center gap-2 md:gap-3">
               <span className={displayedPlayerWins > displayedOpponentWins ? 'text-emerald-400' : 'text-white'}>
                 {displayedPlayerWins}
               </span>
-              <span className="text-slate-500 text-2xl">:</span>
+              <span className="text-slate-500 text-xl md:text-2xl">:</span>
               <span className={displayedOpponentWins > displayedPlayerWins ? 'text-rose-400' : 'text-white'}>
                 {displayedOpponentWins}
               </span>
             </div>
           </div>
 
-          {/* Right: Adversário (Full Name allowed to wrap up to 2 lines) */}
-          <div className="flex items-center md:justify-end gap-3 md:text-right">
+          {/* Right: Adversário */}
+          <div className="flex items-center justify-end gap-2 md:gap-3 text-right min-w-0">
             <div className="order-2 md:order-1 min-w-0">
-              <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-rose-400 block">
+              <span className="hidden md:block font-mono-vct text-xs font-bold uppercase tracking-wider text-rose-400">
                 Adversário
               </span>
-              <h2 className="font-display text-2xl sm:text-3xl leading-tight text-white uppercase tracking-wide break-words line-clamp-2">
-                {series.opponent.name}
+              <h2 className="font-display text-xl sm:text-2xl md:text-3xl leading-none md:leading-tight text-white uppercase tracking-wide break-words line-clamp-1 md:line-clamp-2">
+                {series.opponent.tag || series.opponent.name}
+                <span className="hidden md:inline">
+                  {series.opponent.name !== series.opponent.tag ? '' : ''}
+                </span>
               </h2>
-              <span className="font-mono-vct text-xs text-slate-300 mt-0.5 block">
+              <span className="hidden md:block font-mono-vct text-xs text-slate-300 mt-0.5">
                 Força Geral: <strong className="text-white">{series.opponent.rating} OVR</strong>
               </span>
             </div>
-            <div className="order-1 md:order-2 w-12 h-12 rounded-xl bg-[#0b0e14] border border-white/10 p-1.5 flex items-center justify-center shrink-0">
+            <div className="order-1 md:order-2 w-8 h-8 md:w-12 md:h-12 rounded-[3px] bg-[#0b0e14] border border-white/10 p-1 md:p-1.5 flex items-center justify-center shrink-0">
               <TeamLogo
                 teamName={series.opponent.name}
                 shortName={series.opponent.tag}
@@ -379,13 +382,13 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         </div>
       </Card>
 
-      {/* BELOW: TWO TOP-ALIGNED COLUMNS (No stretched empty space) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* LEFT NARROW COLUMN: 5 Roster Players + Map Markers (M1/M2/M3) */}
-        <div className="lg:col-span-4 flex flex-col gap-4">
+      {/* BELOW: TWO TOP-ALIGNED COLUMNS (On mobile: compact Maps strip + Live Timeline) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 md:gap-4 items-start">
+        {/* LEFT NARROW COLUMN */}
+        <div className="lg:col-span-4 flex flex-col gap-2.5 md:gap-4">
           {/* Map Markers Card */}
-          <Card padding="md">
-            <div className="flex items-center justify-between gap-2 mb-3">
+          <Card padding="none" className="p-2.5 md:p-4">
+            <div className="hidden md:flex items-center justify-between gap-2 mb-3">
               <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-slate-200">
                 Mapas da Série
               </span>
@@ -394,7 +397,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 md:gap-2">
               {mapSlots.map((_, idx) => {
                 const committedMap = series.maps[idx];
                 const isCurrentSlot = idx === series.currentMapIndex;
@@ -421,12 +424,12 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                 return (
                   <div
                     key={idx}
-                    className={`p-2.5 rounded-xl border flex flex-col items-center justify-center text-center ${boxCls}`}
+                    className={`p-1.5 md:p-2.5 rounded-[3px] border flex flex-col items-center justify-center text-center ${boxCls}`}
                   >
-                    <span className="font-mono-vct text-xs font-bold uppercase">
+                    <span className="font-mono-vct text-xs font-bold uppercase truncate max-w-full">
                       M{idx + 1} {mapData ? `· ${mapData.mapName}` : isCurrentSlot ? `· ${currentMap.mapName}` : ''}
                     </span>
-                    <span className="font-mono-vct text-sm font-bold mt-1 text-white">
+                    <span className="font-mono-vct text-xs md:text-sm font-bold mt-0.5 md:mt-1 text-white">
                       {scoreLabel}
                     </span>
                   </div>
@@ -435,8 +438,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
             </div>
           </Card>
 
-          {/* 5 Players Roster Card */}
-          <Card padding="md">
+          {/* 5 Players Roster Card (Hidden on < lg mobile so live timeline & controls sit immediately above the fold) */}
+          <Card padding="md" className="hidden lg:block">
             <div className="flex items-center justify-between gap-2 mb-3">
               <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-slate-200">
                 Seu Elenco Titular
@@ -631,9 +634,9 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           </Card>
 
           {/* STICKY BOTTOM ACTION BAR */}
-          <div className="sticky bottom-4 z-30">
-            <Card padding="sm" className="bg-[#0b0e14]/95 border-white/15 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-xs sm:text-sm text-slate-300 px-1">
+          <div className="sticky bottom-2 md:bottom-4 z-30">
+            <Card padding="sm" className="bg-[#0b0e14]/95 border-white/15 flex flex-wrap items-center justify-between gap-2 md:gap-3">
+              <div className="hidden sm:block text-xs sm:text-sm text-slate-300 px-1">
                 {isCurrentMapEnded ? (
                   <span>
                     <strong className={currentMap.playerWon ? 'text-emerald-400' : 'text-rose-400'}>
@@ -712,7 +715,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
             </p>
 
             {/* All 5 Champions side by side */}
-            <div className="grid grid-cols-5 gap-2 mb-5">
+            <div className="grid grid-cols-5 gap-1.5 sm:gap-2 mb-5">
               {ROLE_ORDER.map(role => {
                 const p = lineup[role];
                 if (!p) return null;

@@ -163,11 +163,11 @@ export const ValorantGridMode: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto py-2 space-y-4">
+    <div className="w-full max-w-3xl mx-auto py-1 sm:py-2 space-y-2.5 sm:space-y-4">
       {/* Top Header Card */}
-      <Card padding="md" className="flex flex-wrap items-center justify-between gap-4">
+      <Card padding="none" className="p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
             <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714]">
               Grid {puzzle.number}/{GRID_PUZZLES.length}
             </span>
@@ -176,16 +176,16 @@ export const ValorantGridMode: React.FC = () => {
               {solvedCount}/9 células
             </span>
           </div>
-          <div className="flex items-center gap-2.5 mt-1">
+          <div className="flex items-center gap-2 sm:gap-2.5 mt-1">
             <span className="vct-slash" aria-hidden />
-            <h2 className="font-display text-3xl leading-none text-white tracking-wide uppercase">
+            <h2 className="font-display text-2xl sm:text-3xl leading-none text-white tracking-wide uppercase">
               {puzzle.title}
             </h2>
           </div>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1">{puzzle.description}</p>
+          <p className="text-xs sm:text-sm text-slate-300 mt-1 line-clamp-1 sm:line-clamp-none">{puzzle.description}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <StatPill label="PTS" value={totalScore} color="#e2b714" />
 
           <SecondaryButton
@@ -259,11 +259,11 @@ export const ValorantGridMode: React.FC = () => {
       )}
 
       {/* 4x4 Grid Board */}
-      <Card padding="md" className="overflow-x-auto">
-        <div className="min-w-[340px] max-w-xl mx-auto grid grid-cols-4 gap-2.5 sm:gap-3 aspect-square">
+      <Card padding="none" className="p-2 sm:p-4 overflow-x-auto">
+        <div className="w-full sm:min-w-[340px] max-w-xl mx-auto grid grid-cols-4 gap-1.5 sm:gap-3 aspect-square">
           {/* Top-Left Corner: GRID Brand */}
-          <div className="surface-sub flex flex-col items-center justify-center p-2 text-center select-none">
-            <span className="font-display text-2xl leading-none text-white tracking-wider">
+          <div className="surface-sub flex flex-col items-center justify-center p-1 sm:p-2 text-center select-none">
+            <span className="font-display text-lg sm:text-2xl leading-none text-white tracking-wider">
               GRID
             </span>
             <span className="text-xs font-mono-vct text-[#ff4655] font-bold uppercase tracking-wider mt-0.5">
@@ -275,15 +275,15 @@ export const ValorantGridMode: React.FC = () => {
           {puzzle.cols.map(colCrit => (
             <div
               key={colCrit.id}
-              className="surface-sub p-2 sm:p-2.5 flex flex-col items-center justify-center text-center select-none"
+              className="surface-sub p-1 sm:p-2.5 flex flex-col items-center justify-center text-center select-none"
             >
-              <div className="mb-1.5">
+              <div className="mb-0.5 sm:mb-1.5">
                 <GridVisualBadge criterion={colCrit} size="md" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-white leading-tight line-clamp-1">
+              <span className="text-xs sm:text-sm font-bold text-white leading-tight line-clamp-2 sm:line-clamp-1">
                 {colCrit.label}
               </span>
-              <span className="text-xs text-slate-400 font-mono-vct line-clamp-1 mt-0.5">
+              <span className="hidden sm:block text-xs text-slate-400 font-mono-vct line-clamp-1 mt-0.5">
                 {colCrit.subLabel}
               </span>
             </div>
@@ -293,14 +293,14 @@ export const ValorantGridMode: React.FC = () => {
           {puzzle.rows.map((rowCrit, rIdx) => (
             <React.Fragment key={rowCrit.id}>
               {/* Row Header (Left Column) */}
-              <div className="surface-sub p-2 sm:p-2.5 flex flex-col items-center justify-center text-center select-none">
-                <div className="mb-1.5">
+              <div className="surface-sub p-1 sm:p-2.5 flex flex-col items-center justify-center text-center select-none">
+                <div className="mb-0.5 sm:mb-1.5">
                   <GridVisualBadge criterion={rowCrit} size="md" />
                 </div>
                 <span className="text-xs sm:text-sm font-bold text-white leading-tight line-clamp-2">
                   {rowCrit.label}
                 </span>
-                <span className="text-xs text-slate-400 font-mono-vct line-clamp-1 mt-0.5">
+                <span className="hidden sm:block text-xs text-slate-400 font-mono-vct line-clamp-1 mt-0.5">
                   {rowCrit.subLabel}
                 </span>
               </div>
@@ -316,7 +316,7 @@ export const ValorantGridMode: React.FC = () => {
                     id={`grid-cell-${rIdx}-${cIdx}`}
                     onClick={() => handleCellClick(rIdx, cIdx)}
                     disabled={isSolved}
-                    className={`relative rounded-[3px] border transition-colors flex flex-col items-center justify-center p-2 text-center select-none ${
+                    className={`relative rounded-[3px] border transition-colors flex flex-col items-center justify-center p-1 sm:p-2 text-center select-none ${
                       isSolved
                         ? 'bg-emerald-500/10 border-emerald-500/45 cursor-default'
                         : 'surface-sub hover:border-[#ff4655] hover:bg-[#1a151c] cursor-pointer group'
@@ -324,19 +324,19 @@ export const ValorantGridMode: React.FC = () => {
                   >
                     {isSolved && player ? (
                       <div className="w-full flex flex-col items-center justify-center">
-                        <div className="absolute top-1.5 right-1.5">
-                          <span className="text-xs font-mono-vct font-bold px-1.5 rounded-[2px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <div className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5">
+                          <span className="text-xs font-mono-vct font-bold px-1 sm:px-1.5 rounded-[2px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                             +{cell.points}
                           </span>
                         </div>
 
-                        <div className="mb-1">
+                        <div className="mb-0.5 sm:mb-1">
                           <PlayerAvatar player={player} size="sm" />
                         </div>
-                        <span className="font-display text-lg leading-none text-white tracking-wide truncate max-w-full">
+                        <span className="font-display text-sm sm:text-lg leading-none text-white tracking-wide truncate max-w-full">
                           {player.ign}
                         </span>
-                        <div className="flex items-center gap-1 text-xs text-slate-300 truncate max-w-full justify-center mt-0.5">
+                        <div className="hidden sm:flex items-center gap-1 text-xs text-slate-300 truncate max-w-full justify-center mt-0.5">
                           <TeamLogo teamName={player.team} size="xs" />
                           <span className="truncate">{player.team}</span>
                         </div>
