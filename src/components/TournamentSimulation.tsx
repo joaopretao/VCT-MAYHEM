@@ -323,7 +323,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                 SEU ELENCO
               </h2>
               <span className="font-mono-vct text-xs text-slate-300 mt-0.5 block">
-                Força Geral: <strong className="text-[#e2b714]">{teamStats.overallRating} OVR</strong>
+                Força Geral: <strong className="text-slate-400">Oculta na Run</strong>
               </span>
             </div>
           </div>

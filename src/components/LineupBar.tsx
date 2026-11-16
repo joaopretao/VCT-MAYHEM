@@ -147,12 +147,6 @@ export const LineupBar: React.FC<LineupBarProps> = ({
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <StatPill
-              label="OVR"
-              value={filledCount > 0 ? '??' : '--'}
-              color="#e2b714"
-              title="Rating geral oculto durante o draft"
-            />
-            <StatPill
               label="QUÍMICA"
               value={stats.synergy ? `+${stats.synergy}` : '0'}
               color="#38bdf8"

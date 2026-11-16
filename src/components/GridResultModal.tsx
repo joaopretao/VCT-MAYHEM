@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, CheckCircle, X, Share2, RotateCcw, ArrowRight } from 'lucide-react';
+import { Trophy, X, Share2, ArrowRight } from 'lucide-react';
 import { GridCellState } from '../types';
 import { GridPuzzle } from '../data/gridPuzzles';
 
@@ -10,7 +10,6 @@ interface GridResultModalProps {
   cells: GridCellState[][];
   totalScore: number;
   solvedCount: number;
-  onRestart: () => void;
   onNextPuzzle: () => void;
   hasNextPuzzle: boolean;
   isInfiniteMode?: boolean;
@@ -24,7 +23,6 @@ export const GridResultModal: React.FC<GridResultModalProps> = ({
   cells,
   totalScore,
   solvedCount,
-  onRestart,
   onNextPuzzle,
   hasNextPuzzle,
   isInfiniteMode = false,
@@ -160,23 +158,13 @@ Jogue também no VALORANT Champions Mayhem!`;
 
         {/* Actions */}
         <div className="p-4 bg-[#111822] border-t border-[#1f2c3f] space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={handleShare}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded bg-[#182332] hover:bg-[#202e42] text-white text-xs font-bold transition-colors border border-[#26374f]"
-            >
-              <Share2 className="w-4 h-4 text-amber-400" />
-              <span>{copied ? 'Copiado!' : 'Compartilhar'}</span>
-            </button>
-
-            <button
-              onClick={onRestart}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded bg-[#182332] hover:bg-[#202e42] text-slate-300 hover:text-white text-xs font-bold transition-colors border border-[#26374f]"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Reiniciar</span>
-            </button>
-          </div>
+          <button
+            onClick={handleShare}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded bg-[#182332] hover:bg-[#202e42] text-white text-xs font-bold transition-colors border border-[#26374f] cursor-pointer"
+          >
+            <Share2 className="w-4 h-4 text-amber-400" />
+            <span>{copied ? 'Copiado!' : 'Compartilhar Resultado'}</span>
+          </button>
 
           {hasNextPuzzle && (
             <button

@@ -1,33 +1,27 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Trophy,
   HelpCircle,
-  RotateCcw,
   ChevronRight,
   ChevronLeft,
   Info,
   Eye,
   Layers,
-  Dices,
+  AlertTriangle,
 } from 'lucide-react';
 import { GridCellState, Player } from '../types';
 import { GRID_PUZZLES, GridPuzzle, playerMatchesCriterion, GRID_PLAYERS_DATABASE } from '../data/gridPuzzles';
-import { generateInfiniteGridPuzzle } from '../data/infiniteGridGenerator';
 import { GridPlayerSearchModal } from './GridPlayerSearchModal';
 import { GridResultModal } from './GridResultModal';
 import { GridVisualBadge } from './GridVisualBadge';
 import { PlayerAvatar } from './PlayerAvatar';
 import { TeamLogo } from './TeamLogo';
 import { playSelectSound } from '../utils/audio';
-import { Card, Badge, SecondaryButton, StatPill } from './ui';
+import { Card, Badge, PrimaryButton, SecondaryButton, StatPill } from './ui';
 
 export const ValorantGridMode: React.FC = () => {
   const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0);
-  const [customRandomPuzzle, setCustomRandomPuzzle] = useState<GridPuzzle | null>(null);
-  const [randomCount, setRandomCount] = useState(1);
 
-  const puzzle: GridPuzzle =
-    customRandomPuzzle || GRID_PUZZLES[currentPuzzleIndex] || GRID_PUZZLES[0];
+  const puzzle: GridPuzzle = GRID_PUZZLES[currentPuzzleIndex] || GRID_PUZZLES[0];
 
   const createEmptyCells = (): GridCellState[][] =>
     Array(3)
@@ -50,6 +44,7 @@ export const ValorantGridMode: React.FC = () => {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [showRulesInfo, setShowRulesInfo] = useState(false);
   const [showGridPicker, setShowGridPicker] = useState(false);
+  const [showSolutionsWarning, setShowSolutionsWarning] = useState(false);
   const [showSolutionsModal, setShowSolutionsModal] = useState(false);
 
   const solvedCount = useMemo(() => {
@@ -107,7 +102,6 @@ export const ValorantGridMode: React.FC = () => {
 
   const handlePrevPuzzle = () => {
     playSelectSound();
-    setCustomRandomPuzzle(null);
     const prev = (currentPuzzleIndex - 1 + GRID_PUZZLES.length) % GRID_PUZZLES.length;
     setCurrentPuzzleIndex(prev);
     setCells(createEmptyCells());
@@ -116,35 +110,17 @@ export const ValorantGridMode: React.FC = () => {
 
   const handleNextPuzzle = () => {
     playSelectSound();
-    setCustomRandomPuzzle(null);
     const next = (currentPuzzleIndex + 1) % GRID_PUZZLES.length;
     setCurrentPuzzleIndex(next);
     setCells(createEmptyCells());
     setIsResultModalOpen(false);
   };
 
-  const handleGenerateRandomGrid = () => {
-    playSelectSound();
-    const nextNum = randomCount + 1;
-    setRandomCount(nextNum);
-    setCustomRandomPuzzle(generateInfiniteGridPuzzle(nextNum));
-    setCells(createEmptyCells());
-    setShowGridPicker(false);
-    setIsResultModalOpen(false);
-  };
-
   const selectPuzzle = (index: number) => {
     playSelectSound();
-    setCustomRandomPuzzle(null);
     setCurrentPuzzleIndex(index);
     setCells(createEmptyCells());
     setShowGridPicker(false);
-    setIsResultModalOpen(false);
-  };
-
-  const handleRestart = () => {
-    playSelectSound();
-    setCells(createEmptyCells());
     setIsResultModalOpen(false);
   };
 
@@ -214,9 +190,7 @@ export const ValorantGridMode: React.FC = () => {
           >
             <Layers className="w-4 h-4 text-[#e2b714]" />
             <span>
-              {customRandomPuzzle
-                ? 'Temáticos'
-                : `Tabuleiro ${puzzle.number}/${GRID_PUZZLES.length}`}
+              {`Tabuleiro ${puzzle.number}/${GRID_PUZZLES.length}`}
             </span>
           </SecondaryButton>
 
@@ -237,16 +211,6 @@ export const ValorantGridMode: React.FC = () => {
           >
             <ChevronRight className="w-4 h-4" />
           </SecondaryButton>
-
-          <SecondaryButton
-            id="infinite-reroll-btn"
-            size="sm"
-            onClick={handleGenerateRandomGrid}
-            title="Sortear uma combinação dinâmica de Times e Nacionalidades"
-          >
-            <Dices className="w-4 h-4 text-[#38bdf8]" />
-            <span>Sortear 🎲</span>
-          </SecondaryButton>
         </div>
       </Card>
 
@@ -262,7 +226,7 @@ export const ValorantGridMode: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             {GRID_PUZZLES.map((g, idx) => {
-              const isSelected = !customRandomPuzzle && idx === currentPuzzleIndex;
+              const isSelected = idx === currentPuzzleIndex;
               return (
                 <button
                   key={g.id}
@@ -407,17 +371,15 @@ export const ValorantGridMode: React.FC = () => {
           <SecondaryButton
             id="grid-show-solutions-btn"
             size="sm"
-            onClick={() => setShowSolutionsModal(true)}
+            onClick={() => {
+              playSelectSound();
+              setShowSolutionsWarning(true);
+            }}
           >
             <Eye className="w-4 h-4 text-[#e2b714]" />
             <span>Ver Gabarito</span>
           </SecondaryButton>
         </div>
-
-        <SecondaryButton id="restart-grid-btn" size="sm" onClick={handleRestart}>
-          <RotateCcw className="w-4 h-4 text-rose-400" />
-          <span>Reiniciar Tabuleiro</span>
-        </SecondaryButton>
       </div>
 
       {/* Rules Explanations Drawer */}
@@ -443,6 +405,57 @@ export const ValorantGridMode: React.FC = () => {
             região que já tenha defendido a organização da coluna.
           </p>
         </Card>
+      )}
+
+      {/* Solutions Warning Confirmation Modal */}
+      {showSolutionsWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <Card padding="lg" className="relative w-full max-w-md border-amber-500/40 text-center space-y-4 animate-popIn">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div>
+              <span className="text-xs font-mono-vct uppercase tracking-widest text-amber-400 font-bold block">
+                AVISO DE SPOILER
+              </span>
+              <h3 className="text-2xl font-display text-white tracking-wide uppercase mt-1">
+                Deseja revelar o gabarito?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+                Ao abrir o gabarito, todas as respostas válidas deste tabuleiro serão exibidas e podem estragar o desafio. Tem certeza que quer continuar?
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 pt-2">
+              <SecondaryButton
+                id="cancel-solutions-warning-btn"
+                size="md"
+                onClick={() => {
+                  playSelectSound();
+                  setShowSolutionsWarning(false);
+                }}
+                className="flex-1"
+              >
+                Voltar ao Jogo
+              </SecondaryButton>
+
+              <PrimaryButton
+                id="confirm-solutions-warning-btn"
+                size="md"
+                onClick={() => {
+                  playSelectSound();
+                  setShowSolutionsWarning(false);
+                  setShowSolutionsModal(true);
+                }}
+                className="flex-1"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Sim, Ver Gabarito</span>
+              </PrimaryButton>
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* Solutions / Answers Modal */}
@@ -529,7 +542,6 @@ export const ValorantGridMode: React.FC = () => {
         cells={cells}
         totalScore={totalScore}
         solvedCount={solvedCount}
-        onRestart={handleRestart}
         onNextPuzzle={handleNextPuzzle}
         hasNextPuzzle={true}
         isInfiniteMode={false}

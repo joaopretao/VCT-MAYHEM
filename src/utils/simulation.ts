@@ -220,9 +220,9 @@ export function simulateSingleMap(
   const tiltedPlayer = players.find(p => p.trait?.id === 'tilted');
   const inconsistentPlayer = players.find(p => p.trait?.id === 'inconsistent');
 
-  // Calibrated base probability (+2% round edge for ~5% softer overall tournament difficulty)
-  let baseRoundProb = 0.420 + (ratingDiff * 0.009) + synergyMod + consistencyMod + compModifier + champModifier;
-  baseRoundProb = Math.min(0.585, Math.max(0.22, baseRoundProb));
+  // Calibrated base probability (+0.5% round edge -> ~2% softer tournament run)
+  let baseRoundProb = 0.425 + (ratingDiff * 0.009) + synergyMod + consistencyMod + compModifier + champModifier;
+  baseRoundProb = Math.min(0.59, Math.max(0.225, baseRoundProb));
 
   const events: MatchEvent[] = [];
 
@@ -357,7 +357,7 @@ export function simulateSingleMap(
 
     // Dynamic round variance (+/- 3%)
     sitProb += (Math.random() - 0.50) * 0.06;
-    sitProb = Math.min(0.60, Math.max(0.26, sitProb));
+    sitProb = Math.min(0.605, Math.max(0.265, sitProb));
 
     let wonSituation = Math.random() < sitProb;
 
