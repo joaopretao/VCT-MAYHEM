@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Trophy, Volume2, VolumeX, HelpCircle, Gamepad2, Grid3X3, Search } from 'lucide-react';
+import { Home, Trophy, Volume2, VolumeX, HelpCircle, Gamepad2, Grid3X3, Search } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Difficulty } from '../types';
 import { isAudioEnabled, toggleAudio, playSelectSound } from '../utils/audio';
 
-type TabId = 'draft' | 'grid' | 'trivia' | 'history';
+export type TabId = 'home' | 'draft' | 'grid' | 'trivia' | 'history';
 
 interface NavbarProps {
   currentTab: TabId;
@@ -17,6 +17,7 @@ interface NavbarProps {
 }
 
 const TABS: { id: TabId; label: string; Icon: LucideIcon; accent: string }[] = [
+  { id: 'home', label: 'Início', Icon: Home, accent: '#ffffff' },
   { id: 'draft', label: 'Lobby & Draft', Icon: Gamepad2, accent: '#ff4655' },
   { id: 'grid', label: 'Grid VCT', Icon: Grid3X3, accent: '#e2b714' },
   { id: 'trivia', label: 'Trivia', Icon: Search, accent: '#38bdf8' },
@@ -55,8 +56,17 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 shrink-0 z-40 border-b border-white/15 bg-gradient-to-b from-white/[0.09] to-[#0b0e14]/55 backdrop-blur-[18px] backdrop-saturate-[160%] shadow-[inset_0_-1px_0_rgba(255,255,255,0.12),0_12px_30px_-12px_rgba(0,0,0,0.55)]">
       <div className="max-w-[1400px] mx-auto px-4 py-2 flex flex-wrap items-center justify-between gap-2">
         {/* Brand Lockup */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ff4655] to-[#b8202d] flex items-center justify-center shadow-[0_0_16px_rgba(255,70,85,0.45)]">
+        <button
+          id="brand-home-btn"
+          type="button"
+          onClick={() => {
+            playSelectSound();
+            onTabChange('home');
+          }}
+          className="flex items-center gap-2.5 shrink-0 cursor-pointer group"
+          title="Voltar para a Tela Inicial"
+        >
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ff4655] to-[#b8202d] flex items-center justify-center shadow-[0_0_16px_rgba(255,70,85,0.45)] group-hover:scale-105 transition-transform">
             <svg viewBox="0 0 100 100" className="w-5 h-5 fill-white">
               <path d="M15 25 L45 75 L30 75 L5 33 Z" />
               <path d="M85 25 L55 75 L70 75 L95 33 Z" />
@@ -70,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               MAYHEM
             </span>
           </h1>
-        </div>
+        </button>
 
         {/* Center Navigation Tabs */}
         <nav className="order-3 lg:order-2 w-full lg:w-auto flex items-center justify-between sm:justify-center gap-1 overflow-x-auto scrollbar-none border-t lg:border-t-0 border-white/10 pt-1.5 lg:pt-0">

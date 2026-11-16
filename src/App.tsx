@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Navbar } from './components/Navbar';
+import { Navbar, TabId } from './components/Navbar';
+import { HomeScreen } from './components/HomeScreen';
 import { AppBackground } from './components/AppBackground';
 import { ValorantDraftBoard } from './components/ValorantDraftBoard';
 import { PlayerModal } from './components/PlayerModal';
@@ -17,8 +18,9 @@ import { rollOpponentBans, isPlayerBanned } from './utils/bans';
 import { playLockSound, playSelectSound } from './utils/audio';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'draft' | 'grid' | 'trivia' | 'history'>('draft');
+  const [currentTab, setCurrentTab] = useState<TabId>('home');
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const [pendingBansNotice, setPendingBansNotice] = useState<boolean>(false);
   const [lineup, setLineup] = useState<Lineup>({
     Duelist: null,
     Controller: null,
@@ -80,6 +82,11 @@ export default function App() {
     setBannedPlayers(bans);
     if (bans.length > 0 && openBansNotification) {
       setShowBansModal(true);
+      setPendingBansNotice(false);
+    } else if (bans.length > 0) {
+      setPendingBansNotice(true);
+    } else {
+      setPendingBansNotice(false);
     }
 
     drawThreeTeams([]);
@@ -87,12 +94,22 @@ export default function App() {
 
   // Initial draw & initial bans on app mount
   useEffect(() => {
-    initializeDraftRun('normal', true);
+    initializeDraftRun('normal', false);
   }, [initializeDraftRun]);
+
+  const handleTabChange = (tab: TabId) => {
+    setCurrentTab(tab);
+    if (tab !== 'draft') {
+      setIsTournamentActive(false);
+    } else if (pendingBansNotice && bannedPlayers.length > 0) {
+      setShowBansModal(true);
+      setPendingBansNotice(false);
+    }
+  };
 
   const handleDifficultyChange = (newDifficulty: Difficulty) => {
     setDifficulty(newDifficulty);
-    initializeDraftRun(newDifficulty, true);
+    initializeDraftRun(newDifficulty, currentTab === 'draft');
   };
 
   const handleReroll = () => {
@@ -253,12 +270,7 @@ export default function App() {
       {/* Top Navbar */}
       <Navbar
         currentTab={currentTab}
-        onTabChange={tab => {
-          setCurrentTab(tab);
-          if (tab !== 'draft') {
-            setIsTournamentActive(false);
-          }
-        }}
+        onTabChange={handleTabChange}
         difficulty={difficulty}
         onDifficultyChange={handleDifficultyChange}
         onOpenHelp={() => setShowRulesModal(true)}
@@ -276,6 +288,17 @@ export default function App() {
             transition={{ duration: 0.18, ease: 'easeOut' }}
             className="flex-1 flex flex-col"
           >
+            {currentTab === 'home' && (
+              <HomeScreen
+                difficulty={difficulty}
+                onDifficultyChange={handleDifficultyChange}
+                onSelectMode={handleTabChange}
+                onOpenHelp={() => setShowRulesModal(true)}
+                trophiesCount={championshipsCount}
+                totalCampaigns={campaignHistory.length}
+              />
+            )}
+
             {currentTab === 'draft' && (
               <>
                 {!isTournamentActive ? (
