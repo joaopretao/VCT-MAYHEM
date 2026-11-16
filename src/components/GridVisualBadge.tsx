@@ -39,7 +39,9 @@ export const GridVisualBadge: React.FC<GridVisualBadgeProps> = ({ criterion, siz
           <div className="w-full h-[14%] bg-white" />
           <div className="w-full h-[14%] bg-white" />
           <div className="absolute top-0 left-0 w-[48%] h-[55%] bg-[#3c3b6e] flex items-center justify-center">
-            <span className="text-[8px] text-white leading-none font-bold">★</span>
+            <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-white">
+              <polygon points="12,2 14.9,8.6 22,9.3 16.6,14 18.2,21 12,17.3 5.8,21 7.4,14 2,9.3 9.1,8.6" />
+            </svg>
           </div>
         </div>
       );
@@ -108,8 +110,10 @@ export const GridVisualBadge: React.FC<GridVisualBadgeProps> = ({ criterion, siz
           className={`${iconDimensions} rounded-md overflow-hidden shadow-md flex flex-col border border-white/20 shrink-0`}
         >
           <div className="w-full h-1/2 flex">
-            <div className="w-1/3 h-full bg-[#0039a6] flex items-center justify-center text-white text-[8px]">
-              ★
+            <div className="w-1/3 h-full bg-[#0039a6] flex items-center justify-center">
+              <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-white">
+                <polygon points="12,2 14.9,8.6 22,9.3 16.6,14 18.2,21 12,17.3 5.8,21 7.4,14 2,9.3 9.1,8.6" />
+              </svg>
             </div>
             <div className="w-2/3 h-full bg-white" />
           </div>
@@ -152,8 +156,10 @@ export const GridVisualBadge: React.FC<GridVisualBadgeProps> = ({ criterion, siz
         <div
           className={`${iconDimensions} rounded-md overflow-hidden shadow-md flex flex-col border border-white/20 shrink-0`}
         >
-          <div className="w-full h-1/2 bg-[#ef3340] flex items-center px-1.5">
-            <span className="text-[8px] text-white leading-none font-bold">★</span>
+          <div className="w-full h-1/2 bg-[#ef3340] flex items-center px-1">
+            <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-white">
+              <polygon points="12,2 14.9,8.6 22,9.3 16.6,14 18.2,21 12,17.3 5.8,21 7.4,14 2,9.3 9.1,8.6" />
+            </svg>
           </div>
           <div className="w-full h-1/2 bg-white" />
         </div>

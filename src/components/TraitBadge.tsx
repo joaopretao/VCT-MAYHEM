@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlayerTrait } from '../types';
-import { Sparkles, Shield, Zap, Flame, AlertTriangle, Snowflake, Shuffle } from 'lucide-react';
+import { Crown, Shield, Zap, Flame, AlertTriangle, Snowflake, Shuffle, Star } from 'lucide-react';
 
 interface TraitBadgeProps {
   trait?: PlayerTrait;
@@ -19,13 +19,10 @@ export const TraitBadge: React.FC<TraitBadgeProps> = ({
 }) => {
   if (!trait) return null;
 
-  const isLegendary = trait.rarity === 'legendary';
-  const isEpic = trait.rarity === 'epic';
-
   const getIcon = (iconClass: string) => {
     switch (trait.id) {
       case 'final_boss':
-        return <Sparkles className={`${iconClass} text-amber-300 animate-spin-slow`} />;
+        return <Crown className={`${iconClass} text-amber-300`} />;
       case 'ice_in_the_veins':
         return <Snowflake className={`${iconClass} text-sky-300`} />;
       case 'first_blood_king':
@@ -41,11 +38,10 @@ export const TraitBadge: React.FC<TraitBadgeProps> = ({
       case 'inconsistent':
         return <Shuffle className={`${iconClass} text-slate-300`} />;
       default:
-        return <Sparkles className={`${iconClass} text-amber-300`} />;
+        return <Star className={`${iconClass} text-amber-300`} />;
     }
   };
 
-  // If iconOnly mode is requested, render just the clean icon badge
   if (iconOnly) {
     const iconSizes = {
       xs: 'w-3 h-3',
@@ -63,19 +59,13 @@ export const TraitBadge: React.FC<TraitBadgeProps> = ({
 
     return (
       <span
-        className={`inline-flex items-center justify-center rounded-lg border transition-all shrink-0 cursor-help ${containerSizes} ${
-          isLegendary
-            ? 'animate-pulse shadow-sm shadow-amber-400/40 ring-1 ring-amber-400/50'
-            : isEpic
-            ? 'shadow-sm shadow-sky-400/30 ring-1 ring-sky-400/30'
-            : ''
-        }`}
+        className={`inline-flex items-center justify-center rounded-[2px] border shrink-0 cursor-help ${containerSizes}`}
         style={{
           color: trait.color,
           backgroundColor: trait.badgeBg,
           borderColor: trait.badgeBorder,
         }}
-        title={`${trait.name} (${trait.rarity.toUpperCase()}): Clique no botão de Info (i) para ver os detalhes completos.`}
+        title={`${trait.name}: ${trait.shortEffect}`}
       >
         {getIcon(iconSizes)}
       </span>
@@ -83,8 +73,8 @@ export const TraitBadge: React.FC<TraitBadgeProps> = ({
   }
 
   const sizeClasses = {
-    xs: 'text-[9px] px-1.5 py-0.5 gap-1 font-bold',
-    sm: 'text-[10px] px-2 py-0.5 gap-1.5 font-bold',
+    xs: 'text-xs px-1.5 py-0.5 gap-1 font-bold',
+    sm: 'text-xs px-2 py-0.5 gap-1.5 font-bold',
     md: 'text-xs px-2.5 py-1 gap-1.5 font-bold',
     lg: 'text-sm px-3 py-1.5 gap-2 font-extrabold',
   }[size];
@@ -99,9 +89,7 @@ export const TraitBadge: React.FC<TraitBadgeProps> = ({
   return (
     <div className="inline-flex items-center gap-1.5 flex-wrap">
       <span
-        className={`inline-flex items-center rounded-full font-mono-vct tracking-wider uppercase border transition-all ${sizeClasses} ${
-          isLegendary ? 'animate-pulse shadow-sm shadow-amber-400/30' : ''
-        }`}
+        className={`inline-flex items-center rounded-[2px] font-mono-vct tracking-wider uppercase border ${sizeClasses}`}
         style={{
           color: trait.color,
           backgroundColor: trait.badgeBg,
@@ -115,7 +103,7 @@ export const TraitBadge: React.FC<TraitBadgeProps> = ({
 
       {showShortEffect && trait.shortEffect && (
         <span
-          className="text-[10px] font-mono-vct font-semibold px-1.5 py-0.5 rounded border bg-white/[0.04]"
+          className="text-xs font-mono-vct font-semibold px-1.5 py-0.5 rounded-[2px] border bg-[#0d1118]"
           style={{ color: trait.color, borderColor: `${trait.color}40` }}
         >
           {trait.shortEffect}
@@ -123,21 +111,24 @@ export const TraitBadge: React.FC<TraitBadgeProps> = ({
       )}
 
       {showDescription && (
-        <div className="w-full text-[11px] font-mono-vct text-slate-300 bg-white/[0.04] p-3 rounded-lg border border-white/10 space-y-1.5 mt-1">
-          <div className="flex items-center justify-between">
+        <div className="w-full text-xs font-mono-vct text-slate-300 bg-[#0d1118] p-3 rounded-sm border border-white/10 space-y-1.5 mt-1">
+          <div className="flex items-center justify-between gap-2">
             <span className="font-bold text-xs" style={{ color: trait.color }}>
               {trait.name}
             </span>
             {trait.shortEffect && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/[0.08]" style={{ color: trait.color }}>
+              <span
+                className="text-xs font-bold px-1.5 py-0.5 rounded-[2px] bg-white/[0.06]"
+                style={{ color: trait.color }}
+              >
                 {trait.shortEffect}
               </span>
             )}
           </div>
-          <p className="font-medium text-slate-200">
+          <p className="font-medium text-slate-200 font-sans text-sm">
             {trait.description}
           </p>
-          <p className="text-[10px] text-slate-400 italic pt-0.5 border-t border-white/[0.06]">
+          <p className="text-xs text-slate-400 italic pt-1 border-t border-white/[0.06] font-sans">
             "{trait.flavorText}"
           </p>
         </div>

@@ -4,12 +4,11 @@ import { Team, Player, Lineup, Role } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
-import { RoleEmblem } from './RoleEmblem';
 import { PlayerAvatar } from './PlayerAvatar';
 import { LineupBar } from './LineupBar';
 import { isPlayerBanned } from '../utils/bans';
 import { playSelectSound, playRerollSound } from '../utils/audio';
-import { RotateCcw, AlertCircle, Info, ShieldAlert, Ban, Check } from 'lucide-react';
+import { RotateCcw, AlertCircle, Info, ShieldAlert, Check } from 'lucide-react';
 import { Card, PrimaryButton, SecondaryButton } from './ui';
 
 interface ValorantDraftBoardProps {
@@ -85,7 +84,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
   const handleTileClick = (player: Player) => {
     const banned = isPlayerBanned(player, bannedPlayers);
     if (banned) {
-      flashWarning(`🚫 ${player.ign} foi banido pelo adversário nesta campanha!`);
+      flashWarning(`${player.ign} foi vetado pelo adversário nessa run.`);
       return;
     }
     if (isPlayerDrafted(player.id)) return;
@@ -103,7 +102,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* BLOCK 1: LOBBY / ESCALAÇÃO */}
+      {/* BLOCK 1: LOBBY */}
       <LineupBar
         lineup={lineup}
         hoveredPlayer={hoveredPlayer}
@@ -115,19 +114,21 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
 
       {/* BLOCK 2: FAIXA DA RODADA */}
       <Card padding="md" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* Left: Round Title + Progress Bar + Small Subtitle below */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-4 flex-wrap">
-            <h2 className="font-display text-3xl sm:text-4xl leading-none text-white tracking-wide">
-              {isLineupFull ? (
-                <span className="text-[#10b981]">ELENCO COMPLETO · 5/5</span>
-              ) : (
-                <>
-                  RODADA <span className="text-[#ff4655]">{currentRound}</span>
-                  <span className="text-slate-400">/5</span>
-                </>
-              )}
-            </h2>
+            <div className="flex items-center gap-2.5">
+              <span className="vct-slash" aria-hidden />
+              <h2 className="font-display text-3xl sm:text-4xl leading-none text-white tracking-wide uppercase">
+                {isLineupFull ? (
+                  <span className="text-[#10b981]">Line Fechada · 5/5</span>
+                ) : (
+                  <>
+                    Pick <span className="text-[#ff4655]">{currentRound}</span>
+                    <span className="text-slate-400">/5</span>
+                  </>
+                )}
+              </h2>
+            </div>
 
             {/* 5-Segment Progress Bar */}
             <div className="flex gap-1.5 w-36 sm:w-44" aria-label={`Progresso do draft: ${filledCount} de 5`}>
@@ -135,14 +136,14 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                 const filled = i < filledCount;
                 const current = i === filledCount && !isLineupFull;
                 return (
-                  <div key={i} className="relative h-2.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+                  <div key={i} className="relative h-2 flex-1 rounded-[1px] bg-white/10 overflow-hidden">
                     <motion.div
                       initial={false}
                       animate={{ width: filled ? '100%' : '0%' }}
-                      transition={{ duration: 0.35, ease: 'easeOut' }}
-                      className="absolute inset-y-0 left-0 rounded-full bg-[#ff4655]"
+                      transition={{ duration: 0.25, ease: 'easeOut' }}
+                      className="absolute inset-y-0 left-0 bg-[#ff4655]"
                     />
-                    {current && <div className="absolute inset-0 rounded-full bg-[#e2b714]/80 animate-pulse" />}
+                    {current && <div className="absolute inset-0 bg-[#e2b714]/75" />}
                   </div>
                 );
               })}
@@ -156,15 +157,15 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                 {activeWarning}
               </span>
             ) : isLineupFull ? (
-              'Todos os 5 titulares estão prontos. Clique em "Iniciar Campeonato" no lobby acima.'
+              'Time pronto. Clique em "Iniciar Campeonato" no lobby acima.'
             ) : (
-              'Escolha 1 jogador de qualquer uma das 3 equipes abaixo para preencher seu lobby.'
+              'Escolhe um jogador de qualquer uma das 3 equipes.'
             )}
           </p>
         </div>
 
-        {/* Right: Bans Button (if any) + Rerolls Counter + REROLL Button */}
-        <div className="flex items-center gap-4 flex-wrap sm:justify-end">
+        {/* Right Controls */}
+        <div className="flex items-center gap-3 flex-wrap sm:justify-end">
           {bannedPlayers.length > 0 && onOpenBansModal && (
             <SecondaryButton
               size="md"
@@ -183,8 +184,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
               Rerolls:{' '}
               <strong className={rerollsLeft > 0 ? 'text-[#e2b714]' : 'text-slate-400'}>
                 {rerollsLeft}
-              </strong>{' '}
-              {rerollsLeft === 1 ? 'restante' : 'restantes'}
+              </strong>
             </span>
 
             {isLineupFull ? (
@@ -196,10 +196,9 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                   onReroll();
                 }}
                 disabled={rerollsLeft <= 0}
-                className="group"
               >
-                <RotateCcw className="w-4 h-4 transition-transform duration-500 group-hover:rotate-[-360deg]" />
-                <span>REROLL</span>
+                <RotateCcw className="w-4 h-4" />
+                <span>Reroll</span>
               </SecondaryButton>
             ) : (
               <PrimaryButton
@@ -210,10 +209,9 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                   onReroll();
                 }}
                 disabled={rerollsLeft <= 0}
-                className="group"
               >
-                <RotateCcw className="w-4 h-4 transition-transform duration-500 group-hover:rotate-[-360deg]" />
-                <span>REROLL</span>
+                <RotateCcw className="w-4 h-4" />
+                <span>Reroll</span>
               </PrimaryButton>
             )}
           </div>
@@ -225,27 +223,21 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
         <motion.div
           key={batchKey}
           className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-          exit={{ opacity: 0, transition: { duration: 0.15 } }}
+          exit={{ opacity: 0, transition: { duration: 0.12 } }}
         >
           {availableTeams.map((team, idx) => {
-            const color = team.primaryColor || '#ff4655';
-
             return (
               <motion.div
                 key={`${team.id}-${idx}`}
                 id={`team-card-${team.id}`}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05, duration: 0.22 }}
+                transition={{ delay: idx * 0.04, duration: 0.18 }}
               >
-                {/* Same uniform border on all 3 team cards; team color only on crest glow */}
-                <Card variant="interactive" padding="md" className="h-full flex flex-col gap-4">
-                  {/* Standardized Team Header */}
-                  <div className="flex items-center gap-3 pb-3 border-b border-white/12">
-                    <div
-                      className="w-12 h-12 rounded-xl bg-black/35 border border-white/15 flex items-center justify-center p-1.5 shrink-0"
-                      style={{ boxShadow: `0 0 22px -4px ${color}66` }}
-                    >
+                <Card variant="interactive" padding="md" className="h-full flex flex-col gap-3.5">
+                  {/* Team Header */}
+                  <div className="flex items-center gap-3 pb-3 border-b border-white/[0.08]">
+                    <div className="w-11 h-11 rounded-[3px] bg-[#0d1118] border border-white/10 flex items-center justify-center p-1.5 shrink-0">
                       <TeamLogo
                         teamName={team.name}
                         shortName={team.shortName}
@@ -261,17 +253,17 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                         <h3 className="font-display text-2xl leading-none text-white uppercase tracking-wide truncate">
                           {team.name}
                         </h3>
-                        <span className="font-mono-vct text-xs font-bold px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-slate-200">
+                        <span className="font-mono-vct text-xs font-bold px-1.5 py-0.5 rounded-[2px] bg-[#0d1118] border border-white/10 text-slate-200">
                           {team.year}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-300 mt-1 truncate">
+                      <p className="text-xs text-slate-400 mt-1 truncate">
                         {team.region} · {team.editionLabel}
                       </p>
                     </div>
                   </div>
 
-                  {/* 5 Compact, Scannable Player Rows */}
+                  {/* 5 Player Rows */}
                   <div className="flex flex-col gap-2">
                     {team.roster.map(player => {
                       const drafted = isPlayerDrafted(player.id);
@@ -282,14 +274,14 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
 
                       let rowCls = '';
                       if (banned) {
-                        rowCls = 'bg-rose-950/25 border-rose-500/30 opacity-50 cursor-not-allowed';
+                        rowCls = 'bg-[#170c10] border-rose-500/30 opacity-65 cursor-not-allowed';
                       } else if (drafted) {
                         rowCls = 'bg-emerald-950/25 border-emerald-500/35 opacity-75 cursor-default';
                       } else if (selectable) {
                         rowCls =
-                          'glass-film cursor-pointer hover:border-[#ff4655] hover:bg-[#ff4655]/[0.12] focus-visible:border-[#ff4655]';
+                          'surface-sub cursor-pointer hover:border-[#ff4655] hover:bg-[#1a151c] focus-visible:border-[#ff4655]';
                       } else {
-                        rowCls = 'bg-white/[0.02] border-white/[0.06] opacity-45 cursor-pointer';
+                        rowCls = 'bg-[#0b0e14] border-white/[0.05] opacity-45 cursor-pointer';
                       }
 
                       return (
@@ -317,10 +309,10 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                               handleTileClick(player);
                             }
                           }}
-                          className={`group/player relative h-13 rounded-xl border px-3 flex items-center justify-between gap-2 transition-colors duration-150 outline-none ${rowCls}`}
+                          className={`group/player relative h-13 rounded-[3px] border px-2.5 flex items-center justify-between gap-2 transition-colors duration-150 outline-none ${rowCls}`}
                         >
-                          {/* Left: Avatar + Name + Role (in role color) + Agent */}
-                          <div className="flex items-center gap-3 min-w-0">
+                          {/* Left: Player Face + Name + Role + Agent */}
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <PlayerAvatar player={player} size="sm" />
 
                             <div className="min-w-0 text-left">
@@ -339,40 +331,35 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
 
                               <div className="flex items-center gap-1.5 text-xs leading-tight mt-0.5">
                                 <span className="font-bold" style={{ color: roleColor }}>
-                                  {player.primaryRole === 'Flex' ? 'Flex' : ROLE_NAMES_PT[player.primaryRole]}
+                                  {ROLE_NAMES_PT[player.primaryRole]}
                                   {player.secondaryRoles.length > 0
-                                    ? ` / ${
-                                        player.secondaryRoles[0] === 'Flex'
-                                          ? 'Flex'
-                                          : ROLE_NAMES_PT[player.secondaryRoles[0]]
-                                      }`
+                                    ? ` / ${ROLE_NAMES_PT[player.secondaryRoles[0]]}`
                                     : ''}
                                 </span>
-                                <span className="text-slate-500">·</span>
+                                <span className="text-slate-600">·</span>
                                 <span className="text-slate-300 truncate">{player.signatureAgent}</span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Right: Hover "ESCOLHER" or Status label + small (i) button */}
-                          <div className="flex items-center gap-2 shrink-0">
+                          {/* Right: Pick label / BANIDO stamp / Status + Info */}
+                          <div className="flex items-center gap-1.5 shrink-0">
                             {selectable ? (
-                              <span className="opacity-0 group-hover/player:opacity-100 group-focus-visible/player:opacity-100 px-2.5 py-1 rounded-lg bg-[#ff4655] text-white font-mono-vct text-xs font-bold uppercase tracking-wider transition-opacity">
-                                ESCOLHER
+                              <span className="opacity-0 group-hover/player:opacity-100 group-focus-visible/player:opacity-100 px-2.5 py-1 rounded-[2px] bg-[#ff4655] text-white font-mono-vct text-xs font-bold uppercase tracking-wider transition-opacity">
+                                Pegar
                               </span>
                             ) : banned ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-mono-vct font-semibold text-rose-300">
-                                <Ban className="w-3.5 h-3.5" />
-                                Banido
+                              <span className="ban-stamp px-2 py-0.5 font-mono-vct text-xs font-bold uppercase">
+                                BANIDO
                               </span>
                             ) : drafted ? (
                               <span className="inline-flex items-center gap-1 text-xs font-mono-vct font-semibold text-emerald-300">
                                 <Check className="w-3.5 h-3.5" />
-                                Escalado
+                                No time
                               </span>
                             ) : (
-                              <span className="text-xs text-slate-400 font-medium">
-                                Função preenchida
+                              <span className="text-xs text-slate-400">
+                                Cheia
                               </span>
                             )}
 
@@ -383,8 +370,8 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                                 playSelectSound();
                                 onInspectPlayer(player);
                               }}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                              title={`Ver detalhes de ${player.ign}`}
+                              className="p-1.5 rounded-[2px] text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                              title={`Perfil de ${player.ign}`}
                               aria-label={`Ver detalhes de ${player.ign}`}
                             >
                               <Info className="w-4 h-4" />

@@ -23,9 +23,12 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
             {eyebrow}
           </span>
         )}
-        <h2 className="font-display text-2xl sm:text-3xl leading-none text-white tracking-wide uppercase">
-          {title}
-        </h2>
+        <div className="flex items-center gap-2.5">
+          <span className="vct-slash" aria-hidden />
+          <h2 className="font-display text-2xl sm:text-3xl leading-none text-white tracking-wide uppercase">
+            {title}
+          </h2>
+        </div>
         {subtitle && <p className="text-xs sm:text-sm text-slate-300 mt-1">{subtitle}</p>}
       </div>
       {rightSlot && <div className="flex items-center gap-2 flex-wrap">{rightSlot}</div>}

@@ -9,7 +9,7 @@ import { TeamLogo } from './TeamLogo';
 import { PlayerAvatar } from './PlayerAvatar';
 import { RoleEmblem } from './RoleEmblem';
 import { Confetti } from './Confetti';
-import { Card, Badge, PrimaryButton, SecondaryButton } from './ui';
+import { Card, PrimaryButton, SecondaryButton } from './ui';
 
 export const TriviaMode: React.FC = () => {
   const [targetPlayer, setTargetPlayer] = useState<Player | null>(null);
@@ -134,13 +134,15 @@ export const TriviaMode: React.FC = () => {
       <Confetti fire={isGameOver && Boolean(guesses[0]?.isCorrect)} />
 
       {/* Header Banner */}
-      <div className="text-center space-y-2">
-        <Badge tone="red">Minigame Tático · Estilo LoLdle</Badge>
-        <h2 className="text-3xl sm:text-4xl font-display font-bold uppercase text-white tracking-wider">
-          Descubra o Atleta Misterioso
+      <div className="text-center space-y-1.5">
+        <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-[#38bdf8] block">
+          Trivia VCT
+        </span>
+        <h2 className="text-3xl sm:text-4xl font-display font-bold uppercase text-white tracking-wide leading-none">
+          Descubra o Pro Player
         </h2>
         <p className="text-sm text-slate-300 max-w-md mx-auto">
-          Adivinhe o jogador do VCT Champions em até 8 tentativas com base nas pistas de equipe, região, ano, função e agente!
+          8 tentativas usando time, região, temporada, função e agente assinatura.
         </p>
       </div>
 
@@ -225,20 +227,20 @@ export const TriviaMode: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Digite o nick ou equipe (ex: aspas, TenZ,ZmjjKK, Fnatic)..."
-              className="w-full bg-[#16202d] border border-[#243347] rounded px-4 py-2.5 pl-10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-[#ff4655] shadow-sm"
+              placeholder="Digite o nick ou time (ex: aspas, TenZ, ZmjjKK, Fnatic)..."
+              className="w-full bg-[#11151d] border border-white/15 rounded-[3px] px-4 py-2.5 pl-10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-[#ff4655]"
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           </div>
 
           {/* Autocomplete Dropdown */}
           {filteredPlayers.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-[#111822] border border-[#222f42] rounded shadow-2xl z-30 overflow-hidden divide-y divide-[#1b2636]">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-[#11151d] border border-white/15 rounded-[3px] shadow-2xl z-30 overflow-hidden divide-y divide-white/[0.06]">
               {filteredPlayers.map(p => (
                 <button
                   key={p.id}
                   onClick={() => handleMakeGuess(p)}
-                  className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-[#182332] transition-colors group"
+                  className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-[#191f2b] transition-colors group"
                 >
                   <div className="flex items-center gap-2.5">
                     <PlayerAvatar player={p} size="xs" />
@@ -247,16 +249,16 @@ export const TriviaMode: React.FC = () => {
                         <span className="font-bold text-white group-hover:text-[#ff4655] text-sm">
                           {p.ign}
                         </span>
-                        <span className="text-[11px] text-slate-400">({p.name})</span>
+                        <span className="text-xs text-slate-400">({p.name})</span>
                       </div>
                     </div>
                   </div>
                   <div className="text-xs text-slate-300 flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0d141d] border border-[#1f2c3f]">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-white/10">
                       <TeamLogo teamName={p.team} size="xs" />
                       <span>{p.team} '{p.year.toString().slice(2)}</span>
                     </span>
-                    <span className="text-slate-400 text-[11px] hidden sm:inline">
+                    <span className="text-slate-400 text-xs hidden sm:inline">
                       {ROLE_NAMES_PT[p.primaryRole] || p.primaryRole}
                     </span>
                   </div>
@@ -269,31 +271,34 @@ export const TriviaMode: React.FC = () => {
 
       {/* Victory / Defeat Announcement */}
       {isGameOver && targetPlayer && (
-        <div className="glass-card p-6 text-center max-w-md mx-auto shadow-2xl animate-popIn">
+        <Card variant="modal" padding="lg" className="text-center max-w-md mx-auto animate-popIn">
           {guesses[0]?.isCorrect ? (
             <div>
-              <div className="w-14 h-14 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto mb-2.5 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
-                <Check className="w-7 h-7" />
+              <div className="w-12 h-12 rounded-[3px] bg-emerald-500/15 border border-emerald-500/35 flex items-center justify-center mx-auto mb-2.5 text-emerald-400">
+                <Check className="w-6 h-6" />
               </div>
-              <h3 className="text-3xl font-display font-bold uppercase tracking-wider text-emerald-400">Você Acertou!</h3>
-              <div className="text-xs text-slate-300 mt-2 mb-4 flex items-center justify-center gap-1.5 flex-wrap">
-                <span>O atleta misterioso era</span>
+              <h3 className="text-3xl font-display font-bold uppercase tracking-wider text-emerald-400">
+                Acertou em {guesses.length}.
+              </h3>
+              <div className="text-sm text-slate-300 mt-2 mb-5 flex items-center justify-center gap-1.5 flex-wrap">
+                <span>Era</span>
                 <strong className="text-white font-bold">{targetPlayer.ign}</strong>
                 <span className="inline-flex items-center gap-1">
                   (<TeamLogo teamName={targetPlayer.team} size="xs" />
                   {targetPlayer.team} {targetPlayer.year}).
                 </span>
-                <span>Descoberto em {guesses.length} {guesses.length === 1 ? 'palpite' : 'palpites'}!</span>
               </div>
             </div>
           ) : (
             <div>
-              <div className="w-14 h-14 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center mx-auto mb-2.5 text-rose-400">
-                <X className="w-7 h-7" />
+              <div className="w-12 h-12 rounded-[3px] bg-rose-500/15 border border-rose-500/35 flex items-center justify-center mx-auto mb-2.5 text-rose-400">
+                <X className="w-6 h-6" />
               </div>
-              <h3 className="text-3xl font-display font-bold uppercase tracking-wider text-rose-400">Fim das Tentativas</h3>
-              <div className="text-xs text-slate-300 mt-2 mb-4 flex items-center justify-center gap-1.5 flex-wrap">
-                <span>O atleta correto era</span>
+              <h3 className="text-3xl font-display font-bold uppercase tracking-wider text-rose-400">
+                Não foi dessa vez.
+              </h3>
+              <div className="text-sm text-slate-300 mt-2 mb-5 flex items-center justify-center gap-1.5 flex-wrap">
+                <span>A resposta era</span>
                 <strong className="text-white font-bold">{targetPlayer.ign}</strong>
                 <span className="inline-flex items-center gap-1">
                   (<TeamLogo teamName={targetPlayer.team} size="xs" />
@@ -303,18 +308,18 @@ export const TriviaMode: React.FC = () => {
             </div>
           )}
 
-          <button
+          <PrimaryButton
             onClick={() => {
               playSelectSound();
               setMode('practice');
               initRound('practice');
             }}
-            className="btn-primary px-6 py-2.5 rounded-lg text-white font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2 cursor-pointer"
+            size="md"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Jogar Novamente</span>
-          </button>
-        </div>
+            <span>Jogar de novo</span>
+          </PrimaryButton>
+        </Card>
       )}
 
       {/* Pre-First-Guess Guide Panel (6 Clue Columns Explanation) */}
@@ -372,12 +377,12 @@ export const TriviaMode: React.FC = () => {
         </Card>
       )}
 
-      {/* LoLdle Guess Feedback Table */}
+      {/* Guess Feedback Table */}
       {guesses.length > 0 && (
         <div className="overflow-x-auto">
-          <div className="min-w-[640px] bg-[#0c121c] border border-[#202b3b] rounded p-3.5">
+          <div className="min-w-[640px] bg-[#11151d] border border-white/10 rounded-[3px] p-3.5">
             {/* Table Header */}
-            <div className="grid grid-cols-6 gap-2 text-center text-[11px] font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-[#1c2738]">
+            <div className="grid grid-cols-6 gap-2 text-center text-xs font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-white/[0.08]">
               <div>Jogador</div>
               <div>Equipe</div>
               <div>Região</div>

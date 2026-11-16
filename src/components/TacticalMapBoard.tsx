@@ -6,7 +6,7 @@ import { TeamLogo } from './TeamLogo';
 import { calculateTeamStats } from '../utils/simulation';
 import { playSelectSound } from '../utils/audio';
 import { TraitBadge } from './TraitBadge';
-import { Trophy, X, RotateCcw, Lock, Sparkles } from 'lucide-react';
+import { Trophy, X, RotateCcw, Lock } from 'lucide-react';
 
 interface TacticalMapBoardProps {
   lineup: Lineup;
@@ -78,7 +78,7 @@ export const TacticalMapBoard: React.FC<TacticalMapBoardProps> = ({
           <span className="font-extrabold text-sm text-white tracking-wide uppercase">
             Mapa Tático · Ascent
           </span>
-          <span className="text-[10px] font-mono-vct px-2 py-0.5 rounded bg-[#101722] text-slate-300 border border-[#1f2c3f]">
+          <span className="text-xs font-mono-vct px-2 py-0.5 rounded-[2px] bg-[#0b0e14] text-slate-300 border border-white/10">
             5 Vagas
           </span>
         </div>
@@ -119,7 +119,7 @@ export const TacticalMapBoard: React.FC<TacticalMapBoardProps> = ({
           <h3 className="text-base sm:text-lg font-black tracking-[0.25em] text-white uppercase drop-shadow-md">
             ASCENT
           </h3>
-          <span className="text-[10px] uppercase tracking-wider text-slate-500 -mt-0.5">
+          <span className="text-xs uppercase tracking-wider text-slate-400 -mt-0.5">
             Posicionamento Competitivo
           </span>
         </div>
@@ -140,21 +140,21 @@ export const TacticalMapBoard: React.FC<TacticalMapBoardProps> = ({
 
           {/* Site A Callout Badge */}
           <div className="absolute top-[17%] left-[30%] -translate-x-1/2 pointer-events-none">
-            <div className="px-2 py-0.5 rounded bg-[#0b140f] border border-emerald-500/40 text-[9px] font-bold text-emerald-400 uppercase tracking-wider shadow">
+            <div className="px-2 py-0.5 rounded-[2px] bg-[#0b140f] border border-emerald-500/40 text-xs font-bold text-emerald-400 uppercase tracking-wider">
               Site A
             </div>
           </div>
 
           {/* Site B Callout Badge */}
           <div className="absolute top-[72%] left-[30%] -translate-x-1/2 pointer-events-none">
-            <div className="px-2 py-0.5 rounded bg-[#141008] border border-amber-500/40 text-[9px] font-bold text-amber-400 uppercase tracking-wider shadow">
+            <div className="px-2 py-0.5 rounded-[2px] bg-[#141008] border border-amber-500/40 text-xs font-bold text-amber-400 uppercase tracking-wider">
               Site B
             </div>
           </div>
 
           {/* Mid Callout Badge */}
           <div className="absolute top-[43%] left-[48%] -translate-x-1/2 pointer-events-none">
-            <div className="px-2 py-0.5 rounded bg-[#0b121a] border border-sky-500/40 text-[8px] font-semibold text-sky-400 uppercase tracking-wider shadow">
+            <div className="px-2 py-0.5 rounded-[2px] bg-[#0b121a] border border-sky-500/40 text-xs font-semibold text-sky-400 uppercase tracking-wider">
               Mid
             </div>
           </div>
@@ -225,7 +225,7 @@ export const TacticalMapBoard: React.FC<TacticalMapBoardProps> = ({
                       </span>
                       {player.trait && (
                         <span
-                          className="text-[8px] font-bold px-1 rounded uppercase tracking-tight my-0.5"
+                          className="text-xs font-bold px-1 rounded-[2px] uppercase tracking-tight my-0.5"
                           style={{
                             color: player.trait.color,
                             backgroundColor: player.trait.badgeBg,
@@ -237,12 +237,12 @@ export const TacticalMapBoard: React.FC<TacticalMapBoardProps> = ({
                       )}
                       <div className="flex items-center gap-1 my-0.5">
                         <TeamLogo teamName={player.team} size="xs" />
-                        <span className="text-[9px] font-medium text-slate-300 truncate max-w-[70px]">
+                        <span className="text-xs font-medium text-slate-300 truncate max-w-[70px]">
                           {player.team}
                         </span>
                       </div>
                       <span
-                        className="text-[9px] font-bold uppercase tracking-wider"
+                        className="text-xs font-bold uppercase tracking-wider"
                         style={{ color: roleColor }}
                       >
                         {ROLE_NAMES_PT[role]}
@@ -262,9 +262,9 @@ export const TacticalMapBoard: React.FC<TacticalMapBoardProps> = ({
                       </div>
                     </div>
 
-                    <div className="mt-1 px-2 py-0.5 rounded bg-[#0c0d12] border border-[#1b1c24] text-center shadow-sm">
+                    <div className="mt-1 px-2 py-0.5 rounded-[2px] bg-[#0c0d12] border border-white/10 text-center">
                       <span
-                        className="text-[9px] font-bold uppercase tracking-wider block"
+                        className="text-xs font-bold uppercase tracking-wider block"
                         style={{ color: roleColor }}
                       >
                         {ROLE_NAMES_PT[role]}
@@ -283,11 +283,10 @@ export const TacticalMapBoard: React.FC<TacticalMapBoardProps> = ({
         const draftedWithTraits = Object.values(lineup).filter((p): p is Player => !!p?.trait);
         if (draftedWithTraits.length === 0) return null;
         return (
-          <div className="px-5 py-2 bg-[#101722] border-t border-[#1c2736] flex items-center justify-between gap-2 flex-wrap text-xs">
+          <div className="px-5 py-2 bg-[#0d1118] border-t border-white/10 flex items-center justify-between gap-2 flex-wrap text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Traits Ativos ({draftedWithTraits.length}):
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                Traits ativos ({draftedWithTraits.length})
               </span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -312,33 +311,32 @@ export const TacticalMapBoard: React.FC<TacticalMapBoardProps> = ({
         <div className="flex items-center gap-5 w-full sm:w-auto justify-around sm:justify-start">
           {/* Rating */}
           <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider flex items-center gap-1">
+            <div className="text-xs text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <Lock className="w-3 h-3 text-amber-400" />
-              <span>Rating Geral</span>
+              <span>Overall</span>
             </div>
             <div className="text-xs font-semibold text-amber-300 mt-0.5">
-              <span>Oculto no Draft</span>
+              <span>Oculto</span>
             </div>
           </div>
 
-          <div className="w-[1px] h-7 bg-[#223042]" />
+          <div className="w-[1px] h-7 bg-white/10" />
 
           {/* Sinergia */}
           <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider">
+            <div className="text-xs text-slate-400 uppercase tracking-wider">
               Sinergia
             </div>
             <div className="text-base font-bold text-emerald-400 flex items-center gap-1 mt-0.5 font-mono-vct">
               <span>{stats.synergy ? `+${stats.synergy}` : '0'}</span>
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
             </div>
           </div>
 
-          <div className="w-[1px] h-7 bg-[#223042]" />
+          <div className="w-[1px] h-7 bg-white/10" />
 
           {/* Status */}
           <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider">
+            <div className="text-xs text-slate-400 uppercase tracking-wider">
               Status
             </div>
             <div className="text-xs font-bold text-slate-300 mt-1">

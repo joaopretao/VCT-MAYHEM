@@ -16,13 +16,13 @@ export const StatPill: React.FC<StatPillProps> = ({
   return (
     <div
       title={title}
-      className="glass-film flex items-center gap-2 px-3 py-1.5 rounded-xl"
+      className="surface-sub flex items-center gap-2 px-3 py-1.5"
     >
       <span
-        className="w-2 h-2 rounded-full shrink-0"
-        style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+        className="w-1.5 h-3.5 rounded-[1px] shrink-0"
+        style={{ backgroundColor: color }}
       />
-      <span className="font-mono-vct text-xs font-semibold uppercase tracking-wider text-slate-200">
+      <span className="font-mono-vct text-xs font-semibold uppercase tracking-wider text-slate-300">
         {label}
       </span>
       <span className="font-mono-vct text-base font-bold leading-none" style={{ color }}>

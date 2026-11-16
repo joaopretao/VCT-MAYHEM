@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Crosshair, Cloud, Eye, Shield, Sparkles } from 'lucide-react';
+import { Crosshair, Cloud, Eye, Shield, Shuffle } from 'lucide-react';
 import { Role } from '../types';
-import { ROLE_DISPLAY_ICONS, ROLE_COLORS } from '../data/roleIcons';
+import { ROLE_DISPLAY_ICONS, ROLE_COLORS, ROLE_NAMES_PT } from '../data/roleIcons';
 
 interface RoleEmblemProps {
   role: Role;
@@ -16,7 +16,7 @@ const FALLBACK_ICONS: Record<Role, React.ReactNode> = {
   Controller: <Cloud className="w-full h-full" />,
   Initiator: <Eye className="w-full h-full" />,
   Sentinel: <Shield className="w-full h-full" />,
-  Flex: <Sparkles className="w-full h-full" />,
+  Flex: <Shuffle className="w-full h-full" />,
 };
 
 const SIZE_MAP = {
@@ -41,24 +41,21 @@ export const RoleEmblem: React.FC<RoleEmblemProps> = ({
 
   return (
     <div
-      className={`relative inline-flex items-center justify-center rounded-xl transition-all duration-200 shrink-0 ${sizeConfig.box} ${className}`}
+      className={`relative inline-flex items-center justify-center rounded-[3px] shrink-0 ${sizeConfig.box} ${className}`}
       style={{
-        backgroundColor: showBackground ? `${roleColor}18` : 'transparent',
+        backgroundColor: showBackground ? `${roleColor}14` : 'transparent',
         border: showBackground ? `1px solid ${roleColor}40` : 'none',
-        boxShadow: glow ? `0 0 16px ${roleColor}40` : undefined,
+        boxShadow: glow ? `0 0 12px ${roleColor}26` : undefined,
       }}
-      title={role}
+      title={ROLE_NAMES_PT[role] || role}
     >
       {roleIconUrl && !imgError ? (
         <img
           src={roleIconUrl}
-          alt={role}
-          className={`${sizeConfig.icon} object-contain filter drop-shadow`}
+          alt={ROLE_NAMES_PT[role] || role}
+          className={`${sizeConfig.icon} object-contain`}
           referrerPolicy="no-referrer"
           onError={() => setImgError(true)}
-          style={{
-            filter: `drop-shadow(0 0 4px ${roleColor}80)`,
-          }}
         />
       ) : (
         <div

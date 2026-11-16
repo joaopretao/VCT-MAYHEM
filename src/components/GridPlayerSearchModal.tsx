@@ -111,27 +111,27 @@ export const GridPlayerSearchModal: React.FC<GridPlayerSearchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-xl glass-card shadow-2xl overflow-hidden flex flex-col max-h-[88vh] animate-popIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="relative w-full max-w-xl glass-modal overflow-hidden flex flex-col max-h-[88vh] animate-popIn">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono-vct uppercase tracking-wider text-[#ff4655] font-bold">
-                GRID · TRANSFERÊNCIAS &amp; BANDEIRAS
+                Grid VCT
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-[#e2b714]/15 text-[#e2b714] text-xs font-mono-vct font-bold border border-[#e2b714]/35">
-                Vale {currentPoints} pts
+              <span className="px-2 py-0.5 rounded-[2px] bg-[#e2b714]/15 text-[#e2b714] text-xs font-mono-vct font-bold border border-[#e2b714]/35">
+                {currentPoints} pts
               </span>
             </div>
             <h3 className="text-2xl font-display text-white tracking-wide uppercase mt-1">
-              Qual jogador cumpre os dois critérios?
+              Quem fecha os dois critérios?
             </h3>
           </div>
           <button
             id="close-grid-search-btn"
             onClick={onClose}
-            className="p-2 text-slate-300 hover:text-white rounded-xl bg-white/[0.05] hover:bg-white/[0.12] border border-white/10 transition-colors cursor-pointer"
+            className="p-2 text-slate-300 hover:text-white rounded-[3px] bg-white/[0.05] hover:bg-white/[0.12] border border-white/10 transition-colors cursor-pointer"
             aria-label="Fechar"
           >
             <X className="w-5 h-5" />
@@ -139,20 +139,20 @@ export const GridPlayerSearchModal: React.FC<GridPlayerSearchModalProps> = ({
         </div>
 
         {/* Clues Banner */}
-        <div className="px-4 py-3 bg-black/30 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="px-4 py-3 bg-[#090c11] border-b border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-slate-300">Linha:</span>
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg glass-film">
+            <span className="text-slate-400">Linha</span>
+            <div className="flex items-center gap-2 px-2.5 py-1 surface-sub">
               <GridVisualBadge criterion={rowCriterion} size="sm" />
               <span className="font-bold text-white">{rowCriterion.label}</span>
             </div>
           </div>
 
-          <div className="text-slate-400 font-bold">✕</div>
+          <div className="text-slate-500 font-bold">✕</div>
 
           <div className="flex items-center gap-2">
-            <span className="text-slate-300">Coluna:</span>
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg glass-film">
+            <span className="text-slate-400">Coluna</span>
+            <div className="flex items-center gap-2 px-2.5 py-1 surface-sub">
               <GridVisualBadge criterion={colCriterion} size="sm" />
               <span className="font-bold text-white">{colCriterion.label}</span>
             </div>

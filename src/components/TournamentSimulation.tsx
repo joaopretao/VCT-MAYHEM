@@ -11,7 +11,6 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
-  Sparkles,
 } from 'lucide-react';
 import {
   Player,
@@ -44,6 +43,7 @@ import { StageQualifiedScreen } from './StageQualifiedScreen';
 import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
 import { RoleEmblem } from './RoleEmblem';
+import { PlayerAvatar } from './PlayerAvatar';
 import { ROLE_ORDER } from './roleOrder';
 import { Confetti } from './Confetti';
 import { Card, Badge, PrimaryButton, SecondaryButton } from './ui';
@@ -262,7 +262,15 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   };
 
   if (showQualifiedScreen) {
-    return <StageQualifiedScreen stage={currentStage} onNextStage={handleNextStageFromScreen} />;
+    return (
+      <StageQualifiedScreen
+        stage={currentStage}
+        lineup={lineup}
+        opponentName={series?.opponent.name}
+        scoreLabel={series ? `${series.playerWins}–${series.opponentWins}` : undefined}
+        onNextStage={handleNextStageFromScreen}
+      />
+    );
   }
 
   if (!series || !currentMap) {
@@ -443,10 +451,10 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                 return (
                   <div
                     key={role}
-                    className="glass-film px-3 py-2 rounded-xl flex items-center justify-between gap-2"
+                    className="surface-sub px-2.5 py-2 flex items-center justify-between gap-2"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <RoleEmblem role={role} size="xs" showBackground={false} />
+                      {p ? <PlayerAvatar player={p} size="xs" /> : <RoleEmblem role={role} size="xs" showBackground={false} />}
                       <span className="text-sm font-bold text-white truncate">
                         {p?.ign || '—'}
                       </span>
@@ -512,7 +520,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                   return (
                     <div
                       key={sIdx}
-                      className={`px-2.5 py-1.5 rounded-xl border font-mono-vct text-xs font-bold flex items-center gap-1 ${pillClass}`}
+                      className={`px-2.5 py-1.5 rounded-[3px] border font-mono-vct text-xs font-bold flex items-center gap-1 ${pillClass}`}
                       title={`Momento decisivo ${sIdx + 1}`}
                     >
                       <span className="text-slate-400">{sIdx + 1}</span>
@@ -537,7 +545,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                     initial={{ opacity: 0, x: -14 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className={`rounded-xl border border-white/10 border-l-[3px] p-3.5 ${
+                    className={`rounded-[3px] border border-white/10 border-l-[3px] p-3.5 ${
                       isWin
                         ? 'border-l-emerald-400 bg-emerald-500/[0.08]'
                         : 'border-l-rose-400 bg-rose-500/[0.08]'
@@ -685,30 +693,56 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         </div>
       </div>
 
-      {/* Grand Final Championship Victory Modal */}
+      {/* Grand Final Championship Victory Screen */}
       {isChampionshipWon && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-          <Card padding="lg" className="border-amber-500/40 w-full max-w-xl text-center text-white my-auto animate-popIn">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto mb-3 text-amber-400">
-              <Trophy className="w-8 h-8" />
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+          <Card variant="modal" padding="lg" cutCorner className="border-[#e2b714]/50 w-full max-w-2xl text-center text-white my-auto animate-popIn relative overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-1 bg-[#e2b714]" aria-hidden />
+
+            <div className="flex items-center justify-center gap-2 text-xs font-mono-vct font-bold text-[#e2b714] uppercase tracking-widest mb-1">
+              <Trophy className="w-4 h-4" />
+              <span>VALORANT Champions · Título Mundial</span>
             </div>
 
-            <span className="text-xs font-mono-vct font-bold text-amber-400 uppercase tracking-widest block">
-              VALORANT CHAMPIONS
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-display font-bold text-white tracking-wide mt-1 mb-2 uppercase">
-              CAMPEÕES MUNDIAIS!
+            <h2 className="text-4xl sm:text-5xl font-display font-bold text-white tracking-wide uppercase leading-none">
+              Campeão do Champions
             </h2>
-            <p className="text-xs sm:text-sm text-slate-300 mb-5 max-w-md mx-auto">
-              Sua escalação personalizada conquistou o troféu mundial com química tática e precisão sob pressão!
+            <p className="text-sm text-slate-300 mt-1 mb-5">
+              {series.playerWins}–{series.opponentWins} na Grande Final sobre {series.opponent.name}.
             </p>
 
+            {/* All 5 Champions side by side */}
+            <div className="grid grid-cols-5 gap-2 mb-5">
+              {ROLE_ORDER.map(role => {
+                const p = lineup[role];
+                if (!p) return null;
+                const isMvp = tournamentMvp?.player.id === p.id;
+                return (
+                  <div
+                    key={role}
+                    className={`surface-sub p-2 flex flex-col items-center gap-1 border-b-2 ${
+                      isMvp ? 'border-[#e2b714]' : 'border-white/15'
+                    }`}
+                    style={{ borderBottomColor: isMvp ? '#e2b714' : ROLE_COLORS[role] }}
+                  >
+                    <PlayerAvatar player={p} size="md" />
+                    <span className="text-xs font-bold text-white truncate max-w-full">
+                      {p.ign}
+                    </span>
+                    <span className="text-xs font-mono-vct text-slate-400">
+                      {isMvp ? 'MVP' : ROLE_NAMES_PT[role]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
             {tournamentMvp && (
-              <div className="rounded-xl bg-[#0b0e14] border border-amber-500/40 p-4 sm:p-5 mb-5 text-left">
-                <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="rounded-[3px] bg-[#090c11] border border-[#e2b714]/40 p-4 mb-5 text-left">
+                <div className="flex items-center justify-between gap-2 mb-2.5">
                   <Badge tone="gold">
                     <Award className="w-3.5 h-3.5" />
-                    MVP DA CAMPANHA
+                    MVP da Campanha
                   </Badge>
                   <span className="text-xs font-mono-vct text-slate-300">
                     {ROLE_NAMES_PT[tournamentMvp.player.primaryRole]}
@@ -726,7 +760,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                     <div className="flex items-center gap-2 text-xs text-slate-300 flex-wrap mt-1">
                       <span>{tournamentMvp.player.name}</span>
                       <span>·</span>
-                      <span className="text-amber-400 font-semibold">
+                      <span className="text-amber-300 font-semibold">
                         {tournamentMvp.player.signatureAgent}
                       </span>
                       <span>·</span>
@@ -739,31 +773,27 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 bg-[#111723] p-2.5 rounded-xl border border-white/10 text-center shrink-0">
+                  <div className="grid grid-cols-3 gap-2 bg-[#11151d] p-2.5 rounded-[3px] border border-white/10 text-center shrink-0">
                     <div className="px-2">
-                      <span className="text-xs uppercase font-semibold text-slate-300 block">ACS</span>
+                      <span className="text-xs uppercase font-semibold text-slate-400 block">ACS</span>
                       <span className="text-base font-bold text-amber-400 font-mono-vct">
                         {tournamentMvp.acs}
                       </span>
                     </div>
                     <div className="px-2 border-x border-white/10">
-                      <span className="text-xs uppercase font-semibold text-slate-300 block">K/D</span>
+                      <span className="text-xs uppercase font-semibold text-slate-400 block">K/D</span>
                       <span className="text-base font-bold text-emerald-400 font-mono-vct">
                         {tournamentMvp.kdRatio}
                       </span>
                     </div>
                     <div className="px-2">
-                      <span className="text-xs uppercase font-semibold text-slate-300 block">Clutches</span>
+                      <span className="text-xs uppercase font-semibold text-slate-400 block">Clutches</span>
                       <span className="text-base font-bold text-sky-400 font-mono-vct">
                         {tournamentMvp.clutchesWon}
                       </span>
                     </div>
                   </div>
                 </div>
-
-                <p className="text-xs sm:text-sm italic text-amber-200/90 mt-3 pt-2.5 border-t border-white/10">
-                  "{tournamentMvp.highlightText}"
-                </p>
               </div>
             )}
 
@@ -777,8 +807,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                   <BarChart3 className="w-4 h-4 text-amber-400" />
                   <span>
                     {showScoreboardModal
-                      ? 'Ocultar estatísticas do elenco'
-                      : 'Ver estatísticas de todos os 5 jogadores'}
+                      ? 'Ocultar placar do time'
+                      : 'Ver placar dos 5 jogadores'}
                   </span>
                 </span>
                 {showScoreboardModal ? (
@@ -789,8 +819,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               </SecondaryButton>
 
               {showScoreboardModal && (
-                <div className="mt-2 bg-[#0b0e14] p-3 rounded-xl border border-white/10 text-left space-y-1.5">
-                  <div className="grid grid-cols-12 text-xs font-mono-vct text-slate-300 uppercase pb-1.5 border-b border-white/10">
+                <div className="mt-2 bg-[#090c11] p-3 rounded-[3px] border border-white/10 text-left space-y-1.5">
+                  <div className="grid grid-cols-12 text-xs font-mono-vct text-slate-400 uppercase pb-1.5 border-b border-white/10">
                     <span className="col-span-5">Jogador</span>
                     <span className="col-span-2 text-center">K / D</span>
                     <span className="col-span-2 text-center">K/D</span>
@@ -801,7 +831,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                     return (
                       <div
                         key={perf.playerId}
-                        className={`grid grid-cols-12 items-center text-xs font-mono-vct py-1.5 px-2.5 rounded-lg ${
+                        className={`grid grid-cols-12 items-center text-xs font-mono-vct py-1.5 px-2.5 rounded-[2px] ${
                           isMvp
                             ? 'bg-amber-500/15 border border-amber-500/40 text-amber-200'
                             : 'bg-white/[0.03] text-slate-200'
@@ -841,7 +871,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               }}
               className="w-full"
             >
-              MONTAR NOVO ELENCO (DRAFT)
+              Jogar novo draft
             </PrimaryButton>
           </Card>
         </div>
@@ -850,22 +880,25 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       {/* Tournament Elimination Screen */}
       {isEliminated && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-          <Card padding="lg" className="border-rose-500/40 w-full max-w-lg text-center text-white my-auto animate-popIn">
-            <div className="w-14 h-14 rounded-2xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center mx-auto mb-3 text-rose-400">
-              <ShieldAlert className="w-7 h-7" />
-            </div>
+          <Card variant="modal" padding="lg" cutCorner className="border-rose-500/40 w-full max-w-lg text-center text-white my-auto animate-popIn relative overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-1 bg-[#ff4655]" aria-hidden />
 
-            <span className="text-xs font-mono-vct font-bold text-rose-400 uppercase tracking-widest block">
-              FIM DA LINHA
-            </span>
-            <h2 className="text-3xl font-display font-bold text-white tracking-wide mt-1 mb-2 uppercase">
-              Equipe Eliminada
+            <h2 className="text-6xl font-display font-bold text-[#ff4655] tracking-wider uppercase leading-none mt-1">
+              GG.
             </h2>
-            <p className="text-xs sm:text-sm text-slate-300 mb-5 flex items-center justify-center gap-2 flex-wrap">
+
+            <p className="text-sm sm:text-base text-slate-200 mt-2 mb-5 flex items-center justify-center gap-2 flex-wrap">
               <span>
-                Sua equipe foi superada ({series.playerWins}–{series.opponentWins}) por
+                {currentStage === 'group'
+                  ? 'Caiu nos Grupos'
+                  : currentStage === 'quarters'
+                  ? 'Caiu nas Quartas'
+                  : currentStage === 'semis'
+                  ? 'Caiu nas Semis'
+                  : 'Vice-campeão na Final'}{' '}
+                ({series.playerWins}–{series.opponentWins}) pra
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0b0e14] border border-white/10 text-white font-bold">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] bg-[#090c11] border border-white/10 text-white font-bold">
                 <TeamLogo
                   teamName={series.opponent.name}
                   shortName={series.opponent.tag}
@@ -875,23 +908,20 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                 />
                 {series.opponent.name}
               </span>
-              <span>na {series.stageTitle}.</span>
             </p>
 
             {tournamentMvp && (
-              <div className="rounded-xl bg-[#0b0e14] border border-white/10 p-4 mb-4 text-left">
-                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                  <Badge tone="gold">
-                    <Award className="w-3.5 h-3.5" />
-                    Destaque: {tournamentMvp.player.ign}
-                  </Badge>
-                  <span className="text-xs font-mono-vct text-amber-400 font-bold">
-                    {tournamentMvp.acs} ACS · {tournamentMvp.kdRatio} K/D
-                  </span>
+              <div className="rounded-[3px] bg-[#090c11] border border-white/10 p-3.5 mb-4 text-left flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2.5">
+                  <PlayerAvatar player={tournamentMvp.player} size="sm" />
+                  <div>
+                    <span className="text-xs font-mono-vct text-slate-400 block">Destaque da line</span>
+                    <strong className="text-sm text-white">{tournamentMvp.player.ign}</strong>
+                  </div>
                 </div>
-                <p className="text-xs sm:text-sm italic text-slate-300">
-                  "{tournamentMvp.highlightText}"
-                </p>
+                <span className="text-xs font-mono-vct text-amber-400 font-bold">
+                  {tournamentMvp.acs} ACS · {tournamentMvp.kdRatio} K/D
+                </span>
               </div>
             )}
 
@@ -905,8 +935,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                   <BarChart3 className="w-4 h-4 text-rose-400" />
                   <span>
                     {showScoreboardModal
-                      ? 'Ocultar estatísticas do elenco'
-                      : 'Ver estatísticas do elenco'}
+                      ? 'Ocultar placar do time'
+                      : 'Ver placar dos 5 jogadores'}
                   </span>
                 </span>
                 {showScoreboardModal ? (
@@ -917,8 +947,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               </SecondaryButton>
 
               {showScoreboardModal && (
-                <div className="mt-2 bg-[#0b0e14] p-3 rounded-xl border border-white/10 text-left space-y-1.5">
-                  <div className="grid grid-cols-12 text-xs font-mono-vct text-slate-300 uppercase pb-1.5 border-b border-white/10">
+                <div className="mt-2 bg-[#090c11] p-3 rounded-[3px] border border-white/10 text-left space-y-1.5">
+                  <div className="grid grid-cols-12 text-xs font-mono-vct text-slate-400 uppercase pb-1.5 border-b border-white/10">
                     <span className="col-span-5">Jogador</span>
                     <span className="col-span-2 text-center">K / D</span>
                     <span className="col-span-2 text-center">K/D</span>
@@ -927,7 +957,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                   {teamPerformances.map(perf => (
                     <div
                       key={perf.playerId}
-                      className="grid grid-cols-12 items-center text-xs font-mono-vct py-1.5 px-2.5 rounded-lg bg-white/[0.03]"
+                      className="grid grid-cols-12 items-center text-xs font-mono-vct py-1.5 px-2.5 rounded-[2px] bg-white/[0.03]"
                     >
                       <span className="col-span-5 font-bold text-white truncate">{perf.ign}</span>
                       <span className="col-span-2 text-center text-slate-300">
@@ -955,7 +985,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               className="w-full"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Montar Novo Elenco</span>
+              <span>Montar nova line</span>
             </PrimaryButton>
           </Card>
         </div>

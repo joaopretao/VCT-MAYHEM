@@ -23,8 +23,8 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   }, [player.id, player.ign]);
 
   const sizeClasses = {
-    xs: 'w-6 h-6 text-[10px]',
-    sm: 'w-7 h-7 sm:w-8 sm:h-8 text-xs',
+    xs: 'w-6 h-6 text-xs',
+    sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-sm',
     lg: 'w-14 h-14 text-base',
   };
@@ -35,13 +35,13 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   return (
     <div className="relative inline-block shrink-0">
       <div
-        className={`${sizeClasses[size]} rounded-xl overflow-hidden bg-gradient-to-br from-[#1b2636] to-[#0c131d] border border-[#2b3d56] flex items-center justify-center font-vct font-bold text-[#e2b714] shadow-md relative group`}
+        className={`${sizeClasses[size]} rounded-[3px] overflow-hidden bg-[#0d1118] border border-white/15 flex items-center justify-center font-vct font-bold text-[#e2b714] relative`}
       >
         {playerPhotoUrl && !photoError ? (
           <img
             src={playerPhotoUrl}
             alt={player.ign}
-            className="w-full h-full object-cover object-top hover:scale-105 transition-transform"
+            className="w-full h-full object-cover object-top"
             loading="lazy"
             onError={() => setPhotoError(true)}
           />
@@ -49,7 +49,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
           <img
             src={agentIconUrl}
             alt={player.signatureAgent}
-            className="w-full h-full object-cover p-0.5 filter drop-shadow hover:scale-105 transition-transform"
+            className="w-full h-full object-cover p-0.5"
             referrerPolicy="no-referrer"
             onError={() => setAgentError(true)}
           />
@@ -63,7 +63,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
       {showAgentBadge && player.signatureAgent && (
         <span
           title={player.signatureAgent}
-          className="absolute -bottom-1 -right-1 px-1 py-0.2 rounded bg-black/90 border border-white/20 text-[8px] font-mono-vct text-slate-300 shadow"
+          className="absolute -bottom-1 -right-1 px-1 rounded-[2px] bg-[#0b0e14] border border-white/20 text-xs leading-tight font-mono-vct text-slate-200"
         >
           {player.signatureAgent.slice(0, 3)}
         </span>

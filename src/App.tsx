@@ -122,7 +122,7 @@ export default function App() {
   // Assign player to a specific role in the lineup (supports moving/swapping already drafted players)
   const handleAssignRole = (player: Player, targetRole: Role) => {
     if (isPlayerBanned(player, bannedPlayers)) {
-      setWarningMessage(`🚫 ${player.ign} foi banido pelo adversário nesta campanha!`);
+      setWarningMessage(`${player.ign} foi vetado pelo adversário nessa run.`);
       setTimeout(() => setWarningMessage(null), 3000);
       return;
     }
@@ -157,7 +157,7 @@ export default function App() {
   // Smart selection when player chip is clicked from team card
   const handleSelectPlayerFromCard = (player: Player) => {
     if (isPlayerBanned(player, bannedPlayers)) {
-      setWarningMessage(`🚫 ${player.ign} foi banido pelo adversário nesta campanha!`);
+      setWarningMessage(`${player.ign} foi vetado pelo adversário nessa run.`);
       setTimeout(() => setWarningMessage(null), 3000);
       return;
     }

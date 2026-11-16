@@ -2,6 +2,7 @@ import React from 'react';
 import { Trophy, X, Share2, ArrowRight } from 'lucide-react';
 import { GridCellState } from '../types';
 import { GridPuzzle } from '../data/gridPuzzles';
+import { Card, PrimaryButton, SecondaryButton } from './ui';
 
 interface GridResultModalProps {
   isOpen: boolean;
@@ -36,11 +37,11 @@ export const GridResultModal: React.FC<GridResultModalProps> = ({
   const isPerfect = solvedCount === 9 && totalScore === maxPossible;
 
   const getRankBadge = () => {
-    if (isPerfect) return { title: 'IMMACULATE GRID · RADIANTE', color: '#f59e0b', desc: 'Perfeito! 9 de 9 acertos de primeira tentativa!' };
-    if (totalScore >= 450) return { title: 'IMORTAL DO VCT', color: '#ff4655', desc: 'Conhecimento absurdo do circuito competitivo!' };
-    if (totalScore >= 300) return { title: 'ASCENDENTE / DIAMANTE', color: '#38bdf8', desc: 'Excelente leitura dos times e atletas!' };
-    if (solvedCount >= 5) return { title: 'OURO / PLATINA', color: '#10b981', desc: 'Bom desempenho nas principais conexões!' };
-    return { title: 'PRATA / FERRO', color: '#94a3b8', desc: 'Continue praticando para dominar o VCT!' };
+    if (isPerfect) return { title: 'Radiante', color: '#f59e0b', desc: '9/9 de primeira. Gabarito limpo.' };
+    if (totalScore >= 450) return { title: 'Imortal', color: '#ff4655', desc: 'Quase perfeito nas janelas e elencos.' };
+    if (totalScore >= 300) return { title: 'Ascendente / Diamante', color: '#38bdf8', desc: 'Boa leitura das conexões.' };
+    if (solvedCount >= 5) return { title: 'Ouro / Platina', color: '#10b981', desc: 'Mandou bem nos principais cruzamentos.' };
+    return { title: 'Ferro / Prata', color: '#94a3b8', desc: 'Bora pro próximo tabuleiro.' };
   };
 
   const rank = getRankBadge();
@@ -48,9 +49,9 @@ export const GridResultModal: React.FC<GridResultModalProps> = ({
   const handleShare = () => {
     const text = `VCT GRID #${puzzle.number} (${puzzle.title})
 Resultado: ${solvedCount}/9 células
-Pontuação: ${totalScore}/${maxPossible} pts 🏆
-${rank.title}
-Jogue também no VALORANT Champions Mayhem!`;
+Pontuação: ${totalScore}/${maxPossible} pts
+Rank: ${rank.title}
+Jogue também no VALORANT Champions Mayhem.`;
 
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
@@ -60,61 +61,61 @@ Jogue também no VALORANT Champions Mayhem!`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-lg glass-card shadow-2xl overflow-hidden flex flex-col animate-popIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+      <Card variant="modal" padding="none" className="relative w-full max-w-lg overflow-hidden flex flex-col animate-popIn">
         {/* Top Header */}
-        <div className="p-6 text-center bg-[#111822] border-b border-[#222f42] relative">
+        <div className="p-6 text-center bg-[#0d1118] border-b border-white/10 relative">
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-white rounded bg-[#16202e] hover:bg-[#1f2c3e] border border-[#243347] transition-colors"
+            className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-white rounded-[3px] bg-[#161b24] hover:bg-[#1e2531] border border-white/10 transition-colors cursor-pointer"
             aria-label="Fechar"
           >
             <X className="w-5 h-5" />
           </button>
 
-          <div className="w-12 h-12 mx-auto rounded bg-amber-500/15 border border-amber-500/30 mb-3 flex items-center justify-center text-amber-400">
-            <Trophy className="w-6 h-6" />
+          <div className="w-11 h-11 mx-auto rounded-[3px] bg-amber-500/15 border border-amber-500/35 mb-3 flex items-center justify-center text-amber-400">
+            <Trophy className="w-5 h-5" />
           </div>
 
           <span
-            className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded border inline-block mb-1.5"
+            className="text-xs font-mono-vct font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-[2px] border inline-block mb-1.5"
             style={{ color: rank.color, borderColor: `${rank.color}40`, backgroundColor: `${rank.color}15` }}
           >
             {rank.title}
           </span>
 
-          <h3 className="text-xl font-bold text-white tracking-tight">
-            Resumo do Desafio
+          <h3 className="text-2xl font-display font-bold uppercase text-white tracking-wide">
+            Grid fechado
           </h3>
-          <p className="text-xs text-slate-400 mt-1">{rank.desc}</p>
+          <p className="text-xs sm:text-sm text-slate-300 mt-1">{rank.desc}</p>
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-4 bg-[#101722] border-b border-[#1f2c3f] text-center">
-          <div className="tracker-subcard p-3">
-            <div className="text-2xl font-bold text-amber-400 font-mono tabular-nums">
-              {totalScore} <span className="text-xs text-slate-500 font-normal">/ {maxPossible}</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-4 bg-[#11151d] border-b border-white/[0.08] text-center">
+          <div className="surface-sub p-3">
+            <div className="text-2xl font-bold text-amber-400 font-mono-vct tabular-nums">
+              {totalScore} <span className="text-xs text-slate-400 font-normal">/ {maxPossible}</span>
             </div>
-            <div className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
-              Pontuação
+            <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
+              Pontos
             </div>
           </div>
 
-          <div className="tracker-subcard p-3">
-            <div className="text-2xl font-bold text-white font-mono tabular-nums">
-              {solvedCount} <span className="text-xs text-slate-500 font-normal">/ 9</span>
+          <div className="surface-sub p-3">
+            <div className="text-2xl font-bold text-white font-mono-vct tabular-nums">
+              {solvedCount} <span className="text-xs text-slate-400 font-normal">/ 9</span>
             </div>
-            <div className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
+            <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
               Células
             </div>
           </div>
 
           {isInfiniteMode && (
-            <div className="tracker-subcard p-3 border-amber-500/30 col-span-2 sm:col-span-1 flex flex-col justify-center">
-              <div className="text-2xl font-bold text-amber-400 font-mono tabular-nums">
-                🔥 {streak}
+            <div className="surface-sub p-3 border-amber-500/30 col-span-2 sm:col-span-1 flex flex-col justify-center">
+              <div className="text-2xl font-bold text-amber-400 font-mono-vct tabular-nums">
+                {streak}
               </div>
-              <div className="text-[11px] text-amber-300 font-semibold uppercase tracking-wider mt-0.5">
+              <div className="text-xs text-amber-300 font-semibold uppercase tracking-wider mt-0.5">
                 Sequência
               </div>
             </div>
@@ -122,9 +123,9 @@ Jogue também no VALORANT Champions Mayhem!`;
         </div>
 
         {/* Mini 3x3 Visual Matrix */}
-        <div className="p-4 bg-[#141d2a] space-y-2">
-          <span className="text-[11px] text-slate-400 font-semibold tracking-wider uppercase block text-center">
-            Gabarito do Seu Grid
+        <div className="p-4 bg-[#0b0e14] space-y-2">
+          <span className="text-xs text-slate-400 font-mono-vct font-semibold tracking-wider uppercase block text-center">
+            Suas escolhas
           </span>
 
           <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
@@ -132,10 +133,10 @@ Jogue também no VALORANT Champions Mayhem!`;
               row.map((cell, c) => (
                 <div
                   key={`${r}-${c}`}
-                  className={`p-2 rounded text-center border transition-colors flex flex-col items-center justify-center min-h-[50px] ${
+                  className={`p-2 rounded-[3px] text-center border transition-colors flex flex-col items-center justify-center min-h-[52px] ${
                     cell.isSolved
-                      ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-                      : 'bg-[#101722] border-[#1e2a3b] text-slate-600'
+                      ? 'bg-emerald-950/35 border-emerald-500/40 text-emerald-300'
+                      : 'bg-[#11151d] border-white/[0.08] text-slate-500'
                   }`}
                 >
                   {cell.isSolved && cell.player ? (
@@ -143,8 +144,8 @@ Jogue também no VALORANT Champions Mayhem!`;
                       <span className="text-xs font-bold text-white truncate max-w-full">
                         {cell.player.ign}
                       </span>
-                      <span className="text-[10px] text-emerald-400 font-mono font-semibold">
-                        +{cell.points} pts
+                      <span className="text-xs text-emerald-400 font-mono-vct font-semibold">
+                        +{cell.points}
                       </span>
                     </>
                   ) : (
@@ -157,26 +158,28 @@ Jogue também no VALORANT Champions Mayhem!`;
         </div>
 
         {/* Actions */}
-        <div className="p-4 bg-[#111822] border-t border-[#1f2c3f] space-y-2">
-          <button
+        <div className="p-4 bg-[#0d1118] border-t border-white/10 space-y-2">
+          <SecondaryButton
             onClick={handleShare}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded bg-[#182332] hover:bg-[#202e42] text-white text-xs font-bold transition-colors border border-[#26374f] cursor-pointer"
+            size="md"
+            className="w-full"
           >
             <Share2 className="w-4 h-4 text-amber-400" />
-            <span>{copied ? 'Copiado!' : 'Compartilhar Resultado'}</span>
-          </button>
+            <span>{copied ? 'Copiado!' : 'Compartilhar resultado'}</span>
+          </SecondaryButton>
 
           {hasNextPuzzle && (
-            <button
+            <PrimaryButton
               onClick={onNextPuzzle}
-              className="btn-primary w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-white text-xs font-bold uppercase tracking-wider cursor-pointer"
+              size="md"
+              className="w-full"
             >
-              <span>{isInfiniteMode ? 'Continuar Sequência Infinita 🔥' : 'Jogar Próximo Grid'}</span>
+              <span>Próximo Grid</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </PrimaryButton>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

@@ -16,7 +16,7 @@ import { GridVisualBadge } from './GridVisualBadge';
 import { PlayerAvatar } from './PlayerAvatar';
 import { TeamLogo } from './TeamLogo';
 import { playSelectSound } from '../utils/audio';
-import { Card, Badge, PrimaryButton, SecondaryButton, StatPill } from './ui';
+import { Card, PrimaryButton, SecondaryButton, StatPill } from './ui';
 
 export const ValorantGridMode: React.FC = () => {
   const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0);
@@ -168,14 +168,20 @@ export const ValorantGridMode: React.FC = () => {
       <Card padding="md" className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <Badge tone="gold">Transferências &amp; Nacionalidades</Badge>
+            <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714]">
+              Grid {puzzle.number}/{GRID_PUZZLES.length}
+            </span>
+            <span className="text-slate-600">·</span>
             <span className="font-mono-vct text-xs font-bold text-slate-300">
-              {solvedCount}/9 células preenchidas
+              {solvedCount}/9 células
             </span>
           </div>
-          <h2 className="font-display text-3xl leading-none text-white tracking-wide uppercase mt-1.5">
-            {puzzle.title}
-          </h2>
+          <div className="flex items-center gap-2.5 mt-1">
+            <span className="vct-slash" aria-hidden />
+            <h2 className="font-display text-3xl leading-none text-white tracking-wide uppercase">
+              {puzzle.title}
+            </h2>
+          </div>
           <p className="text-xs sm:text-sm text-slate-300 mt-1">{puzzle.description}</p>
         </div>
 
@@ -220,9 +226,8 @@ export const ValorantGridMode: React.FC = () => {
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <span className="text-xs font-mono-vct font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-[#e2b714]" />
-              Escolha um Tabuleiro de Transferências &amp; Nacionalidades ({GRID_PUZZLES.length}):
+              Tabuleiros disponíveis ({GRID_PUZZLES.length})
             </span>
-            <Badge tone="green">100% Times &amp; Bandeiras</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             {GRID_PUZZLES.map((g, idx) => {
@@ -231,17 +236,17 @@ export const ValorantGridMode: React.FC = () => {
                 <button
                   key={g.id}
                   onClick={() => selectPuzzle(idx)}
-                  className={`p-3 rounded-xl text-left border transition-all text-xs flex flex-col justify-between cursor-pointer ${
+                  className={`p-3 rounded-[3px] text-left border transition-colors text-xs flex flex-col justify-between cursor-pointer ${
                     isSelected
                       ? 'bg-[#ff4655]/15 border-[#ff4655] text-white'
-                      : 'glass-film text-slate-300 hover:text-white'
+                      : 'surface-sub text-slate-300 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
                     <span className="font-mono-vct font-bold text-xs text-[#e2b714]">
                       Grid #{g.number}
                     </span>
-                    {isSelected && <span className="w-2 h-2 rounded-full bg-[#ff4655]" />}
+                    {isSelected && <span className="w-2 h-2 rounded-[1px] bg-[#ff4655]" />}
                   </div>
                   <span className="font-bold text-sm text-white leading-tight line-clamp-2">
                     {g.title}
@@ -257,7 +262,7 @@ export const ValorantGridMode: React.FC = () => {
       <Card padding="md" className="overflow-x-auto">
         <div className="min-w-[340px] max-w-xl mx-auto grid grid-cols-4 gap-2.5 sm:gap-3 aspect-square">
           {/* Top-Left Corner: GRID Brand */}
-          <div className="glass-film rounded-xl flex flex-col items-center justify-center p-2 text-center select-none">
+          <div className="surface-sub flex flex-col items-center justify-center p-2 text-center select-none">
             <span className="font-display text-2xl leading-none text-white tracking-wider">
               GRID
             </span>
@@ -270,7 +275,7 @@ export const ValorantGridMode: React.FC = () => {
           {puzzle.cols.map(colCrit => (
             <div
               key={colCrit.id}
-              className="glass-film rounded-xl p-2 sm:p-2.5 flex flex-col items-center justify-center text-center select-none"
+              className="surface-sub p-2 sm:p-2.5 flex flex-col items-center justify-center text-center select-none"
             >
               <div className="mb-1.5">
                 <GridVisualBadge criterion={colCrit} size="md" />
@@ -278,7 +283,7 @@ export const ValorantGridMode: React.FC = () => {
               <span className="text-xs sm:text-sm font-bold text-white leading-tight line-clamp-1">
                 {colCrit.label}
               </span>
-              <span className="text-xs text-slate-300 font-mono-vct line-clamp-1 mt-0.5">
+              <span className="text-xs text-slate-400 font-mono-vct line-clamp-1 mt-0.5">
                 {colCrit.subLabel}
               </span>
             </div>
@@ -288,14 +293,14 @@ export const ValorantGridMode: React.FC = () => {
           {puzzle.rows.map((rowCrit, rIdx) => (
             <React.Fragment key={rowCrit.id}>
               {/* Row Header (Left Column) */}
-              <div className="glass-film rounded-xl p-2 sm:p-2.5 flex flex-col items-center justify-center text-center select-none">
+              <div className="surface-sub p-2 sm:p-2.5 flex flex-col items-center justify-center text-center select-none">
                 <div className="mb-1.5">
                   <GridVisualBadge criterion={rowCrit} size="md" />
                 </div>
                 <span className="text-xs sm:text-sm font-bold text-white leading-tight line-clamp-2">
                   {rowCrit.label}
                 </span>
-                <span className="text-xs text-slate-300 font-mono-vct line-clamp-1 mt-0.5">
+                <span className="text-xs text-slate-400 font-mono-vct line-clamp-1 mt-0.5">
                   {rowCrit.subLabel}
                 </span>
               </div>
@@ -311,16 +316,16 @@ export const ValorantGridMode: React.FC = () => {
                     id={`grid-cell-${rIdx}-${cIdx}`}
                     onClick={() => handleCellClick(rIdx, cIdx)}
                     disabled={isSolved}
-                    className={`relative rounded-xl border transition-all flex flex-col items-center justify-center p-2 text-center select-none ${
+                    className={`relative rounded-[3px] border transition-colors flex flex-col items-center justify-center p-2 text-center select-none ${
                       isSolved
-                        ? 'bg-emerald-500/10 border-emerald-500/50 cursor-default'
-                        : 'glass-film hover:border-[#ff4655] hover:bg-[#ff4655]/10 active:scale-95 cursor-pointer group'
+                        ? 'bg-emerald-500/10 border-emerald-500/45 cursor-default'
+                        : 'surface-sub hover:border-[#ff4655] hover:bg-[#1a151c] cursor-pointer group'
                     }`}
                   >
                     {isSolved && player ? (
                       <div className="w-full flex flex-col items-center justify-center">
                         <div className="absolute top-1.5 right-1.5">
-                          <span className="text-xs font-mono-vct font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          <span className="text-xs font-mono-vct font-bold px-1.5 rounded-[2px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                             +{cell.points}
                           </span>
                         </div>
@@ -338,12 +343,12 @@ export const ValorantGridMode: React.FC = () => {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center">
-                        <span className="text-sm font-mono-vct font-bold text-slate-300 group-hover:text-white transition-colors uppercase">
+                        <span className="text-xs sm:text-sm font-mono-vct font-bold text-slate-300 group-hover:text-white transition-colors uppercase">
                           Escolher
                         </span>
                         {cell.wrongGuessesCount > 0 && (
                           <span className="text-xs font-mono-vct text-rose-400 mt-1">
-                            Vale {cell.points} pts
+                            {cell.points} pts
                           </span>
                         )}
                       </div>
@@ -410,20 +415,20 @@ export const ValorantGridMode: React.FC = () => {
       {/* Solutions Warning Confirmation Modal */}
       {showSolutionsWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <Card padding="lg" className="relative w-full max-w-md border-amber-500/40 text-center space-y-4 animate-popIn">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <AlertTriangle className="w-6 h-6" />
+          <Card variant="modal" padding="lg" className="relative w-full max-w-md border-amber-500/40 text-center space-y-4 animate-popIn">
+            <div className="w-11 h-11 mx-auto rounded-[3px] bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400">
+              <AlertTriangle className="w-5 h-5" />
             </div>
 
             <div>
               <span className="text-xs font-mono-vct uppercase tracking-widest text-amber-400 font-bold block">
-                AVISO DE SPOILER
+                Tem certeza?
               </span>
               <h3 className="text-2xl font-display text-white tracking-wide uppercase mt-1">
-                Deseja revelar o gabarito?
+                Abrir o gabarito?
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                Ao abrir o gabarito, todas as respostas válidas deste tabuleiro serão exibidas e podem estragar o desafio. Tem certeza que quer continuar?
+                Isso vai mostrar todas as respostas desse tabuleiro e entregar a solução do desafio.
               </p>
             </div>
 
@@ -437,7 +442,7 @@ export const ValorantGridMode: React.FC = () => {
                 }}
                 className="flex-1"
               >
-                Voltar ao Jogo
+                Voltar pro jogo
               </SecondaryButton>
 
               <PrimaryButton
@@ -451,7 +456,7 @@ export const ValorantGridMode: React.FC = () => {
                 className="flex-1"
               >
                 <Eye className="w-4 h-4" />
-                <span>Sim, Ver Gabarito</span>
+                <span>Ver gabarito</span>
               </PrimaryButton>
             </div>
           </Card>
@@ -460,15 +465,16 @@ export const ValorantGridMode: React.FC = () => {
 
       {/* Solutions / Answers Modal */}
       {showSolutionsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
           <Card
+            variant="modal"
             padding="lg"
             className="relative w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] animate-popIn"
           >
             <div className="pb-4 mb-4 border-b border-white/10 flex items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-mono-vct uppercase tracking-widest text-[#e2b714] font-bold">
-                  GABARITO DE JOGADORES VÁLIDOS
+                  Respostas válidas
                 </span>
                 <h3 className="text-2xl font-display text-white tracking-wide uppercase mt-0.5">
                   {puzzle.title}
@@ -491,7 +497,7 @@ export const ValorantGridMode: React.FC = () => {
                     return (
                       <div
                         key={`${rIdx}-${cIdx}`}
-                        className="glass-film p-3 rounded-xl flex flex-col"
+                        className="surface-sub p-3 flex flex-col"
                       >
                         <div className="text-xs font-bold text-[#e2b714] mb-2 leading-tight">
                           {rowCrit.label} ✕ {colCrit.label}
@@ -501,7 +507,7 @@ export const ValorantGridMode: React.FC = () => {
                             sol.map(ign => (
                               <span
                                 key={ign}
-                                className="px-2 py-0.5 rounded-md bg-black/40 border border-white/10 text-xs font-mono-vct font-semibold text-slate-200"
+                                className="px-2 py-0.5 rounded-[2px] bg-[#080b10] border border-white/10 text-xs font-mono-vct font-semibold text-slate-200"
                               >
                                 {ign}
                               </span>
