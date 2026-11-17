@@ -257,12 +257,14 @@ export interface PlayerRecords {
 
 export interface TriviaGuess {
   player: Player;
+  championsCount: number;
   isCorrect: boolean;
   matches: {
+    country: 'correct' | 'wrong';
     region: 'correct' | 'wrong';
     team: 'correct' | 'wrong';
     role: 'correct' | 'wrong';
-    year: 'correct' | 'higher' | 'lower';
+    champions: 'correct' | 'higher' | 'lower';
     agent: 'correct' | 'wrong';
   };
 }

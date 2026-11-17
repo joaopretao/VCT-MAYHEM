@@ -1,55 +1,104 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Check, X, ArrowUp, ArrowDown, HelpCircle, Trophy, RotateCcw, MapPin } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Search, Check, X, ArrowUp, ArrowDown, HelpCircle, Trophy, RotateCcw, MapPin, Calendar, Flame } from 'lucide-react';
 import { Player, TriviaGuess } from '../types';
 import { PLAYERS_DATABASE, TEAMS_DATABASE } from '../data/teamsAndPlayers';
 import { getTeamLogoData } from '../data/teamLogos';
 import { ROLE_NAMES_PT } from '../data/roleIcons';
+import { getLocalDateKey, getPreviousDateKey, formatDateKeyPtBr } from '../data/infiniteGridGenerator';
 import { playRoundWinSound, playRoundLossSound, playSelectSound } from '../utils/audio';
 import { TeamLogo } from './TeamLogo';
 import { PlayerAvatar } from './PlayerAvatar';
 import { RoleEmblem } from './RoleEmblem';
 import { Confetti } from './Confetti';
-import { Card, PrimaryButton, SecondaryButton } from './ui';
+import { Card, PrimaryButton } from './ui';
+
+interface CanonicalTriviaPlayer {
+  player: Player;
+  championsCount: number;
+}
+
+const MAX_TRIVIA_ATTEMPTS = 8;
+const DAILY_TRIVIA_PREFIX = 'vct_trivia_daily_v1_';
+const DAILY_TRIVIA_STREAK_KEY = 'vct_trivia_daily_streak_v1';
+
+interface StoredDailyTrivia {
+  guessIgns: string[];
+  targetIgn: string;
+}
+
+interface TriviaStreakData {
+  streak: number;
+  lastCompletedDate: string | null;
+}
+
+const buildCanonicalTriviaRoster = (): CanonicalTriviaPlayer[] => {
+  const byIgn = new Map<string, Player[]>();
+  for (const p of PLAYERS_DATABASE) {
+    const key = p.ign.trim().toLowerCase();
+    const list = byIgn.get(key) || [];
+    list.push(p);
+    byIgn.set(key, list);
+  }
+  return Array.from(byIgn.values())
+    .map(entries => {
+      const sorted = [...entries].sort((a, b) => b.year - a.year);
+      const uniqueYears = new Set(entries.map(e => e.year)).size;
+      return {
+        player: sorted[0],
+        championsCount: uniqueYears,
+      };
+    })
+    .sort((a, b) => a.player.ign.localeCompare(b.player.ign));
+};
+
+const CANONICAL_TRIVIA_PLAYERS: CanonicalTriviaPlayer[] = buildCanonicalTriviaRoster();
+
+const CANONICAL_BY_IGN = new Map<string, CanonicalTriviaPlayer>(
+  CANONICAL_TRIVIA_PLAYERS.map(entry => [entry.player.ign.trim().toLowerCase(), entry])
+);
+
+const getDailyTarget = (dateKey: string): CanonicalTriviaPlayer => {
+  let hash = 2166136261;
+  const seedStr = `vct-daily-trivia-${dateKey}`;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash ^= seedStr.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const index = (hash >>> 0) % CANONICAL_TRIVIA_PLAYERS.length;
+  return CANONICAL_TRIVIA_PLAYERS[index];
+};
+
+const loadTriviaStreak = (todayKey: string): TriviaStreakData => {
+  try {
+    const raw = localStorage.getItem(DAILY_TRIVIA_STREAK_KEY);
+    if (!raw) return { streak: 0, lastCompletedDate: null };
+    const parsed = JSON.parse(raw) as TriviaStreakData;
+    const yesterdayKey = getPreviousDateKey(todayKey);
+    if (
+      parsed.lastCompletedDate &&
+      parsed.lastCompletedDate !== todayKey &&
+      parsed.lastCompletedDate !== yesterdayKey
+    ) {
+      return { streak: 0, lastCompletedDate: parsed.lastCompletedDate };
+    }
+    return {
+      streak: parsed.streak || 0,
+      lastCompletedDate: parsed.lastCompletedDate || null,
+    };
+  } catch {
+    return { streak: 0, lastCompletedDate: null };
+  }
+};
 
 export const TriviaMode: React.FC = () => {
-  const [targetPlayer, setTargetPlayer] = useState<Player | null>(null);
+  const [todayKey] = useState<string>(() => getLocalDateKey());
+  const [mode, setMode] = useState<'daily' | 'practice'>('daily');
+  const [targetEntry, setTargetEntry] = useState<CanonicalTriviaPlayer | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [guesses, setGuesses] = useState<TriviaGuess[]>([]);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
-  const [mode, setMode] = useState<'daily' | 'practice'>('daily');
-  const [streak, setStreak] = useState<number>(0);
-
-  // Load target player on mount or mode switch
-  useEffect(() => {
-    initRound(mode);
-    const savedStreak = localStorage.getItem('vct_trivia_streak');
-    if (savedStreak) {
-      setStreak(parseInt(savedStreak, 10) || 0);
-    }
-  }, [mode]);
-
-  const initRound = (gameMode: 'daily' | 'practice') => {
-    let chosen: Player;
-    if (gameMode === 'daily') {
-      // Deterministic daily player based on day string
-      const dateStr = new Date().toISOString().slice(0, 10);
-      let hash = 0;
-      for (let i = 0; i < dateStr.length; i++) {
-        hash = (hash << 5) - hash + dateStr.charCodeAt(i);
-        hash |= 0;
-      }
-      const index = Math.abs(hash) % PLAYERS_DATABASE.length;
-      chosen = PLAYERS_DATABASE[index];
-    } else {
-      // Random player
-      chosen = PLAYERS_DATABASE[Math.floor(Math.random() * PLAYERS_DATABASE.length)];
-    }
-
-    setTargetPlayer(chosen);
-    setGuesses([]);
-    setIsGameOver(false);
-    setSearchTerm('');
-  };
+  const [streak, setStreak] = useState<number>(() => loadTriviaStreak(todayKey).streak);
+  const practiceFireConfettiRef = useRef<boolean>(false);
 
   const getRegionForTeam = (teamName: string): string => {
     const dbTeam = TEAMS_DATABASE.find(t => t.name.toLowerCase() === teamName.toLowerCase());
@@ -61,12 +110,12 @@ export const TriviaMode: React.FC = () => {
     return 'Americas';
   };
 
-  const handleMakeGuess = (selected: Player) => {
-    if (!targetPlayer || isGameOver) return;
-    if (guesses.some(g => g.player.id === selected.id)) return;
-
-    playSelectSound();
-
+  const evaluateGuess = (
+    guessEntry: CanonicalTriviaPlayer,
+    target: CanonicalTriviaPlayer
+  ): TriviaGuess => {
+    const selected = guessEntry.player;
+    const targetPlayer = target.player;
     const isMatch =
       selected.id === targetPlayer.id ||
       selected.ign.toLowerCase() === targetPlayer.ign.toLowerCase();
@@ -74,73 +123,186 @@ export const TriviaMode: React.FC = () => {
     const targetRegion = getRegionForTeam(targetPlayer.team);
     const guessRegion = getRegionForTeam(selected.team);
 
-    let yearComparison: 'correct' | 'higher' | 'lower' = 'correct';
-    if (selected.year < targetPlayer.year) {
-      yearComparison = 'higher';
-    } else if (selected.year > targetPlayer.year) {
-      yearComparison = 'lower';
+    let championsComparison: 'correct' | 'higher' | 'lower' = 'correct';
+    if (guessEntry.championsCount < target.championsCount) {
+      championsComparison = 'higher';
+    } else if (guessEntry.championsCount > target.championsCount) {
+      championsComparison = 'lower';
     }
 
-    const newGuess: TriviaGuess = {
+    const countryMatch =
+      (selected.countryCode || selected.country || '').toLowerCase() ===
+      (targetPlayer.countryCode || targetPlayer.country || '').toLowerCase();
+
+    return {
       player: selected,
+      championsCount: guessEntry.championsCount,
       isCorrect: isMatch,
       matches: {
+        country: countryMatch ? 'correct' : 'wrong',
         region: targetRegion === guessRegion ? 'correct' : 'wrong',
-        team: selected.team === targetPlayer.team ? 'correct' : 'wrong',
+        team: selected.team.toLowerCase() === targetPlayer.team.toLowerCase() ? 'correct' : 'wrong',
         role: selected.primaryRole === targetPlayer.primaryRole ? 'correct' : 'wrong',
-        year: yearComparison,
+        champions: championsComparison,
         agent: selected.signatureAgent === targetPlayer.signatureAgent ? 'correct' : 'wrong',
       },
     };
+  };
 
+  // Load target player on mount or mode switch
+  useEffect(() => {
+    initRound(mode);
+  }, [mode]);
+
+  const initRound = (gameMode: 'daily' | 'practice') => {
+    setSearchTerm('');
+
+    if (gameMode === 'daily') {
+      const dailyTarget = getDailyTarget(todayKey);
+      setTargetEntry(dailyTarget);
+
+      try {
+        const raw = localStorage.getItem(`${DAILY_TRIVIA_PREFIX}${todayKey}`);
+        if (raw) {
+          const parsed = JSON.parse(raw) as StoredDailyTrivia;
+          if (parsed.targetIgn === dailyTarget.player.ign.toLowerCase() && Array.isArray(parsed.guessIgns)) {
+            const restored: TriviaGuess[] = [];
+            for (const ign of parsed.guessIgns) {
+              const found = CANONICAL_BY_IGN.get(ign.toLowerCase());
+              if (found) restored.push(evaluateGuess(found, dailyTarget));
+            }
+            const won = restored.some(g => g.isCorrect);
+            const done = won || restored.length >= MAX_TRIVIA_ATTEMPTS;
+            practiceFireConfettiRef.current = false;
+            setGuesses(restored);
+            setIsGameOver(done);
+            return;
+          }
+        }
+      } catch {
+        // ignore invalid storage
+      }
+
+      practiceFireConfettiRef.current = false;
+      setGuesses([]);
+      setIsGameOver(false);
+      return;
+    }
+
+    const randomEntry =
+      CANONICAL_TRIVIA_PLAYERS[Math.floor(Math.random() * CANONICAL_TRIVIA_PLAYERS.length)];
+    practiceFireConfettiRef.current = false;
+    setTargetEntry(randomEntry);
+    setGuesses([]);
+    setIsGameOver(false);
+  };
+
+  const handleMakeGuess = (guessEntry: CanonicalTriviaPlayer) => {
+    if (!targetEntry || isGameOver) return;
+    const guessedIgn = guessEntry.player.ign.toLowerCase();
+    if (guesses.some(g => g.player.ign.toLowerCase() === guessedIgn)) return;
+
+    playSelectSound();
+
+    const newGuess = evaluateGuess(guessEntry, targetEntry);
     const updatedGuesses = [newGuess, ...guesses];
+    const isMatch = newGuess.isCorrect;
+    const roundEnded = isMatch || updatedGuesses.length >= MAX_TRIVIA_ATTEMPTS;
+
     setGuesses(updatedGuesses);
     setSearchTerm('');
 
+    if (mode === 'daily') {
+      try {
+        const payload: StoredDailyTrivia = {
+          targetIgn: targetEntry.player.ign.toLowerCase(),
+          guessIgns: updatedGuesses.map(g => g.player.ign.toLowerCase()),
+        };
+        localStorage.setItem(`${DAILY_TRIVIA_PREFIX}${todayKey}`, JSON.stringify(payload));
+      } catch {
+        // ignore storage quota errors
+      }
+    }
+
     if (isMatch) {
+      practiceFireConfettiRef.current = true;
       setIsGameOver(true);
       playRoundWinSound();
-      const newStreak = streak + 1;
-      setStreak(newStreak);
-      localStorage.setItem('vct_trivia_streak', String(newStreak));
-    } else if (updatedGuesses.length >= 8) {
+
+      if (mode === 'daily') {
+        const streakData = loadTriviaStreak(todayKey);
+        if (streakData.lastCompletedDate !== todayKey) {
+          const yesterdayKey = getPreviousDateKey(todayKey);
+          const nextStreak = streakData.lastCompletedDate === yesterdayKey ? streakData.streak + 1 : 1;
+          setStreak(nextStreak);
+          try {
+            localStorage.setItem(
+              DAILY_TRIVIA_STREAK_KEY,
+              JSON.stringify({ streak: nextStreak, lastCompletedDate: todayKey })
+            );
+          } catch {
+            // ignore
+          }
+        }
+      }
+    } else if (roundEnded) {
       setIsGameOver(true);
       playRoundLossSound();
-      setStreak(0);
-      localStorage.setItem('vct_trivia_streak', '0');
+
+      if (mode === 'daily') {
+        const streakData = loadTriviaStreak(todayKey);
+        if (streakData.lastCompletedDate !== todayKey) {
+          setStreak(0);
+          try {
+            localStorage.setItem(
+              DAILY_TRIVIA_STREAK_KEY,
+              JSON.stringify({ streak: 0, lastCompletedDate: todayKey })
+            );
+          } catch {
+            // ignore
+          }
+        }
+      }
     } else {
       playRoundLossSound();
     }
   };
 
-  const guessedIds = new Set(guesses.map(g => g.player.id));
+  const targetPlayer = targetEntry?.player ?? null;
 
-  const filteredPlayers = PLAYERS_DATABASE.filter(p => {
-    if (!searchTerm.trim()) return false;
-    if (guessedIds.has(p.id)) return false;
-    const term = searchTerm.toLowerCase();
-    return (
-      p.ign.toLowerCase().includes(term) ||
-      p.name.toLowerCase().includes(term) ||
-      p.team.toLowerCase().includes(term)
-    );
-  }).slice(0, 7);
+  const guessedIgns = useMemo(
+    () => new Set(guesses.map(g => g.player.ign.toLowerCase())),
+    [guesses]
+  );
+
+  // Spoiler-free filter: matches ONLY by IGN or real name across the 220 unique athletes
+  const filteredPlayers = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return [];
+    return CANONICAL_TRIVIA_PLAYERS.filter(entry => {
+      if (guessedIgns.has(entry.player.ign.toLowerCase())) return false;
+      return (
+        entry.player.ign.toLowerCase().includes(term) ||
+        entry.player.name.toLowerCase().includes(term)
+      );
+    }).slice(0, 7);
+  }, [searchTerm, guessedIgns]);
 
   return (
-    <div className="max-w-3xl mx-auto my-1 sm:my-4 space-y-3 sm:space-y-4">
-      {/* Confetti on victory */}
-      <Confetti fire={isGameOver && Boolean(guesses[0]?.isCorrect)} />
+    <div className="max-w-4xl mx-auto my-1 sm:my-4 space-y-3 sm:space-y-4">
+      {/* Confetti on fresh victory */}
+      <Confetti fire={practiceFireConfettiRef.current && isGameOver && Boolean(guesses[0]?.isCorrect)} />
 
       {/* Header Banner */}
       <div className="text-center space-y-1 sm:space-y-1.5">
         <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-[#38bdf8] block">
-          Trivia VCT
+          Trivia VCT · {CANONICAL_TRIVIA_PLAYERS.length} atletas únicos
         </span>
         <h2 className="text-2xl sm:text-4xl font-display font-bold uppercase text-white tracking-wide leading-none">
           Descubra o Pro Player
         </h2>
-        <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto">
-          8 tentativas usando time, região, temporada, função e agente assinatura.
+        <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto">
+          8 tentativas usando país, equipe atual, região, participações no Champions, função e agente.
         </p>
       </div>
 
@@ -148,17 +310,25 @@ export const TriviaMode: React.FC = () => {
       <Card padding="none" className="p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 text-xs sm:text-sm">
         <div className="flex items-center gap-2.5 sm:gap-4">
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+            <Flame className="w-4 h-4 text-amber-400 shrink-0" />
             <span className="text-slate-300">
-              <span className="hidden sm:inline">Sequência: </span>
-              <strong className="text-amber-400 font-bold font-mono-vct">{streak} vitórias</strong>
+              <span className="hidden sm:inline">Sequência Diária: </span>
+              <strong className="text-amber-400 font-bold font-mono-vct">{streak}</strong>
             </span>
           </div>
           <span className="text-slate-500">|</span>
           <span className="text-slate-300 font-mono-vct">
             <span className="hidden sm:inline">Tentativas: </span>
-            <strong className="text-white">{guesses.length}/8</strong>
+            <strong className="text-white">{guesses.length}/{MAX_TRIVIA_ATTEMPTS}</strong>
           </span>
+          {mode === 'daily' && (
+            <>
+              <span className="text-slate-500 hidden sm:inline">|</span>
+              <span className="hidden sm:inline font-mono-vct text-xs text-[#38bdf8]">
+                {formatDateKeyPtBr(todayKey)}
+              </span>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -168,26 +338,32 @@ export const TriviaMode: React.FC = () => {
                 playSelectSound();
                 setMode('daily');
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                 mode === 'daily'
                   ? 'bg-[#ff4655] text-white shadow-sm'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              Desafio Diário
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Desafio Diário</span>
             </button>
             <button
               onClick={() => {
                 playSelectSound();
-                setMode('practice');
+                if (mode === 'practice') {
+                  initRound('practice');
+                } else {
+                  setMode('practice');
+                }
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                 mode === 'practice'
                   ? 'bg-[#ff4655] text-white shadow-sm'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              Treino Livre
+              <Trophy className="w-3.5 h-3.5" />
+              <span>Treino Livre</span>
             </button>
           </div>
         </div>
@@ -202,51 +378,48 @@ export const TriviaMode: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Digite o nick ou time (ex: aspas, TenZ, ZmjjKK, Fnatic)..."
+              placeholder="Digite o nick ou nome real (ex: aspas, TenZ, ZmjjKK, Derke)..."
               className="w-full bg-[#11151d] border border-white/15 rounded-[3px] px-4 py-2.5 pl-10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-[#ff4655]"
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           </div>
 
-          {/* Autocomplete Dropdown */}
+          {/* Spoiler-free Autocomplete Dropdown (Avatar + IGN + Name ONLY) */}
           {filteredPlayers.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-[#11151d] border border-white/15 rounded-[3px] shadow-2xl z-30 overflow-hidden divide-y divide-white/[0.06]">
-              {filteredPlayers.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => handleMakeGuess(p)}
-                  className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-[#191f2b] transition-colors group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <PlayerAvatar player={p} size="xs" />
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-white group-hover:text-[#ff4655] text-sm">
-                          {p.ign}
-                        </span>
-                        <span className="text-xs text-slate-400">({p.name})</span>
+              {filteredPlayers.map(entry => {
+                const p = entry.player;
+                return (
+                  <button
+                    key={p.ign}
+                    onClick={() => handleMakeGuess(entry)}
+                    className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-[#191f2b] transition-colors group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <PlayerAvatar player={p} size="xs" />
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-white group-hover:text-[#ff4655] text-sm">
+                            {p.ign}
+                          </span>
+                          <span className="text-xs text-slate-400">({p.name})</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-slate-300 flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-white/10">
-                      <TeamLogo teamName={p.team} size="xs" />
-                      <span>{p.team} '{p.year.toString().slice(2)}</span>
+                    <span className="text-[11px] font-mono-vct uppercase tracking-wider text-slate-400 group-hover:text-white">
+                      Escolher
                     </span>
-                    <span className="text-slate-400 text-xs hidden sm:inline">
-                      {ROLE_NAMES_PT[p.primaryRole] || p.primaryRole}
-                    </span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
       {/* Victory / Defeat Announcement */}
-      {isGameOver && targetPlayer && (
-        <Card variant="modal" padding="lg" className="text-center max-w-md mx-auto animate-popIn">
+      {isGameOver && targetPlayer && targetEntry && (
+        <Card variant="modal" padding="lg" className="text-center max-w-lg mx-auto animate-popIn">
           {guesses[0]?.isCorrect ? (
             <div>
               <div className="w-12 h-12 rounded-[3px] bg-emerald-500/15 border border-emerald-500/35 flex items-center justify-center mx-auto mb-2.5 text-emerald-400">
@@ -260,7 +433,7 @@ export const TriviaMode: React.FC = () => {
                 <strong className="text-white font-bold">{targetPlayer.ign}</strong>
                 <span className="inline-flex items-center gap-1">
                   (<TeamLogo teamName={targetPlayer.team} size="xs" />
-                  {targetPlayer.team} {targetPlayer.year}).
+                  {targetPlayer.team} · {targetEntry.championsCount}x Champions).
                 </span>
               </div>
             </div>
@@ -290,7 +463,7 @@ export const TriviaMode: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded-[2px] bg-[#161b24] border border-white/10 text-xs font-mono-vct text-slate-200 shrink-0">
                     <MapPin className="w-3.5 h-3.5 text-[#ff4655]" />
-                    <span>{targetPlayer.countryCode || targetPlayer.country}</span>
+                    <span>{targetPlayer.country} ({targetPlayer.countryCode})</span>
                   </div>
                 </div>
 
@@ -314,9 +487,9 @@ export const TriviaMode: React.FC = () => {
                     </span>
                   </div>
                   <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Agente / Ano</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Agente / Champ</span>
                     <span className="text-white font-semibold mt-0.5 block truncate">
-                      {targetPlayer.signatureAgent} ({targetPlayer.year})
+                      {targetPlayer.signatureAgent} ({targetEntry.championsCount}x)
                     </span>
                   </div>
                 </div>
@@ -324,28 +497,38 @@ export const TriviaMode: React.FC = () => {
             </div>
           )}
 
+          {mode === 'daily' && (
+            <div className="flex items-center justify-center gap-1.5 text-xs font-mono-vct text-slate-400 mb-3">
+              <Calendar className="w-3.5 h-3.5 text-[#38bdf8]" />
+              <span>Desafio Diário concluído — volte amanhã para o próximo atleta</span>
+            </div>
+          )}
+
           <PrimaryButton
             onClick={() => {
               playSelectSound();
-              setMode('practice');
-              initRound('practice');
+              if (mode === 'practice') {
+                initRound('practice');
+              } else {
+                setMode('practice');
+              }
             }}
             size="md"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Jogar de novo</span>
+            <span>{mode === 'daily' ? 'Jogar Treino Livre' : 'Jogar de novo'}</span>
           </PrimaryButton>
         </Card>
       )}
 
-      {/* Pre-First-Guess Guide Panel (6 Clue Columns Explanation) */}
+      {/* Pre-First-Guess Guide Panel (7 Clue Columns Explanation) */}
       {guesses.length === 0 && !isGameOver && (
         <Card padding="none" className="p-3 sm:p-4 animate-fadeIn">
           <div className="flex items-center justify-between gap-2 mb-2.5 sm:mb-4 flex-wrap">
             <div className="flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-[#38bdf8]" />
               <h3 className="text-xs sm:text-sm font-mono-vct font-bold uppercase tracking-wider text-white">
-                Guia das 6 Colunas de Pistas
+                Guia das 7 Colunas de Pistas
               </h3>
             </div>
             <span className="text-xs font-mono-vct text-slate-300">
@@ -353,18 +536,19 @@ export const TriviaMode: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5 sm:gap-2 text-center mb-3 sm:mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 sm:gap-2 text-center mb-3 sm:mb-4">
             {[
-              { col: 'Jogador', desc: 'Foto e Nick do pro player' },
-              { col: 'Equipe', desc: 'Organização no Champions' },
+              { col: 'Jogador', desc: 'Foto e Nick do atleta' },
+              { col: 'País', desc: 'Nacionalidade do pro' },
+              { col: 'Equipe', desc: 'Time mais recente' },
               { col: 'Região', desc: 'Americas, EMEA, Pacific ou CN' },
-              { col: 'Temporada', desc: 'Ano da edição (2022 a 2026)' },
+              { col: 'Champions', desc: 'Edições jogadas (1x a 5x)' },
               { col: 'Função', desc: 'Duelista, Controlador, etc.' },
-              { col: 'Agente', desc: 'Agente assinatura do atleta' },
+              { col: 'Agente', desc: 'Agente assinatura' },
             ].map(item => (
               <div
                 key={item.col}
-                className="tracker-subcard p-2 sm:p-3 flex flex-col items-center justify-center"
+                className="tracker-subcard p-2 sm:p-2.5 flex flex-col items-center justify-center"
               >
                 <span className="text-xs font-mono-vct font-bold uppercase text-[#e2b714] mb-0.5 sm:mb-1">
                   {item.col}
@@ -400,13 +584,14 @@ export const TriviaMode: React.FC = () => {
             Deslize a tabela lateralmente →
           </span>
           <div className="overflow-x-auto">
-          <div className="min-w-[640px] bg-[#11151d] border border-white/10 rounded-[3px] p-3.5">
+          <div className="min-w-[720px] bg-[#11151d] border border-white/10 rounded-[3px] p-3.5">
             {/* Table Header */}
-            <div className="grid grid-cols-6 gap-2 text-center text-xs font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-white/[0.08]">
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-white/[0.08]">
               <div>Jogador</div>
+              <div>País</div>
               <div>Equipe</div>
               <div>Região</div>
-              <div>Temporada</div>
+              <div>Champions</div>
               <div>Função</div>
               <div>Agente</div>
             </div>
@@ -419,7 +604,7 @@ export const TriviaMode: React.FC = () => {
                 return (
                   <div
                     key={idx}
-                    className="grid grid-cols-6 gap-2 text-center text-xs font-mono-vct font-semibold animate-fadeIn"
+                    className="grid grid-cols-7 gap-2 text-center text-xs font-mono-vct font-semibold animate-fadeIn"
                   >
                     {/* Player Name */}
                     <div
@@ -431,6 +616,18 @@ export const TriviaMode: React.FC = () => {
                     >
                       <PlayerAvatar player={guess.player} size="xs" />
                       <span className="truncate">{guess.player.ign}</span>
+                    </div>
+
+                    {/* Country */}
+                    <div
+                      title={guess.player.country}
+                      className={`p-2.5 rounded flex items-center justify-center border ${
+                        guess.matches.country === 'correct'
+                          ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
+                          : 'bg-rose-950/30 border-rose-800 text-rose-300'
+                      }`}
+                    >
+                      <span className="truncate">{guess.player.countryCode || guess.player.country}</span>
                     </div>
 
                     {/* Team */}
@@ -456,17 +653,17 @@ export const TriviaMode: React.FC = () => {
                       <span>{guessReg}</span>
                     </div>
 
-                    {/* Year */}
+                    {/* Champions Participations */}
                     <div
                       className={`p-2.5 rounded flex items-center justify-center gap-1 border ${
-                        guess.matches.year === 'correct'
+                        guess.matches.champions === 'correct'
                           ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
                           : 'bg-amber-950/40 border-amber-600 text-amber-300'
                       }`}
                     >
-                      <span>{guess.player.year}</span>
-                      {guess.matches.year === 'higher' && <ArrowUp className="w-3.5 h-3.5 text-amber-400" />}
-                      {guess.matches.year === 'lower' && <ArrowDown className="w-3.5 h-3.5 text-amber-400" />}
+                      <span>{guess.championsCount}x</span>
+                      {guess.matches.champions === 'higher' && <ArrowUp className="w-3.5 h-3.5 text-amber-400" />}
+                      {guess.matches.champions === 'lower' && <ArrowDown className="w-3.5 h-3.5 text-amber-400" />}
                     </div>
 
                     {/* Role */}
