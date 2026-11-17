@@ -172,7 +172,7 @@ export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
                   {/* Action cue */}
                   <div className="hidden md:flex items-center justify-between pt-2.5 border-t border-white/[0.08] font-mono-vct text-xs font-bold uppercase tracking-wider">
                     <span style={{ color: meta.textColor }}>Escolher bônus</span>
-                    <span className="text-slate-400 group-hover:text-white transition-colors">
+                    <span className="text-slate-300 group-hover:text-white transition-colors">
                       [{hotkey}]
                     </span>
                   </div>

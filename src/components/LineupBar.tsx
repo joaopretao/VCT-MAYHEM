@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Trophy, RotateCcw, Check } from 'lucide-react';
+import { X, Trophy, RotateCcw, Check, ShieldAlert, AlertCircle } from 'lucide-react';
 import { Lineup, Role, Player, MayhemBonus } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { AGENT_FULL_PORTRAITS, AGENT_ICONS, ROLE_SILHOUETTES } from '../data/agentIcons';
 import { getPlayerPhotoUrl } from '../data/playerPhotos';
+import { getTeamLogoData } from '../data/teamLogos';
 import { calculateTeamStats } from '../utils/simulation';
-import { playSelectSound, playRosterCompleteSound } from '../utils/audio';
+import { playSelectSound, playRosterCompleteSound, playRerollSound } from '../utils/audio';
 import { RoleEmblem } from './RoleEmblem';
 import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
+import { CountryFlag } from './CountryFlag';
 import { MayhemBonusChip } from './MayhemBonusChip';
 import { Confetti } from './Confetti';
 import { ROLE_ORDER, getNextOpenRole } from './roleOrder';
@@ -19,6 +21,11 @@ interface LineupBarProps {
   lineup: Lineup;
   hoveredPlayer?: Player | null;
   selectedBonuses?: MayhemBonus[];
+  rerollsLeft?: number;
+  bannedPlayers?: Player[];
+  onOpenBansModal?: () => void;
+  onReroll?: () => void;
+  warningMessage?: string | null;
   onRemovePlayer: (role: Role) => void;
   onInspectPlayer: (player: Player) => void;
   onClearLineup: () => void;
@@ -98,6 +105,11 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   lineup,
   hoveredPlayer = null,
   selectedBonuses = [],
+  rerollsLeft,
+  bannedPlayers = [],
+  onOpenBansModal,
+  onReroll,
+  warningMessage = null,
   onRemovePlayer,
   onInspectPlayer,
   onClearLineup,
@@ -105,7 +117,9 @@ export const LineupBar: React.FC<LineupBarProps> = ({
 }) => {
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const filledCount = ROLE_ORDER.filter(r => lineup[r]).length;
+  const currentRound = Math.min(5, filledCount + 1);
   const isComplete = filledCount === 5;
+  const isLobbyCompact = filledCount === 0 && !hoveredPlayer;
   const nextOpenRole = getNextOpenRole(lineup);
   const stats = calculateTeamStats(lineup, selectedBonuses);
   const prevCompleteRef = React.useRef(false);
@@ -124,33 +138,53 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   };
 
   return (
-    <Card padding="none" className="p-2.5 md:p-4 relative overflow-hidden">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-4 mb-2.5 md:mb-4">
-        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+    <Card padding="none" className="p-2.5 md:p-3.5 relative overflow-hidden">
+      {/* Unified Header: SEU TIME + PICK X/5 + Progress + Stats + Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3 mb-2">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap min-w-0">
           <span className="vct-slash h-5 md:h-[22px]" aria-hidden />
           <h2 className="font-display text-2xl md:text-3xl leading-none text-white tracking-wide uppercase">
             Seu Time
           </h2>
           <span
-            className={`font-mono-vct text-xs font-bold px-2 py-0.5 rounded-[2px] border ${
+            className={`font-mono-vct text-xs sm:text-sm font-bold px-2 py-0.5 rounded-[2px] border uppercase tracking-wide ${
               isComplete
                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                : 'bg-white/[0.05] border-white/10 text-slate-300'
+                : 'bg-[#0b0e14] border-white/15 text-white'
             }`}
           >
-            {filledCount}/5 <span className="hidden sm:inline">{isComplete ? 'fechado' : 'escalados'}</span>
+            {isComplete ? (
+              'Pick 5/5 · Fechado'
+            ) : (
+              <>
+                Pick <span className="text-[#ff4655]">{currentRound}</span>
+                <span className="text-slate-300">/5</span>
+              </>
+            )}
           </span>
 
-          {stats.synergyBonuses.length > 0 && (
-            <span className="hidden xl:inline-block font-mono-vct text-xs text-emerald-300 pl-2 border-l border-white/10">
-              {stats.synergyBonuses[0]}
-            </span>
-          )}
-        </div>
+          {/* Compact 5-Segment Progress Bar */}
+          <div
+            className="hidden sm:flex gap-1 w-20 md:w-28"
+            aria-label={`Progresso do draft: ${filledCount} de 5`}
+          >
+            {Array.from({ length: 5 }).map((_, i) => {
+              const filled = i < filledCount;
+              const current = i === filledCount && !isComplete;
+              return (
+                <div key={i} className="relative h-2 flex-1 rounded-[1px] bg-white/10 overflow-hidden">
+                  <motion.div
+                    initial={false}
+                    animate={{ width: filled ? '100%' : '0%' }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    className="absolute inset-y-0 left-0 bg-[#ff4655]"
+                  />
+                  {current && <div className="absolute inset-0 bg-[#e2b714]/80" />}
+                </div>
+              );
+            })}
+          </div>
 
-        {/* StatPills + Actions */}
-        <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 md:gap-2">
             <StatPill
               label="Química"
@@ -158,7 +192,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
               color="#38bdf8"
               title="Sinergia entre jogadores do mesmo time ou composição completa"
             />
-            <div className="hidden sm:block">
+            <div className="hidden md:block">
               <StatPill
                 label="Clutch"
                 value={stats.clutch || '--'}
@@ -168,6 +202,67 @@ export const LineupBar: React.FC<LineupBarProps> = ({
             </div>
           </div>
 
+          {stats.synergyBonuses.length > 0 && (
+            <span className="hidden 2xl:inline-block font-mono-vct text-xs text-emerald-300 pl-2 border-l border-white/10">
+              {stats.synergyBonuses[0]}
+            </span>
+          )}
+        </div>
+
+        {/* Right Controls: Vetos + Rerolls + Limpar + Iniciar */}
+        <div className="flex items-center gap-1.5 md:gap-2 flex-wrap justify-end">
+          {bannedPlayers.length > 0 && onOpenBansModal && (
+            <SecondaryButton
+              size="sm"
+              onClick={() => {
+                playSelectSound();
+                onOpenBansModal();
+              }}
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+              <span>Vetos ({bannedPlayers.length})</span>
+            </SecondaryButton>
+          )}
+
+          {typeof rerollsLeft === 'number' && onReroll && (
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <span className="font-mono-vct text-xs sm:text-sm text-slate-200">
+                Rerolls:{' '}
+                <strong className={rerollsLeft > 0 ? 'text-[#e2b714]' : 'text-slate-400'}>
+                  {rerollsLeft}
+                </strong>
+              </span>
+
+              {isComplete ? (
+                <SecondaryButton
+                  id="reroll-teams-btn"
+                  size="sm"
+                  onClick={() => {
+                    playRerollSound();
+                    onReroll();
+                  }}
+                  disabled={rerollsLeft <= 0}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reroll</span>
+                </SecondaryButton>
+              ) : (
+                <PrimaryButton
+                  id="reroll-teams-btn"
+                  size="sm"
+                  onClick={() => {
+                    playRerollSound();
+                    onReroll();
+                  }}
+                  disabled={rerollsLeft <= 0}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reroll</span>
+                </PrimaryButton>
+              )}
+            </div>
+          )}
+
           {filledCount > 0 && (
             <SecondaryButton
               id="clear-roster-btn"
@@ -176,7 +271,6 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                 playSelectSound();
                 onClearLineup();
               }}
-              className="md:px-4 md:py-2 md:text-sm"
               title="Resetar escolhas e começar outro draft"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -201,25 +295,42 @@ export const LineupBar: React.FC<LineupBarProps> = ({
         </div>
       </div>
 
-      {/* Active Mayhem Bonuses Strip */}
-      {selectedBonuses.length > 0 && (
-        <div
-          id="lineup-bonuses-strip"
-          className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-2.5 md:mb-3 pb-2 md:pb-2.5 border-b border-white/[0.07]"
-        >
-          <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714]">
-            Bônus:
-          </span>
-          {selectedBonuses.map(bonus => (
-            <MayhemBonusChip
-              key={bonus.id}
-              id={bonus.id}
-              name={bonus.name}
-              rarity={bonus.rarity}
-              subtitle={bonus.shortEffect}
-              compact
-            />
-          ))}
+      {/* Warning / Sub-instruction / Bonuses Strip */}
+      {(warningMessage || selectedBonuses.length > 0 || !isComplete) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2 pb-2 border-b border-white/[0.07]">
+          <p className="text-xs text-slate-300">
+            {warningMessage ? (
+              <span className="inline-flex items-center gap-1.5 text-amber-300 font-semibold">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                {warningMessage}
+              </span>
+            ) : isComplete ? (
+              'Time pronto. Clique em "Iniciar Campeonato" acima.'
+            ) : (
+              'Escolha 1 jogador de qualquer uma das 3 equipes.'
+            )}
+          </p>
+
+          {selectedBonuses.length > 0 && (
+            <div
+              id="lineup-bonuses-strip"
+              className="flex items-center gap-1.5 sm:gap-2 flex-wrap"
+            >
+              <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714]">
+                Bônus:
+              </span>
+              {selectedBonuses.map(bonus => (
+                <MayhemBonusChip
+                  key={bonus.id}
+                  id={bonus.id}
+                  name={bonus.name}
+                  rarity={bonus.rarity}
+                  subtitle={bonus.shortEffect}
+                  compact
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -241,6 +352,9 @@ export const LineupBar: React.FC<LineupBarProps> = ({
             : null;
 
           const activePlayer = lockedPlayer || displayedPreviewPlayer;
+          const activeTeamColor = activePlayer
+            ? getTeamLogoData(activePlayer.team)?.primaryColor || roleColor
+            : roleColor;
           const realPhotoUrl = activePlayer ? getPlayerPhotoUrl(activePlayer.ign) : null;
           const fallbackAgentUrl = activePlayer ? getAgentPortraitUrl(activePlayer.signatureAgent) : null;
           const portraitKey = activePlayer ? `${activePlayer.id}-${activePlayer.ign}` : role;
@@ -259,7 +373,9 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                   onInspectPlayer(lockedPlayer);
                 }
               }}
-              className={`group/slot relative h-[96px] md:h-[174px] rounded-[3px] border transition-colors duration-150 overflow-hidden flex flex-col justify-between select-none ${
+              className={`group/slot relative ${
+                isLobbyCompact ? 'h-[72px] md:h-[104px]' : 'h-[98px] md:h-[168px]'
+              } rounded-[3px] border transition-[height,colors,border-color] duration-200 overflow-hidden flex flex-col justify-between select-none ${
                 lockedPlayer
                   ? 'bg-[#0d1118] border-white/15 cursor-pointer hover:border-white/35'
                   : isPreviewTarget
@@ -288,7 +404,11 @@ export const LineupBar: React.FC<LineupBarProps> = ({
               />
 
               {/* Top Slot Bar */}
-              <div className="relative z-20 h-6 md:h-7 px-1 md:px-2.5 flex items-center justify-between gap-1 md:gap-2 shrink-0">
+              <div
+                className={`relative z-20 ${
+                  isLobbyCompact ? 'h-5 md:h-6' : 'h-6 md:h-7'
+                } px-1 md:px-2.5 flex items-center justify-between gap-1 md:gap-2 shrink-0`}
+              >
                 <div className="flex items-center gap-1.5 min-w-0">
                   <RoleEmblem role={role} size="xs" showBackground={false} />
                   <span
@@ -308,7 +428,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                       playSelectSound();
                       onRemovePlayer(role);
                     }}
-                    className="p-0.5 md:p-1 rounded-[2px] text-slate-400 hover:text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                    className="p-0.5 md:p-1 rounded-[2px] text-slate-300 hover:text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer"
                     title={`Tirar ${lockedPlayer.ign}`}
                     aria-label={`Remover ${lockedPlayer.ign}`}
                   >
@@ -334,8 +454,8 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                 <div
                   className="absolute inset-0 pointer-events-none"
                   style={{
-                    background: lockedPlayer
-                      ? `radial-gradient(circle at 50% 65%, ${roleColor}22 0%, transparent 72%)`
+                    background: activePlayer
+                      ? `radial-gradient(circle at 50% 42%, ${activeTeamColor}45 0%, transparent 76%)`
                       : 'none',
                   }}
                 />
@@ -352,13 +472,19 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                     >
                       {portraitUrl && !imgErrors[portraitKey] ? (
                         usingRealPhoto && !isCutoutPng ? (
-                          <div className="my-auto w-11 h-11 md:w-[112px] md:h-[82px] rounded-[2px] overflow-hidden border border-white/15 relative">
+                          <div
+                            className="my-auto w-11 h-11 md:w-[114px] md:h-[84px] rounded-[2px] overflow-hidden border relative"
+                            style={{
+                              background: `radial-gradient(circle at 50% 25%, ${activeTeamColor}45 0%, #0d1118 85%)`,
+                              borderColor: `${activeTeamColor}55`,
+                            }}
+                          >
                             <img
                               src={portraitUrl}
                               alt={activePlayer.ign}
                               onError={() => markImgError(`photo-${portraitKey}`)}
                               className={`w-full h-full object-cover object-top select-none pointer-events-none ${
-                                lockedPlayer ? 'opacity-100' : 'opacity-75'
+                                lockedPlayer ? 'opacity-100' : 'opacity-80'
                               }`}
                             />
                             <div className="hidden md:block absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-[#0b0e14]/70 to-transparent pointer-events-none" />
@@ -371,8 +497,8 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                             onError={() =>
                               markImgError(usingRealPhoto ? `photo-${portraitKey}` : portraitKey)
                             }
-                            className={`h-full max-h-[44px] md:max-h-[96px] w-auto object-contain object-bottom select-none pointer-events-none ${
-                              lockedPlayer ? 'opacity-100' : 'opacity-75'
+                            className={`h-full max-h-[48px] md:max-h-[98px] w-auto object-contain object-bottom select-none pointer-events-none ${
+                              lockedPlayer ? 'opacity-100' : 'opacity-80'
                             }`}
                           />
                         )
@@ -402,7 +528,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                       exit={{ opacity: 0 }}
                       className="relative w-full h-full flex items-center justify-center"
                     >
-                      {silhouette && !imgErrors[`sil-${role}`] && (
+                      {!isLobbyCompact && silhouette && !imgErrors[`sil-${role}`] && (
                         <img
                           src={silhouette.portraitUrl}
                           alt={silhouette.agentName}
@@ -412,10 +538,12 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                         />
                       )}
                       <div
-                        className={`relative z-10 w-7 h-7 md:w-10 md:h-10 rounded-[3px] border flex items-center justify-center ${
+                        className={`relative z-10 ${
+                          isLobbyCompact ? 'w-6 h-6 md:w-8 md:h-8' : 'w-7 h-7 md:w-10 md:h-10'
+                        } rounded-[3px] border flex items-center justify-center ${
                           isNextSlot
-                            ? 'bg-[#e2b714]/10 border-[#e2b714]/50'
-                            : 'bg-[#11151d] border-white/10 opacity-55'
+                            ? 'bg-[#e2b714]/12 border-[#e2b714]/55'
+                            : 'bg-[#11151d] border-white/10 opacity-65'
                         }`}
                       >
                         <RoleEmblem role={role} size="xs" showBackground={false} />
@@ -426,16 +554,28 @@ export const LineupBar: React.FC<LineupBarProps> = ({
               </div>
 
               {/* Bottom Sticker Nameplate */}
-              <div className="relative z-20 h-6 md:h-12 px-1 md:px-2.5 bg-[#090c11] border-t border-white/[0.08] flex flex-col justify-center shrink-0">
+              <div
+                className={`relative z-20 ${
+                  isLobbyCompact ? 'h-5 md:h-7' : 'h-6 md:h-12'
+                } px-1 md:px-2.5 bg-[#090c11] border-t border-white/[0.08] flex flex-col justify-center shrink-0`}
+              >
                 {activePlayer ? (
                   <div className="flex items-center justify-center md:justify-between gap-1 md:gap-2">
                     <div className="min-w-0">
-                      <div
-                        className={`font-display text-sm md:text-xl leading-none tracking-wide truncate text-center md:text-left ${
-                          lockedPlayer ? 'text-white' : 'text-[#e2b714]'
-                        }`}
-                      >
-                        {activePlayer.ign}
+                      <div className="flex items-center justify-center md:justify-start gap-1 min-w-0">
+                        <span
+                          className={`font-display text-sm md:text-xl leading-none tracking-wide truncate ${
+                            lockedPlayer ? 'text-white' : 'text-[#e2b714]'
+                          }`}
+                        >
+                          {activePlayer.ign}
+                        </span>
+                        <span className="hidden md:inline-flex items-center gap-1 shrink-0">
+                          <CountryFlag code={activePlayer.countryCode} country={activePlayer.country} size="xs" />
+                          {activePlayer.isChampionsWinner && (
+                            <Trophy className="w-3 h-3 text-[#e2b714]" aria-hidden />
+                          )}
+                        </span>
                       </div>
                       <div className="hidden md:block text-xs text-slate-300 truncate leading-tight mt-0.5">
                         {activePlayer.team} · {activePlayer.signatureAgent}
@@ -449,7 +589,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                   <div className="flex items-center justify-center md:justify-between gap-2">
                     <span
                       className={`text-xs font-semibold truncate ${
-                        isNextSlot ? 'text-[#e2b714]' : 'text-slate-400'
+                        isNextSlot ? 'text-[#e2b714]' : 'text-slate-300'
                       }`}
                     >
                       <span className="md:hidden font-mono-vct" style={{ color: roleColor }}>

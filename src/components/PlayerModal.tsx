@@ -5,8 +5,9 @@ import { playLockSound, playSelectSound } from '../utils/audio';
 import { TeamLogo } from './TeamLogo';
 import { RoleEmblem } from './RoleEmblem';
 import { TraitBadge } from './TraitBadge';
+import { PlayerAvatar } from './PlayerAvatar';
+import { CountryFlag } from './CountryFlag';
 import { ROLE_NAMES_PT } from '../data/roleIcons';
-import { getPlayerPhotoUrl } from '../data/playerPhotos';
 import { Card, PrimaryButton, SecondaryButton } from './ui';
 
 interface PlayerModalProps {
@@ -22,15 +23,7 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
   onClose,
   onAssignToRole,
 }) => {
-  const [imgErr, setImgErr] = React.useState(false);
-
-  React.useEffect(() => {
-    setImgErr(false);
-  }, [player?.id, player?.ign]);
-
   if (!player) return null;
-
-  const playerPhotoUrl = getPlayerPhotoUrl(player.ign);
 
   // Determine compatible slots
   const availableSlots: Role[] = [];
@@ -80,29 +73,17 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
         {/* Player Header */}
         <div className="flex items-center gap-4 mb-5">
           <div className="relative shrink-0">
-            {playerPhotoUrl && !imgErr ? (
-              <div className="w-16 h-16 rounded-[3px] overflow-hidden bg-[#0b0e14] border border-white/15">
-                <img
-                  src={playerPhotoUrl}
-                  alt={player.ign}
-                  onError={() => setImgErr(true)}
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-            ) : (
-              <RoleEmblem role={player.primaryRole} size="xl" showBackground />
-            )}
-            {playerPhotoUrl && !imgErr && (
-              <div className="absolute -bottom-1.5 -right-1.5 rounded-[2px] bg-[#0b0e14] p-0.5 border border-white/15">
-                <RoleEmblem role={player.primaryRole} size="xs" />
-              </div>
-            )}
+            <PlayerAvatar player={player} size="xl" />
+            <div className="absolute -bottom-1.5 -right-1.5 rounded-[2px] bg-[#0b0e14] p-0.5 border border-white/15">
+              <RoleEmblem role={player.primaryRole} size="xs" />
+            </div>
           </div>
 
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs px-2 py-0.5 rounded-[2px] bg-[#0b0e14] text-slate-300 font-semibold border border-white/10">
-                {player.country} ({player.countryCode})
+              <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-[2px] bg-[#0b0e14] text-slate-200 font-semibold border border-white/10">
+                <CountryFlag code={player.countryCode} country={player.country} size="xs" />
+                {player.country}
               </span>
               {player.isChampionsWinner && (
                 <span className="text-xs px-2 py-0.5 rounded-[2px] bg-amber-500/15 text-amber-300 border border-amber-500/35 flex items-center gap-1 font-bold">

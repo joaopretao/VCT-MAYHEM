@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { Navbar, TabId } from './components/Navbar';
 import { HomeScreen } from './components/HomeScreen';
 import { AppBackground } from './components/AppBackground';
@@ -18,6 +18,7 @@ import { assignTraitsToTeam } from './data/traits';
 import { rollMayhemBonusChoices } from './data/mayhemBonuses';
 import { rollOpponentBans, isPlayerBanned } from './utils/bans';
 import { playLockSound, playSelectSound, playBonusRevealSound } from './utils/audio';
+import { vibrateLight, vibrateBonus } from './utils/haptics';
 import {
   EMPTY_PLAYER_RECORDS,
   loadPlayerRecords,
@@ -148,6 +149,7 @@ export default function App() {
 
     setLineup(updatedLineup);
     playLockSound();
+    vibrateLight();
     setWarningMessage(null);
     drawThreeTeams(availableTeams.map(t => t.id));
 
@@ -158,6 +160,7 @@ export default function App() {
           setBonusPromptStep(1);
           setPendingBonusChoices(offer);
           playBonusRevealSound();
+          vibrateBonus();
         }
       } else if (nextCount >= 4 && selectedBonuses.length === 1) {
         const offer = rollMayhemBonusChoices(
@@ -168,6 +171,7 @@ export default function App() {
           setBonusPromptStep(2);
           setPendingBonusChoices(offer);
           playBonusRevealSound();
+          vibrateBonus();
         }
       }
     }
@@ -175,6 +179,7 @@ export default function App() {
 
   const handleSelectMayhemBonus = (bonus: MayhemBonus) => {
     playLockSound();
+    vibrateBonus();
     setSelectedBonuses(prev => (prev.some(b => b.id === bonus.id) ? prev : [...prev, bonus]));
     if (bonus.modifiers.extraRerolls) {
       setRerollsLeft(prev => prev + bonus.modifiers.extraRerolls!);
@@ -327,7 +332,8 @@ export default function App() {
   const championshipsCount = campaignHistory.filter(c => c.wonChampionship).length;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-transparent text-slate-100 flex flex-col selection:bg-[#ff4655] selection:text-white relative isolate">
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen overflow-x-hidden bg-transparent text-slate-100 flex flex-col selection:bg-[#ff4655] selection:text-white relative isolate">
       {/* Ambient Drifting Background */}
       <AppBackground />
 
@@ -438,5 +444,6 @@ export default function App() {
       {/* Rules Guide Modal */}
       {showRulesModal && <RulesModal onClose={() => setShowRulesModal(false)} />}
     </div>
+    </MotionConfig>
   );
 }

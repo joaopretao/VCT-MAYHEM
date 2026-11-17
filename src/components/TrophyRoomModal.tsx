@@ -141,28 +141,28 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
         {/* Aggregate Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-white/[0.08]">
           <div className="surface-sub p-3 text-center">
-            <span className="text-xs uppercase text-slate-400 font-semibold block mb-1">Títulos</span>
+            <span className="text-xs uppercase text-slate-300 font-semibold block mb-1">Títulos</span>
             <span className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono-vct tabular-nums">
               {championshipsWon}
             </span>
           </div>
 
           <div className="surface-sub p-3 text-center">
-            <span className="text-xs uppercase text-slate-400 font-semibold block mb-1">Campanhas</span>
+            <span className="text-xs uppercase text-slate-300 font-semibold block mb-1">Campanhas</span>
             <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono-vct tabular-nums">
               {totalCampaigns}
             </span>
           </div>
 
           <div className="surface-sub p-3 text-center">
-            <span className="text-xs uppercase text-slate-400 font-semibold block mb-1">Aproveitamento</span>
+            <span className="text-xs uppercase text-slate-300 font-semibold block mb-1">Aproveitamento</span>
             <span className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono-vct tabular-nums">
               {winRate}%
             </span>
           </div>
 
           <div className="surface-sub p-3 text-center">
-            <span className="text-xs uppercase text-slate-400 font-semibold block mb-1">Conquistas</span>
+            <span className="text-xs uppercase text-slate-300 font-semibold block mb-1">Conquistas</span>
             <span className="text-2xl sm:text-3xl font-extrabold text-amber-300 font-mono-vct tabular-nums">
               {unlockedCount}/{achievements.length}
             </span>
@@ -181,19 +181,19 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             <div className="surface-sub px-3 py-2 text-center">
-              <span className="text-xs text-slate-400 block">Runs jogadas</span>
+              <span className="text-xs text-slate-300 block">Runs jogadas</span>
               <strong className="text-sm sm:text-base font-mono-vct text-white">
                 {resolvedRecords.runsPlayed}
               </strong>
             </div>
             <div className="surface-sub px-3 py-2 text-center">
-              <span className="text-xs text-slate-400 block">Títulos</span>
+              <span className="text-xs text-slate-300 block">Títulos</span>
               <strong className="text-sm sm:text-base font-mono-vct text-amber-400">
                 {resolvedRecords.titles}
               </strong>
             </div>
             <div className="surface-sub px-3 py-2 text-center">
-              <span className="text-xs text-slate-400 block">Melhor sequência</span>
+              <span className="text-xs text-slate-300 block">Melhor sequência</span>
               <strong className="text-sm sm:text-base font-mono-vct text-emerald-400">
                 {resolvedRecords.bestStreak}
               </strong>

@@ -49,7 +49,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div className="flex items-center gap-2.5 md:gap-3">
           <span className="vct-slash h-6 md:h-7" aria-hidden />
           <div>
-            <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-slate-400 hidden md:block">
+            <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-slate-300 hidden md:block">
               VCT 2022–2026
             </span>
             <h2 className="font-display text-2xl sm:text-3xl md:text-4xl text-white uppercase tracking-wide leading-none">
@@ -159,7 +159,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       );
                     })}
                   </div>
-                  <span className="text-xs font-mono-vct text-slate-400">
+                  <span className="text-xs font-mono-vct text-slate-300">
                     {activeDiff.hint}
                   </span>
                 </div>
@@ -170,10 +170,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <div className="hidden lg:block lg:col-span-5">
               <div className="surface-sub p-4 space-y-3">
                 <div className="flex items-center justify-between text-xs font-mono-vct">
-                  <span className="text-slate-300 font-bold uppercase tracking-wider">
+                  <span className="text-slate-200 font-bold uppercase tracking-wider">
                     Campeões e elencos no pool
                   </span>
-                  <span className="text-slate-400">+40 times</span>
+                  <span className="text-slate-300">+40 times</span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
@@ -210,7 +210,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="space-y-0.5 md:space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
               <span className="text-[#e2b714] font-bold uppercase tracking-wider">3×3</span>
-              <span className="text-slate-400">5 tabuleiros</span>
+              <span className="text-slate-300">5 tabuleiros</span>
             </div>
             <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
               GRID VCT
@@ -240,7 +240,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="space-y-0.5 md:space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
               <span className="text-[#38bdf8] font-bold uppercase tracking-wider">Diário</span>
-              <span className="text-slate-400">8 chances</span>
+              <span className="text-slate-300">8 chances</span>
             </div>
             <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
               TRIVIA DOS PROS
@@ -270,7 +270,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="space-y-0.5 md:space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
               <span className="text-[#10b981] font-bold uppercase tracking-wider">Histórico</span>
-              <span className="text-slate-400">
+              <span className="text-slate-300">
                 {trophiesCount} {trophiesCount === 1 ? 'título' : 'títulos'}
               </span>
             </div>

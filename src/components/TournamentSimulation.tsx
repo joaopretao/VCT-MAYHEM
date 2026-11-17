@@ -549,7 +549,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                   isCurrentSlot && isCurrentMapEnded && !committedMap ? currentMap : null;
                 const mapData = committedMap || liveFinishedMap;
 
-                let boxCls = 'bg-[#0b0e14]/70 border-white/10 text-slate-400';
+                let boxCls = 'bg-[#0b0e14]/70 border-white/10 text-slate-300';
                 let scoreLabel = isCurrentSlot ? currentMap.mapName : 'A jogar';
 
                 if (mapData) {
@@ -967,7 +967,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
 
               {showScoreboardModal && (
                 <div className="mt-2 bg-[#090c11] p-3 rounded-[3px] border border-white/10 text-left space-y-1.5">
-                  <div className="grid grid-cols-12 text-xs font-mono-vct text-slate-400 uppercase pb-1.5 border-b border-white/10">
+                  <div className="grid grid-cols-12 text-xs font-mono-vct text-slate-300 uppercase pb-1.5 border-b border-white/10">
                     <span className="col-span-5">Jogador</span>
                     <span className="col-span-2 text-center">K / D</span>
                     <span className="col-span-2 text-center">K/D</span>
@@ -1064,7 +1064,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                 <div className="flex items-center gap-2.5">
                   <PlayerAvatar player={tournamentMvp.player} size="sm" />
                   <div>
-                    <span className="text-xs font-mono-vct text-slate-400 block">Destaque da line</span>
+                    <span className="text-xs font-mono-vct text-slate-300 block">Destaque da line</span>
                     <strong className="text-sm text-white">{tournamentMvp.player.ign}</strong>
                   </div>
                 </div>
@@ -1097,7 +1097,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
 
               {showScoreboardModal && (
                 <div className="mt-2 bg-[#090c11] p-3 rounded-[3px] border border-white/10 text-left space-y-1.5">
-                  <div className="grid grid-cols-12 text-xs font-mono-vct text-slate-400 uppercase pb-1.5 border-b border-white/10">
+                  <div className="grid grid-cols-12 text-xs font-mono-vct text-slate-300 uppercase pb-1.5 border-b border-white/10">
                     <span className="col-span-5">Jogador</span>
                     <span className="col-span-2 text-center">K / D</span>
                     <span className="col-span-2 text-center">K/D</span>

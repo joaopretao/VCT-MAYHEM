@@ -5,11 +5,12 @@ import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
 import { PlayerAvatar } from './PlayerAvatar';
+import { CountryFlag } from './CountryFlag';
 import { LineupBar } from './LineupBar';
 import { isPlayerBanned } from '../utils/bans';
-import { playSelectSound, playRerollSound } from '../utils/audio';
-import { RotateCcw, AlertCircle, Info, ShieldAlert, Check } from 'lucide-react';
-import { Card, PrimaryButton, SecondaryButton } from './ui';
+import { playSelectSound } from '../utils/audio';
+import { Info, Check, Trophy } from 'lucide-react';
+import { Card } from './ui';
 
 interface ValorantDraftBoardProps {
   availableTeams: Team[];
@@ -46,9 +47,6 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
   const [hoveredPlayer, setHoveredPlayer] = useState<Player | null>(null);
   const [mobileTeamIdx, setMobileTeamIdx] = useState<number>(0);
 
-  const filledCount = Object.values(lineup).filter(p => p !== null).length;
-  const currentRound = Math.min(5, filledCount + 1);
-  const isLineupFull = filledCount === 5;
   const batchKey = availableTeams.map(t => t.id).join('|');
 
   useEffect(() => {
@@ -109,122 +107,21 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
 
   return (
     <div className="flex flex-col gap-2.5 md:gap-4">
-      {/* BLOCK 1: LOBBY */}
+      {/* BLOCK 1: UNIFIED LOBBY + PICK STRIP */}
       <LineupBar
         lineup={lineup}
         hoveredPlayer={hoveredPlayer}
         selectedBonuses={selectedBonuses}
+        rerollsLeft={rerollsLeft}
+        bannedPlayers={bannedPlayers}
+        onOpenBansModal={onOpenBansModal}
+        onReroll={onReroll}
+        warningMessage={activeWarning}
         onRemovePlayer={onRemovePlayer}
         onInspectPlayer={onInspectPlayer}
         onClearLineup={onClearLineup}
         onStartTournament={onStartTournament}
       />
-
-      {/* BLOCK 2: FAIXA DA RODADA */}
-      <Card padding="none" className="p-2.5 md:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 md:gap-4">
-        <div className="space-y-1 md:space-y-1.5">
-          <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-            <div className="flex items-center gap-2 md:gap-2.5">
-              <span className="vct-slash h-5 md:h-[22px]" aria-hidden />
-              <h2 className="font-display text-2xl sm:text-3xl md:text-4xl leading-none text-white tracking-wide uppercase">
-                {isLineupFull ? (
-                  <span className="text-[#10b981]">Line Fechada · 5/5</span>
-                ) : (
-                  <>
-                    Pick <span className="text-[#ff4655]">{currentRound}</span>
-                    <span className="text-slate-400">/5</span>
-                  </>
-                )}
-              </h2>
-            </div>
-
-            {/* 5-Segment Progress Bar */}
-            <div className="flex gap-1.5 w-28 sm:w-36 md:w-44" aria-label={`Progresso do draft: ${filledCount} de 5`}>
-              {Array.from({ length: 5 }).map((_, i) => {
-                const filled = i < filledCount;
-                const current = i === filledCount && !isLineupFull;
-                return (
-                  <div key={i} className="relative h-2 flex-1 rounded-[1px] bg-white/10 overflow-hidden">
-                    <motion.div
-                      initial={false}
-                      animate={{ width: filled ? '100%' : '0%' }}
-                      transition={{ duration: 0.25, ease: 'easeOut' }}
-                      className="absolute inset-y-0 left-0 bg-[#ff4655]"
-                    />
-                    {current && <div className="absolute inset-0 bg-[#e2b714]/75" />}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <p className="text-xs sm:text-sm text-slate-300">
-            {activeWarning ? (
-              <span className="inline-flex items-center gap-1.5 text-amber-300 font-semibold">
-                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                {activeWarning}
-              </span>
-            ) : isLineupFull ? (
-              'Time pronto. Clique em "Iniciar Campeonato" no lobby acima.'
-            ) : (
-              'Escolhe um jogador de qualquer uma das 3 equipes.'
-            )}
-          </p>
-        </div>
-
-        {/* Right Controls */}
-        <div className="flex items-center gap-3 flex-wrap sm:justify-end">
-          {bannedPlayers.length > 0 && onOpenBansModal && (
-            <SecondaryButton
-              size="md"
-              onClick={() => {
-                playSelectSound();
-                onOpenBansModal();
-              }}
-            >
-              <ShieldAlert className="w-4 h-4 text-rose-400" />
-              <span>Vetos ({bannedPlayers.length})</span>
-            </SecondaryButton>
-          )}
-
-          <div className="flex items-center gap-3">
-            <span className="font-mono-vct text-xs sm:text-sm text-slate-300">
-              Rerolls:{' '}
-              <strong className={rerollsLeft > 0 ? 'text-[#e2b714]' : 'text-slate-400'}>
-                {rerollsLeft}
-              </strong>
-            </span>
-
-            {isLineupFull ? (
-              <SecondaryButton
-                id="reroll-teams-btn"
-                size="md"
-                onClick={() => {
-                  playRerollSound();
-                  onReroll();
-                }}
-                disabled={rerollsLeft <= 0}
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Reroll</span>
-              </SecondaryButton>
-            ) : (
-              <PrimaryButton
-                id="reroll-teams-btn"
-                size="md"
-                onClick={() => {
-                  playRerollSound();
-                  onReroll();
-                }}
-                disabled={rerollsLeft <= 0}
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Reroll</span>
-              </PrimaryButton>
-            )}
-          </div>
-        </div>
-      </Card>
 
       {/* MOBILE ONLY (< lg): 3-Team Tab Switcher so there is no 1,000px vertical team stack */}
       {availableTeams.length > 0 && (
@@ -251,13 +148,14 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                   logoUrl={team.logoUrl}
                   primaryColor={team.primaryColor}
                   size="sm"
+                  showGlow={active}
                   className="shrink-0"
                 />
                 <div className="min-w-0">
                   <div className="font-display text-base leading-none uppercase truncate">
                     {team.shortName || team.name}
                   </div>
-                  <div className="text-xs font-mono-vct text-slate-400 leading-none mt-0.5">
+                  <div className="text-xs font-mono-vct text-slate-300 leading-none mt-0.5">
                     '{team.year.toString().slice(2)}
                   </div>
                 </div>
@@ -267,7 +165,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
         </div>
       )}
 
-      {/* BLOCK 3: AS 3 EQUIPES */}
+      {/* BLOCK 2: AS 3 EQUIPES */}
       <AnimatePresence mode="wait">
         <motion.div
           key={batchKey}
@@ -286,14 +184,22 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
               >
                 <Card variant="interactive" padding="none" className="p-3 md:p-4 h-full flex flex-col gap-2.5 md:gap-3.5">
                   {/* Team Header */}
-                  <div className="flex items-center gap-3 pb-2.5 md:pb-3 border-b border-white/[0.08]">
-                    <div className="w-11 h-11 rounded-[3px] bg-[#0d1118] border border-white/10 flex items-center justify-center p-1.5 shrink-0">
+                  <div className="flex items-center gap-3.5 pb-2.5 md:pb-3 border-b border-white/[0.08]">
+                    <div
+                      className="w-14 h-14 rounded-[4px] border flex items-center justify-center p-2 shrink-0"
+                      style={{
+                        background: `radial-gradient(circle, ${team.primaryColor}30 0%, #0d1118 78%)`,
+                        borderColor: `${team.primaryColor}55`,
+                        boxShadow: `0 0 18px -4px ${team.primaryColor}55`,
+                      }}
+                    >
                       <TeamLogo
                         teamName={team.name}
                         shortName={team.shortName}
                         logoUrl={team.logoUrl}
                         primaryColor={team.primaryColor}
                         size="lg"
+                        showGlow
                         className="w-full h-full"
                       />
                     </div>
@@ -307,14 +213,14 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                           {team.year}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1 truncate">
+                      <p className="text-xs text-slate-300 mt-1 truncate">
                         {team.region} · {team.editionLabel}
                       </p>
                     </div>
                   </div>
 
                   {/* 5 Player Rows */}
-                  <div className="flex flex-col gap-1.5 md:gap-2">
+                  <div className="flex flex-col gap-2">
                     {team.roster.map(player => {
                       const drafted = isPlayerDrafted(player.id);
                       const banned = isPlayerBanned(player, bannedPlayers);
@@ -359,14 +265,18 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                               handleTileClick(player);
                             }
                           }}
-                          className={`group/player relative h-11 md:h-13 rounded-[3px] border px-2.5 flex items-center justify-between gap-2 transition-colors duration-150 outline-none ${rowCls}`}
+                          className={`group/player relative min-h-[64px] rounded-[3px] border px-2.5 py-1.5 flex items-center justify-between gap-2.5 transition-colors duration-150 outline-none ${rowCls}`}
                         >
-                          {/* Left: Player Face + Name + Role + Agent */}
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <PlayerAvatar player={player} size="sm" />
+                          {/* Left: Player Face + Name + Flag + Champion + Role + Agent */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <PlayerAvatar
+                              player={player}
+                              size="draft"
+                              teamColor={team.primaryColor}
+                            />
 
                             <div className="min-w-0 text-left">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
                                 <span
                                   className={`text-base font-bold leading-tight truncate ${
                                     banned ? 'text-rose-300 line-through' : 'text-white'
@@ -374,20 +284,33 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                                 >
                                   {player.ign}
                                 </span>
+                                <CountryFlag
+                                  code={player.countryCode}
+                                  country={player.country}
+                                  size="sm"
+                                />
+                                {player.isChampionsWinner && (
+                                  <span
+                                    title="Campeão do VALORANT Champions"
+                                    className="inline-flex shrink-0"
+                                  >
+                                    <Trophy className="w-3.5 h-3.5 text-[#e2b714]" aria-label="Campeão" />
+                                  </span>
+                                )}
                                 {player.trait && !banned && (
                                   <TraitBadge trait={player.trait} iconOnly size="xs" />
                                 )}
                               </div>
 
                               <div className="flex items-center gap-1.5 text-xs leading-tight mt-0.5">
-                                <span className="font-bold" style={{ color: roleColor }}>
+                                <span className="font-bold shrink-0" style={{ color: roleColor }}>
                                   {ROLE_NAMES_PT[player.primaryRole]}
                                   {player.secondaryRoles.length > 0
                                     ? ` / ${ROLE_NAMES_PT[player.secondaryRoles[0]]}`
                                     : ''}
                                 </span>
-                                <span className="text-slate-600">·</span>
-                                <span className="text-slate-300 truncate">{player.signatureAgent}</span>
+                                <span className="text-slate-500">·</span>
+                                <span className="text-slate-200 truncate">{player.signatureAgent}</span>
                               </div>
                             </div>
                           </div>
@@ -408,7 +331,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                                 No time
                               </span>
                             ) : (
-                              <span className="text-xs text-slate-400">
+                              <span className="text-xs text-slate-300">
                                 Cheia
                               </span>
                             )}
@@ -420,7 +343,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                                 playSelectSound();
                                 onInspectPlayer(player);
                               }}
-                              className="p-1.5 rounded-[2px] text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-[2px] text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                               title={`Perfil de ${player.ign}`}
                               aria-label={`Ver detalhes de ${player.ign}`}
                             >
