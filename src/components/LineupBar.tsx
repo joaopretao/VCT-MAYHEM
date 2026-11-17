@@ -119,7 +119,6 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   const filledCount = ROLE_ORDER.filter(r => lineup[r]).length;
   const currentRound = Math.min(5, filledCount + 1);
   const isComplete = filledCount === 5;
-  const isLobbyCompact = filledCount === 0 && !hoveredPlayer;
   const nextOpenRole = getNextOpenRole(lineup);
   const stats = calculateTeamStats(lineup, selectedBonuses);
   const prevCompleteRef = React.useRef(false);
@@ -373,9 +372,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                   onInspectPlayer(lockedPlayer);
                 }
               }}
-              className={`group/slot relative ${
-                isLobbyCompact ? 'h-[72px] md:h-[104px]' : 'h-[98px] md:h-[168px]'
-              } rounded-[3px] border transition-[height,colors,border-color] duration-200 overflow-hidden flex flex-col justify-between select-none ${
+              className={`group/slot relative h-[96px] md:h-[168px] rounded-[3px] border transition-colors duration-150 overflow-hidden flex flex-col justify-between select-none ${
                 lockedPlayer
                   ? 'bg-[#0d1118] border-white/15 cursor-pointer hover:border-white/35'
                   : isPreviewTarget
@@ -404,11 +401,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
               />
 
               {/* Top Slot Bar */}
-              <div
-                className={`relative z-20 ${
-                  isLobbyCompact ? 'h-5 md:h-6' : 'h-6 md:h-7'
-                } px-1 md:px-2.5 flex items-center justify-between gap-1 md:gap-2 shrink-0`}
-              >
+              <div className="relative z-20 h-6 md:h-7 px-1 md:px-2.5 flex items-center justify-between gap-1 md:gap-2 shrink-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <RoleEmblem role={role} size="xs" showBackground={false} />
                   <span
@@ -528,7 +521,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                       exit={{ opacity: 0 }}
                       className="relative w-full h-full flex items-center justify-center"
                     >
-                      {!isLobbyCompact && silhouette && !imgErrors[`sil-${role}`] && (
+                      {silhouette && !imgErrors[`sil-${role}`] && (
                         <img
                           src={silhouette.portraitUrl}
                           alt={silhouette.agentName}
@@ -538,9 +531,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                         />
                       )}
                       <div
-                        className={`relative z-10 ${
-                          isLobbyCompact ? 'w-6 h-6 md:w-8 md:h-8' : 'w-7 h-7 md:w-10 md:h-10'
-                        } rounded-[3px] border flex items-center justify-center ${
+                        className={`relative z-10 w-7 h-7 md:w-10 md:h-10 rounded-[3px] border flex items-center justify-center ${
                           isNextSlot
                             ? 'bg-[#e2b714]/12 border-[#e2b714]/55'
                             : 'bg-[#11151d] border-white/10 opacity-65'
@@ -554,11 +545,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
               </div>
 
               {/* Bottom Sticker Nameplate */}
-              <div
-                className={`relative z-20 ${
-                  isLobbyCompact ? 'h-5 md:h-7' : 'h-6 md:h-12'
-                } px-1 md:px-2.5 bg-[#090c11] border-t border-white/[0.08] flex flex-col justify-center shrink-0`}
-              >
+              <div className="relative z-20 h-6 md:h-12 px-1 md:px-2.5 bg-[#090c11] border-t border-white/[0.08] flex flex-col justify-center shrink-0">
                 {activePlayer ? (
                   <div className="flex items-center justify-center md:justify-between gap-1 md:gap-2">
                     <div className="min-w-0">
