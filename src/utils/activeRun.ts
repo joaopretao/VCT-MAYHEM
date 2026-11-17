@@ -1,9 +1,10 @@
-import { ActiveRunSave, Difficulty, Lineup, SavedTournamentState, UserTeamIdentity } from '../types';
+import { ActiveRunSave, Difficulty, Lineup, RunRuleId, SavedTournamentState, UserTeamIdentity } from '../types';
 import { DEFAULT_TEAM_IDENTITY } from '../components/TeamCrest';
 
 const ACTIVE_RUN_STORAGE_KEY = 'vct_mayhem_active_run_v1';
 
 const VALID_DIFFICULTIES: Difficulty[] = ['normal', 'hard', 'master'];
+const VALID_RULES: RunRuleId[] = ['standard', 'only_br', 'no_reroll', 'only_2022', 'only_champions'];
 const VALID_EMBLEMS = new Set(['shield', 'flame', 'crown', 'sword', 'phoenix', 'bolt']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -120,6 +121,13 @@ export function loadActiveRun(): ActiveRunSave | null {
       version: 1,
       savedAt: typeof parsed.savedAt === 'number' ? parsed.savedAt : Date.now(),
       difficulty: parsed.difficulty as Difficulty,
+      runRule: VALID_RULES.includes(parsed.runRule as RunRuleId)
+        ? (parsed.runRule as RunRuleId)
+        : 'standard',
+      seed: typeof parsed.seed === 'string' && parsed.seed.length > 0 ? parsed.seed : undefined,
+      drawStep: typeof parsed.drawStep === 'number' ? parsed.drawStep : 0,
+      rerollsUsed: typeof parsed.rerollsUsed === 'number' ? parsed.rerollsUsed : 0,
+      isDaily: Boolean(parsed.isDaily),
       teamIdentity: sanitizeTeamIdentity(parsed.teamIdentity),
       lineup: parsed.lineup,
       availableTeams: parsed.availableTeams as ActiveRunSave['availableTeams'],

@@ -6,11 +6,13 @@ import {
   MayhemBonus,
   Player,
   Role,
+  RunRuleId,
 } from '../types';
 import { PLAYERS_DATABASE } from '../data/teamsAndPlayers';
 import { rollPlayerTrait } from '../data/traits';
 import { rollMayhemBonusChoices } from '../data/mayhemBonuses';
 import { isPlayerBanned } from './bans';
+import { isPlayerEligibleForRule } from './runRules';
 
 export const PLAYER_SWAP_COST = 5;
 export const SHOP_BONUS_COST = 4;
@@ -73,7 +75,8 @@ export function rollTournamentShopBonus(activeBonuses: MayhemBonus[]): MayhemBon
 export function generateIntermissionShopOffer(
   lineup: Lineup,
   activeBonuses: MayhemBonus[],
-  bannedPlayers: Player[] = []
+  bannedPlayers: Player[] = [],
+  rule: RunRuleId = 'standard'
 ): IntermissionShopOffer {
   const draftedIds = new Set(
     Object.values(lineup)
@@ -86,9 +89,10 @@ export function generateIntermissionShopOffer(
       .map(p => p.ign.toLowerCase())
   );
 
-  // Build deduplicated pool by IGN + pick compatible market swaps (keep OVR hidden in UI)
+  // Build deduplicated pool by IGN + pick compatible market swaps respecting runRule
   const pool = PLAYERS_DATABASE.filter(
     p =>
+      isPlayerEligibleForRule(p, rule) &&
       !draftedIds.has(p.id) &&
       !draftedIgns.has(p.ign.toLowerCase()) &&
       !isPlayerBanned(p, bannedPlayers)

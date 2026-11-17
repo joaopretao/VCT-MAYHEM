@@ -97,6 +97,22 @@ export const ACHIEVEMENTS_LIST: Omit<Achievement, 'isUnlocked' | 'unlockedDate' 
     icon: 'Target',
     rewardLabel: 'Finalista',
   },
+  {
+    id: 'no_reroll_champ',
+    title: 'Sem Rede de Segurança',
+    description: 'Seja campeão jogando na regra Sem Reroll ou sem gastar nenhum reroll no draft.',
+    category: 'draft',
+    icon: 'Award',
+    rewardLabel: 'Moldura Coroa Dourada',
+  },
+  {
+    id: 'special_rule_champ',
+    title: 'Especialista de Circuito',
+    description: 'Conquiste o Champions em uma Regra Especial (Só BR, Só 2022 ou Só Campeões).',
+    category: 'trophy',
+    icon: 'Crown',
+    rewardLabel: 'Moldura Obsidiana Especial',
+  },
 ];
 
 /**
@@ -170,6 +186,28 @@ export function evaluateAchievements(history: CampaignHistory[]): Achievement[] 
         isUnlocked = reachedFinalsOrWon;
         progressText = reachedFinalsOrWon ? 'Concluído' : 'Pendente';
         break;
+      case 'no_reroll_champ': {
+        const wonZeroReroll = history.some(
+          h =>
+            h.wonChampionship &&
+            (h.runRule === 'no_reroll' || h.rerollsUsed === 0)
+        );
+        isUnlocked = wonZeroReroll;
+        progressText = wonZeroReroll ? 'Moldura liberada' : 'Vença sem usar rerolls';
+        break;
+      }
+      case 'special_rule_champ': {
+        const wonSpecial = history.some(
+          h =>
+            h.wonChampionship &&
+            Boolean(h.runRule) &&
+            h.runRule !== 'standard' &&
+            h.runRule !== 'no_reroll'
+        );
+        isUnlocked = wonSpecial;
+        progressText = wonSpecial ? 'Moldura liberada' : 'Vença em Só BR, 2022 ou Campeões';
+        break;
+      }
       default:
         isUnlocked = false;
         progressText = 'Pendente';

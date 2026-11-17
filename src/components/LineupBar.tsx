@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Trophy, RotateCcw, Check, ShieldAlert, AlertCircle, Pencil } from 'lucide-react';
-import { Lineup, Role, Player, MayhemBonus, UserTeamIdentity } from '../types';
+import { X, Trophy, RotateCcw, Check, ShieldAlert, AlertCircle, Pencil, Share2 } from 'lucide-react';
+import { CardFrameId, Lineup, Role, Player, MayhemBonus, RunRuleId, UserTeamIdentity } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { AGENT_FULL_PORTRAITS, AGENT_ICONS, ROLE_SILHOUETTES } from '../data/agentIcons';
 import { getPlayerPhotoUrl } from '../data/playerPhotos';
 import { getTeamLogoData } from '../data/teamLogos';
+import { getFrameMeta } from '../data/frames';
+import { getRunRuleMeta } from '../utils/runRules';
 import { calculateTeamStats } from '../utils/simulation';
 import { playSelectSound, playRosterCompleteSound, playRerollSound } from '../utils/audio';
 import { RoleEmblem } from './RoleEmblem';
@@ -23,6 +25,12 @@ interface LineupBarProps {
   hoveredPlayer?: Player | null;
   selectedBonuses?: MayhemBonus[];
   teamIdentity?: UserTeamIdentity;
+  frameId?: CardFrameId;
+  runRule?: RunRuleId;
+  seed?: string;
+  isDaily?: boolean;
+  onCopySeedUrl?: () => void;
+  seedCopied?: boolean;
   onEditTeamIdentity?: () => void;
   rerollsLeft?: number;
   bannedPlayers?: Player[];
@@ -109,6 +117,12 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   hoveredPlayer = null,
   selectedBonuses = [],
   teamIdentity = DEFAULT_TEAM_IDENTITY,
+  frameId = 'default',
+  runRule = 'standard',
+  seed,
+  isDaily = false,
+  onCopySeedUrl,
+  seedCopied = false,
   onEditTeamIdentity,
   rerollsLeft,
   bannedPlayers = [],
@@ -127,6 +141,8 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   const nextOpenRole = getNextOpenRole(lineup);
   const stats = calculateTeamStats(lineup, selectedBonuses);
   const prevCompleteRef = React.useRef(false);
+  const frameMeta = getFrameMeta(frameId);
+  const ruleMeta = getRunRuleMeta(runRule);
 
   React.useEffect(() => {
     if (isComplete && !prevCompleteRef.current) {
@@ -143,7 +159,21 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   };
 
   return (
-    <Card padding="none" className="p-2.5 md:p-3.5 relative overflow-hidden">
+    <Card
+      padding="none"
+      className="p-2.5 md:p-3.5 relative overflow-hidden"
+      style={{
+        borderColor: frameMeta.borderColor,
+        boxShadow: frameMeta.glowShadow,
+      }}
+    >
+      {frameId !== 'default' && (
+        <div
+          className="absolute inset-x-0 top-0 h-[3px]"
+          style={{ background: frameMeta.topStripGradient }}
+          aria-hidden
+        />
+      )}
       {/* Unified Header: SEU TIME + PICK X/5 + Progress + Stats + Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3 mb-2">
         <div className="flex items-center gap-2 md:gap-3 flex-wrap min-w-0">
@@ -236,6 +266,37 @@ export const LineupBar: React.FC<LineupBarProps> = ({
             <span className="hidden 2xl:inline-block font-mono-vct text-xs text-emerald-300 pl-2 border-l border-white/10">
               {stats.synergyBonuses[0]}
             </span>
+          )}
+
+          {isDaily && (
+            <span className="font-mono-vct text-[11px] font-bold uppercase px-2 py-0.5 rounded-[2px] bg-[#e2b714]/15 border border-[#e2b714]/45 text-[#fde047]">
+              Draft do Dia
+            </span>
+          )}
+
+          {runRule !== 'standard' && (
+            <span
+              className="font-mono-vct text-[11px] font-bold uppercase px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border"
+              style={{ borderColor: `${ruleMeta.accentColor}66`, color: ruleMeta.accentColor }}
+            >
+              {ruleMeta.label}
+            </span>
+          )}
+
+          {seed && onCopySeedUrl && (
+            <button
+              id="copy-draft-seed-btn"
+              type="button"
+              onClick={() => {
+                playSelectSound();
+                onCopySeedUrl();
+              }}
+              className="hidden sm:inline-flex items-center gap-1 font-mono-vct text-[11px] font-bold px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-white/15 text-slate-300 hover:text-white hover:border-white/35 transition-colors cursor-pointer"
+              title="Copiar link desta seed para um amigo tentar o mesmo draft"
+            >
+              <Share2 className="w-3 h-3 text-[#38bdf8]" />
+              <span>{seedCopied ? 'Link copiado!' : seed}</span>
+            </button>
           )}
         </div>
 

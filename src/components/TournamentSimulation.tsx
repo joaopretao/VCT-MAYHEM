@@ -10,8 +10,11 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
+  Share2,
+  Download,
 } from 'lucide-react';
 import {
+  CardFrameId,
   Player,
   Role,
   Lineup,
@@ -29,6 +32,7 @@ import {
   TacticalStance,
   SeriesTacticBuff,
   IntermissionShopOffer,
+  RunRuleId,
 } from '../types';
 import {
   generateTournamentSeries,
@@ -48,6 +52,8 @@ import {
   playBonusRevealSound,
 } from '../utils/audio';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
+import { getFrameMeta } from '../data/frames';
+import { downloadShareResultPng } from '../utils/shareCard';
 import { StageQualifiedScreen } from './StageQualifiedScreen';
 import { TacticalPrepCard } from './TacticalPrepCard';
 import { TACTICAL_STANCES } from '../utils/scouting';
@@ -85,7 +91,7 @@ const RunSummaryPanel: React.FC<RunSummaryPanelProps> = ({ bonusSummaries, summa
         RESUMO DA RUN
       </span>
       {bonusSummaries.length > 0 && (
-        <span className="font-mono-vct text-xs text-slate-400">
+        <span className="font-mono-vct text-xs text-slate-300">
           {bonusSummaries.length} {bonusSummaries.length === 1 ? 'bônus usado' : 'bônus usados'}
         </span>
       )}
@@ -108,6 +114,52 @@ const RunSummaryPanel: React.FC<RunSummaryPanelProps> = ({ bonusSummaries, summa
         ))}
       </div>
     )}
+  </div>
+);
+
+interface ShareResultActionsProps {
+  seed?: string;
+  seedCopied?: boolean;
+  isDownloadingPng: boolean;
+  onCopySeedUrl?: () => void;
+  onDownloadPng: () => void;
+}
+
+const ShareResultActions: React.FC<ShareResultActionsProps> = ({
+  seed,
+  seedCopied = false,
+  isDownloadingPng,
+  onCopySeedUrl,
+  onDownloadPng,
+}) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+    {seed && onCopySeedUrl && (
+      <SecondaryButton
+        id="copy-seed-link-btn"
+        size="md"
+        onClick={() => {
+          playSelectSound();
+          onCopySeedUrl();
+        }}
+        className="w-full"
+      >
+        <Share2 className="w-4 h-4 text-[#38bdf8]" />
+        <span>{seedCopied ? 'Link copiado!' : 'Tente o meu draft'}</span>
+      </SecondaryButton>
+    )}
+    <SecondaryButton
+      id="download-share-card-btn"
+      size="md"
+      disabled={isDownloadingPng}
+      onClick={() => {
+        playSelectSound();
+        onDownloadPng();
+      }}
+      className={`w-full ${!seed || !onCopySeedUrl ? 'sm:col-span-2' : ''}`}
+    >
+      <Download className="w-4 h-4 text-[#e2b714]" />
+      <span>{isDownloadingPng ? 'Gerando imagem...' : 'Baixar card PNG'}</span>
+    </SecondaryButton>
   </div>
 );
 
@@ -171,6 +223,13 @@ function buildRoundProgressionSteps(
 interface TournamentSimulationProps {
   lineup: Lineup;
   difficulty: Difficulty;
+  runRule?: RunRuleId;
+  seed?: string;
+  rerollsUsed?: number;
+  isDaily?: boolean;
+  frameId?: CardFrameId;
+  seedCopied?: boolean;
+  onCopySeedUrl?: () => void;
   selectedBonuses?: MayhemBonus[];
   bannedPlayers?: Player[];
   teamIdentity?: UserTeamIdentity;
@@ -187,6 +246,13 @@ const STAGES: TournamentStage[] = ['group', 'quarters', 'semis', 'finals'];
 export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   lineup,
   difficulty,
+  runRule = 'standard',
+  seed = 'LOCAL',
+  rerollsUsed = 0,
+  isDaily = false,
+  frameId = 'default',
+  seedCopied = false,
+  onCopySeedUrl,
   selectedBonuses = [],
   bannedPlayers = [],
   teamIdentity = DEFAULT_TEAM_IDENTITY,
@@ -197,6 +263,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   onResetTournament,
   onSaveCampaign,
 }) => {
+  const [isDownloadingPng, setIsDownloadingPng] = useState<boolean>(false);
+  const frameMeta = getFrameMeta(frameId);
   const [currentStageIndex, setCurrentStageIndex] = useState<number>(
     initialSavedState?.currentStageIndex ?? 0
   );
@@ -535,7 +603,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           setLastSeriesCreditsEarned(earnedCredits);
           setCredits(prev => prev + earnedCredits);
           setActiveSeriesBuff('none');
-          setShopOffer(generateIntermissionShopOffer(lineup, selectedBonuses, bannedPlayers));
+          setShopOffer(generateIntermissionShopOffer(lineup, selectedBonuses, bannedPlayers, runRule));
           setShowQualifiedScreen(true);
         }
       } else {
@@ -586,6 +654,10 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       teamName: teamIdentity.name,
       teamEmblemId: teamIdentity.emblemId,
       teamColor: teamIdentity.color,
+      runRule,
+      seed,
+      rerollsUsed,
+      isDaily,
       lineup: Object.entries(lineup)
         .filter(([_, p]) => p !== null)
         .map(([role, p]) => ({
@@ -653,6 +725,29 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     setCredits(prev => prev - cost);
     setActiveSeriesBuff(buffId);
     setShopOffer(prev => (prev ? { ...prev, tacticBought: true } : prev));
+  };
+
+  const handleDownloadResultPng = async () => {
+    if (!series || isDownloadingPng) return;
+    setIsDownloadingPng(true);
+    try {
+      await downloadShareResultPng({
+        teamIdentity,
+        frameId,
+        lineup,
+        wonChampionship: isChampionshipWon,
+        stageReached: currentStage,
+        seriesScore: `${series.playerWins}–${series.opponentWins}`,
+        opponentName: series.opponent.name,
+        difficulty,
+        runRule,
+        seed,
+        mvp: tournamentMvp,
+        bonuses: runBonusSummaries,
+      });
+    } finally {
+      setIsDownloadingPng(false);
+    }
   };
 
   const handleNextStageFromScreen = () => {
@@ -1243,8 +1338,23 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       {/* Grand Final Championship Victory Screen */}
       {isChampionshipWon && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-          <Card variant="modal" padding="lg" cutCorner className="border-[#e2b714]/50 w-full max-w-2xl text-center text-white my-auto animate-popIn relative overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-1 bg-[#e2b714]" aria-hidden />
+          <Card
+            variant="modal"
+            padding="lg"
+            cutCorner
+            className="w-full max-w-2xl text-center text-white my-auto animate-popIn relative overflow-hidden"
+            style={{
+              borderColor: frameId !== 'default' ? frameMeta.borderColor : 'rgba(226, 183, 20, 0.5)',
+              boxShadow: frameId !== 'default' ? frameMeta.glowShadow : undefined,
+            }}
+          >
+            <div
+              className="absolute inset-x-0 top-0 h-1"
+              style={{
+                background: frameId !== 'default' ? frameMeta.topStripGradient : '#e2b714',
+              }}
+              aria-hidden
+            />
 
             <div className="flex items-center justify-center gap-2 text-xs font-mono-vct font-bold text-[#e2b714] uppercase tracking-widest mb-1.5">
               <TeamCrest emblemId={teamIdentity.emblemId} color={teamIdentity.color} size="xs" />
@@ -1411,6 +1521,14 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
 
             <RunSummaryPanel bonusSummaries={runBonusSummaries} summaryLine={runSummaryLine} />
 
+            <ShareResultActions
+              seed={seed}
+              seedCopied={seedCopied}
+              isDownloadingPng={isDownloadingPng}
+              onCopySeedUrl={onCopySeedUrl}
+              onDownloadPng={handleDownloadResultPng}
+            />
+
             <PrimaryButton
               id="victory-new-draft-btn"
               size="lg"
@@ -1525,6 +1643,14 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
             </div>
 
             <RunSummaryPanel bonusSummaries={runBonusSummaries} summaryLine={runSummaryLine} />
+
+            <ShareResultActions
+              seed={seed}
+              seedCopied={seedCopied}
+              isDownloadingPng={isDownloadingPng}
+              onCopySeedUrl={onCopySeedUrl}
+              onDownloadPng={handleDownloadResultPng}
+            />
 
             <PrimaryButton
               id="eliminated-retry-btn"

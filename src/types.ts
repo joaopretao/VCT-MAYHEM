@@ -153,6 +153,10 @@ export interface CampaignHistory {
   teamName?: string;
   teamEmblemId?: CustomEmblemId;
   teamColor?: string;
+  runRule?: RunRuleId;
+  seed?: string;
+  rerollsUsed?: number;
+  isDaily?: boolean;
   lineup: {
     role: Role;
     ign: string;
@@ -286,6 +290,16 @@ export interface Achievement {
 
 export type CustomEmblemId = 'shield' | 'flame' | 'crown' | 'sword' | 'phoenix' | 'bolt';
 
+export type RunRuleId = 'standard' | 'only_br' | 'no_reroll' | 'only_2022' | 'only_champions';
+
+export type CardFrameId =
+  | 'default'
+  | 'challenger_emerald'
+  | 'gold_champions'
+  | 'ruby_master'
+  | 'cyan_prodigy'
+  | 'obsidian_legend';
+
 export type TacticalStance = 'aggressive' | 'balanced' | 'disciplined';
 
 export type SeriesTacticBuff = 'none' | 'rating_boost' | 'pistol_prep' | 'clutch_prep';
@@ -344,6 +358,11 @@ export interface ActiveRunSave {
   version: 1;
   savedAt: number;
   difficulty: Difficulty;
+  runRule?: RunRuleId;
+  seed?: string;
+  drawStep?: number;
+  rerollsUsed?: number;
+  isDaily?: boolean;
   teamIdentity: UserTeamIdentity;
   lineup: Lineup;
   availableTeams: Team[];

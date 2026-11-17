@@ -1,4 +1,4 @@
-import { MayhemBonus, MayhemBonusRarity } from '../types';
+import { MayhemBonus, MayhemBonusRarity, RunRuleId } from '../types';
 
 export const BONUS_RARITY_META: Record<
   MayhemBonusRarity,
@@ -239,12 +239,15 @@ export function getMayhemBonusById(id: string): MayhemBonus | undefined {
   return MAYHEM_BONUS_MAP[id];
 }
 
-function rollWeightedRarity(availableRarities: MayhemBonusRarity[]): MayhemBonusRarity {
+function rollWeightedRarity(
+  availableRarities: MayhemBonusRarity[],
+  rng: () => number = Math.random
+): MayhemBonusRarity {
   const totalWeight = availableRarities.reduce(
     (sum, r) => sum + BONUS_RARITY_META[r].weight,
     0
   );
-  let cursor = Math.random() * totalWeight;
+  let cursor = rng() * totalWeight;
   for (const rarity of availableRarities) {
     cursor -= BONUS_RARITY_META[rarity].weight;
     if (cursor <= 0) return rarity;
@@ -254,15 +257,19 @@ function rollWeightedRarity(availableRarities: MayhemBonusRarity[]): MayhemBonus
 
 /**
  * Rolls 3 distinct random bonuses respecting rarity weights (60% common / 30% rare / 10% epic)
- * and excluding any bonus already picked in the current run.
+ * and excluding any bonus already picked in the current run. Supports optional deterministic RNG.
  */
 export function rollMayhemBonusChoices(
   alreadyChosenIds: string[] = [],
-  count: number = 3
+  count: number = 3,
+  options?: { rng?: () => number; rule?: RunRuleId }
 ): MayhemBonus[] {
+  const rng = options?.rng ?? Math.random;
+  const rule = options?.rule ?? 'standard';
   const excluded = new Set(alreadyChosenIds);
-  // Avoid offering extra rerolls if Dream Team already locked rerolls at 0
-  if (excluded.has('dream_team')) {
+
+  // Avoid offering extra rerolls if Dream Team already locked rerolls or rule forbids rerolls
+  if (excluded.has('dream_team') || rule === 'no_reroll') {
     excluded.add('reforco_reroll');
   }
 
@@ -275,10 +282,10 @@ export function rollMayhemBonusChoices(
     if (remaining.length === 0) break;
 
     const availableRarities = Array.from(new Set(remaining.map(b => b.rarity)));
-    const targetRarity = rollWeightedRarity(availableRarities);
+    const targetRarity = rollWeightedRarity(availableRarities, rng);
     const bucket = remaining.filter(b => b.rarity === targetRarity);
     const pool = bucket.length > 0 ? bucket : remaining;
-    const selected = pool[Math.floor(Math.random() * pool.length)];
+    const selected = pool[Math.floor(rng() * pool.length)];
     chosenThisOffer.push(selected);
   }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Team, Player, Lineup, Role, MayhemBonus, UserTeamIdentity } from '../types';
+import { CardFrameId, Team, Player, Lineup, Role, MayhemBonus, RunRuleId, UserTeamIdentity } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
@@ -8,6 +8,7 @@ import { PlayerAvatar } from './PlayerAvatar';
 import { CountryFlag } from './CountryFlag';
 import { LineupBar } from './LineupBar';
 import { isPlayerBanned } from '../utils/bans';
+import { getRunRuleMeta, isPlayerEligibleForRule } from '../utils/runRules';
 import { playSelectSound } from '../utils/audio';
 import { Info, Check, Trophy } from 'lucide-react';
 import { Card } from './ui';
@@ -18,6 +19,12 @@ interface ValorantDraftBoardProps {
   rerollsLeft: number;
   selectedBonuses?: MayhemBonus[];
   teamIdentity?: UserTeamIdentity;
+  frameId?: CardFrameId;
+  runRule?: RunRuleId;
+  seed?: string;
+  isDaily?: boolean;
+  onCopySeedUrl?: () => void;
+  seedCopied?: boolean;
   onEditTeamIdentity?: () => void;
   bannedPlayers?: Player[];
   onOpenBansModal?: () => void;
@@ -36,6 +43,12 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
   rerollsLeft,
   selectedBonuses = [],
   teamIdentity,
+  frameId = 'default',
+  runRule = 'standard',
+  seed,
+  isDaily = false,
+  onCopySeedUrl,
+  seedCopied = false,
   onEditTeamIdentity,
   bannedPlayers = [],
   onOpenBansModal,
@@ -65,6 +78,9 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
   const isPlayerDrafted = (playerId: string) => Object.values(lineup).some(p => p?.id === playerId);
 
   const getDestinationSlot = (player: Player): { role: Role | null; available: boolean } => {
+    if (!isPlayerEligibleForRule(player, runRule)) {
+      return { role: null, available: false };
+    }
     if (isPlayerBanned(player, bannedPlayers) || isPlayerDrafted(player.id)) {
       return { role: null, available: false };
     }
@@ -91,6 +107,10 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
   };
 
   const handleTileClick = (player: Player) => {
+    if (!isPlayerEligibleForRule(player, runRule)) {
+      flashWarning(`${player.ign} não participa desta regra (${getRunRuleMeta(runRule).label}).`);
+      return;
+    }
     const banned = isPlayerBanned(player, bannedPlayers);
     if (banned) {
       flashWarning(`${player.ign} foi vetado pelo adversário nessa run.`);
@@ -117,6 +137,12 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
         hoveredPlayer={hoveredPlayer}
         selectedBonuses={selectedBonuses}
         teamIdentity={teamIdentity}
+        frameId={frameId}
+        runRule={runRule}
+        seed={seed}
+        isDaily={isDaily}
+        onCopySeedUrl={onCopySeedUrl}
+        seedCopied={seedCopied}
         onEditTeamIdentity={onEditTeamIdentity}
         rerollsLeft={rerollsLeft}
         bannedPlayers={bannedPlayers}
@@ -230,6 +256,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                     {team.roster.map(player => {
                       const drafted = isPlayerDrafted(player.id);
                       const banned = isPlayerBanned(player, bannedPlayers);
+                      const ruleBlocked = !isPlayerEligibleForRule(player, runRule);
                       const slot = getDestinationSlot(player);
                       const selectable = slot.available;
                       const roleColor = ROLE_COLORS[player.primaryRole] || '#ff4655';
@@ -237,6 +264,8 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                       let rowCls = '';
                       if (banned) {
                         rowCls = 'bg-[#170c10] border-rose-500/30 opacity-65 cursor-not-allowed';
+                      } else if (ruleBlocked) {
+                        rowCls = 'bg-[#0b0e14] border-white/[0.05] opacity-40 cursor-not-allowed';
                       } else if (drafted) {
                         rowCls = 'bg-emerald-950/25 border-emerald-500/35 opacity-75 cursor-default';
                       } else if (selectable) {
@@ -330,6 +359,10 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                             ) : banned ? (
                               <span className="ban-stamp px-2 py-0.5 font-mono-vct text-xs font-bold uppercase">
                                 BANIDO
+                              </span>
+                            ) : ruleBlocked ? (
+                              <span className="text-[11px] font-mono-vct text-slate-300">
+                                Fora
                               </span>
                             ) : drafted ? (
                               <span className="inline-flex items-center gap-1 text-xs font-mono-vct font-semibold text-emerald-300">

@@ -16,8 +16,10 @@ import {
   Lock,
   Medal,
 } from 'lucide-react';
-import { CampaignHistory, Achievement, PlayerRecords } from '../types';
+import { CampaignHistory, Achievement, PlayerRecords, CardFrameId } from '../types';
 import { evaluateAchievements } from '../data/achievements';
+import { CARD_FRAMES, getUnlockedFrameIds } from '../data/frames';
+import { getRunRuleMeta } from '../utils/runRules';
 import { ROLE_NAMES_PT } from '../data/roleIcons';
 import { playSelectSound } from '../utils/audio';
 import { buildRecordsFromCampaigns, getMostUsedBonus } from '../utils/records';
@@ -29,6 +31,8 @@ import { Card } from './ui';
 interface TrophyRoomModalProps {
   history: CampaignHistory[];
   records?: PlayerRecords;
+  equippedFrameId?: CardFrameId;
+  onSelectFrame?: (frameId: CardFrameId) => void;
   onClearHistory: () => void;
   onClose: () => void;
 }
@@ -49,6 +53,8 @@ const DIFFICULTY_NAMES_PT: Record<string, string> = {
 export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
   history,
   records,
+  equippedFrameId = 'default',
+  onSelectFrame,
   onClearHistory,
 }) => {
   const [activeTab, setActiveTab] = useState<'campaigns' | 'achievements'>('campaigns');
@@ -63,6 +69,7 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
 
   const achievements: Achievement[] = evaluateAchievements(history);
   const unlockedCount = achievements.filter(a => a.isUnlocked).length;
+  const unlockedFrameIds = getUnlockedFrameIds(achievements);
 
   const getAchievementIcon = (iconName: string, isUnlocked: boolean) => {
     const className = `w-5 h-5 ${isUnlocked ? 'text-amber-400' : 'text-slate-500'}`;
@@ -325,6 +332,21 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
                       <span className="text-xs text-slate-300">
                         {camp.date} · {DIFFICULTY_NAMES_PT[camp.difficulty] || camp.difficulty}
                       </span>
+                      {camp.runRule && camp.runRule !== 'standard' && (
+                        <span className="font-mono-vct text-[11px] font-bold px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-white/15 text-[#e2b714]">
+                          {getRunRuleMeta(camp.runRule).label}
+                        </span>
+                      )}
+                      {camp.isDaily && (
+                        <span className="font-mono-vct text-[11px] font-bold px-2 py-0.5 rounded-[2px] bg-[#e2b714]/15 border border-[#e2b714]/40 text-[#fde047]">
+                          Diário
+                        </span>
+                      )}
+                      {camp.seed && (
+                        <span className="font-mono-vct text-[11px] text-slate-300">
+                          Seed: {camp.seed}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -406,9 +428,89 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
         </div>
       )}
 
-      {/* Tab 2: Achievements */}
+      {/* Tab 2: Unlockable Card Frames + Achievements */}
       {activeTab === 'achievements' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-4">
+          {onSelectFrame && (
+            <Card id="unlockable-frames-section" padding="md" className="space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714] block">
+                    Personalização por Conquista
+                  </span>
+                  <h3 className="font-display text-2xl leading-none text-white uppercase tracking-wide">
+                    Molduras do Card ({unlockedFrameIds.size}/{CARD_FRAMES.length})
+                  </h3>
+                </div>
+                <span className="text-xs text-slate-300">
+                  Aplicada no lobby e no cartão PNG compartilhável
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {CARD_FRAMES.map(frame => {
+                  const isUnlocked = unlockedFrameIds.has(frame.id);
+                  const isEquipped = equippedFrameId === frame.id;
+                  return (
+                    <button
+                      key={frame.id}
+                      id={`frame-option-${frame.id}`}
+                      type="button"
+                      disabled={!isUnlocked}
+                      onClick={() => {
+                        if (!isUnlocked) return;
+                        playSelectSound();
+                        onSelectFrame(frame.id);
+                      }}
+                      className={`relative text-left p-3 rounded-[3px] border bg-[#0b0e14] transition-colors overflow-hidden ${
+                        isEquipped
+                          ? 'bg-[#141b27]'
+                          : isUnlocked
+                          ? 'hover:bg-[#121722] cursor-pointer'
+                          : 'opacity-55 cursor-not-allowed'
+                      }`}
+                      style={{
+                        borderColor: isEquipped
+                          ? frame.accentColor
+                          : isUnlocked
+                          ? frame.borderColor
+                          : 'rgba(255,255,255,0.08)',
+                        boxShadow: isEquipped ? frame.glowShadow : 'none',
+                      }}
+                    >
+                      <div
+                        className="absolute inset-x-0 top-0 h-[3px]"
+                        style={{ background: frame.topStripGradient }}
+                        aria-hidden
+                      />
+                      <div className="flex items-center justify-between gap-2 mb-1 pt-0.5">
+                        <span className="font-bold text-sm text-white truncate">{frame.name}</span>
+                        {isEquipped ? (
+                          <span className="text-[11px] font-mono-vct font-bold px-1.5 py-0.5 rounded-[2px] bg-emerald-500/15 border border-emerald-500/40 text-emerald-300">
+                            Equipada
+                          </span>
+                        ) : isUnlocked ? (
+                          <span className="text-[11px] font-mono-vct font-bold text-slate-200">
+                            Equipar
+                          </span>
+                        ) : (
+                          <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-300 leading-snug">{frame.description}</p>
+                      {!isUnlocked && (
+                        <span className="text-[11px] font-mono-vct text-amber-300 block mt-1.5">
+                          {frame.unlockHint}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {filteredAchievements.map(ach => (
             <Card
               key={ach.id}
@@ -460,6 +562,7 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
               </div>
             </Card>
           ))}
+          </div>
         </div>
       )}
     </div>

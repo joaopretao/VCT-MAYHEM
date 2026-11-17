@@ -25,13 +25,26 @@ import {
   PlayerRecords,
   UserTeamIdentity,
   SavedTournamentState,
+  RunRuleId,
+  CardFrameId,
 } from './types';
-import { TEAMS_DATABASE } from './data/teamsAndPlayers';
-import { assignTraitsToTeam } from './data/traits';
 import { rollMayhemBonusChoices } from './data/mayhemBonuses';
+import { evaluateAchievements } from './data/achievements';
+import { loadEquippedFrame, saveEquippedFrame } from './data/frames';
 import { rollOpponentBans, isPlayerBanned } from './utils/bans';
 import { playLockSound, playSelectSound, playBonusRevealSound } from './utils/audio';
 import { vibrateLight, vibrateBonus } from './utils/haptics';
+import { drawThreeTeamsForRun, isPlayerEligibleForRule, getRunRuleMeta } from './utils/runRules';
+import {
+  buildShareDraftUrl,
+  clearUrlSeedParams,
+  createSeededRng,
+  generateRandomSeed,
+  getDailyDraftSeed,
+  hasCompletedDailyDraft,
+  markDailyDraftCompleted,
+  parseRunFromUrl,
+} from './utils/seed';
 import {
   loadActiveRun,
   saveActiveRun,
@@ -46,11 +59,42 @@ import {
 } from './utils/records';
 
 export default function App() {
+  const [urlBoot] = useState(() => parseRunFromUrl());
   const [restoredRun] = useState(() => loadActiveRun());
-  const canResumeRun = hasSavedProgress(restoredRun);
+  const matchesUrlWithSave =
+    Boolean(urlBoot) &&
+    Boolean(restoredRun) &&
+    hasSavedProgress(restoredRun) &&
+    restoredRun?.seed === urlBoot?.seed &&
+    restoredRun?.runRule === urlBoot?.rule &&
+    restoredRun?.difficulty === urlBoot?.difficulty;
+  const canResumeRun = urlBoot ? matchesUrlWithSave : hasSavedProgress(restoredRun);
+  const bootFromUrl = Boolean(urlBoot) && !matchesUrlWithSave;
 
-  const [currentTab, setCurrentTab] = useState<TabId>(canResumeRun ? 'draft' : 'home');
-  const [difficulty, setDifficulty] = useState<Difficulty>(restoredRun?.difficulty ?? 'normal');
+  const [currentTab, setCurrentTab] = useState<TabId>(
+    bootFromUrl || canResumeRun ? 'draft' : 'home'
+  );
+  const [difficulty, setDifficulty] = useState<Difficulty>(
+    bootFromUrl && urlBoot ? urlBoot.difficulty : restoredRun?.difficulty ?? 'normal'
+  );
+  const [runRule, setRunRule] = useState<RunRuleId>(
+    bootFromUrl && urlBoot ? urlBoot.rule : restoredRun?.runRule ?? 'standard'
+  );
+  const [runSeed, setRunSeed] = useState<string>(
+    bootFromUrl && urlBoot ? urlBoot.seed : restoredRun?.seed ?? generateRandomSeed()
+  );
+  const [drawStep, setDrawStep] = useState<number>(
+    bootFromUrl ? 0 : restoredRun?.drawStep ?? 0
+  );
+  const [rerollsUsed, setRerollsUsed] = useState<number>(
+    bootFromUrl ? 0 : restoredRun?.rerollsUsed ?? 0
+  );
+  const [isDailyRun, setIsDailyRun] = useState<boolean>(
+    bootFromUrl && urlBoot ? urlBoot.isDaily : Boolean(restoredRun?.isDaily)
+  );
+  const [dailyCompleted, setDailyCompleted] = useState<boolean>(() => hasCompletedDailyDraft());
+  const [seedCopied, setSeedCopied] = useState<boolean>(false);
+  const [equippedFrameId, setEquippedFrameId] = useState<CardFrameId>('default');
   const [teamIdentity, setTeamIdentity] = useState<UserTeamIdentity>(
     restoredRun?.teamIdentity ?? DEFAULT_TEAM_IDENTITY
   );
@@ -58,22 +102,28 @@ export default function App() {
   const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
   const [pendingBansNotice, setPendingBansNotice] = useState<boolean>(false);
   const [lineup, setLineup] = useState<Lineup>(
-    restoredRun?.lineup ?? {
-      Duelist: null,
-      Controller: null,
-      Initiator: null,
-      Sentinel: null,
-      Flex: null,
-    }
+    bootFromUrl
+      ? { Duelist: null, Controller: null, Initiator: null, Sentinel: null, Flex: null }
+      : restoredRun?.lineup ?? {
+          Duelist: null,
+          Controller: null,
+          Initiator: null,
+          Sentinel: null,
+          Flex: null,
+        }
   );
 
-  const [availableTeams, setAvailableTeams] = useState<Team[]>(restoredRun?.availableTeams ?? []);
-  const [rerollsLeft, setRerollsLeft] = useState<number>(restoredRun?.rerollsLeft ?? 3);
+  const [availableTeams, setAvailableTeams] = useState<Team[]>(
+    bootFromUrl ? [] : restoredRun?.availableTeams ?? []
+  );
+  const [rerollsLeft, setRerollsLeft] = useState<number>(
+    bootFromUrl ? 3 : restoredRun?.rerollsLeft ?? 3
+  );
   const [isTournamentActive, setIsTournamentActive] = useState<boolean>(
     canResumeRun && Boolean(restoredRun?.isTournamentActive)
   );
   const [savedTournamentState, setSavedTournamentState] = useState<SavedTournamentState | null>(
-    restoredRun?.tournamentState ?? null
+    canResumeRun ? restoredRun?.tournamentState ?? null : null
   );
   const [inspectedPlayer, setInspectedPlayer] = useState<Player | null>(null);
   const [showRulesModal, setShowRulesModal] = useState<boolean>(false);
@@ -83,20 +133,22 @@ export default function App() {
 
   // Roguelike Mayhem Bonuses (max 2 per run: after pick 2 and pick 4)
   const [selectedBonuses, setSelectedBonuses] = useState<MayhemBonus[]>(
-    restoredRun?.selectedBonuses ?? []
+    bootFromUrl ? [] : restoredRun?.selectedBonuses ?? []
   );
   const [pendingBonusChoices, setPendingBonusChoices] = useState<MayhemBonus[] | null>(
-    restoredRun?.pendingBonusChoices ?? null
+    bootFromUrl ? null : restoredRun?.pendingBonusChoices ?? null
   );
   const [bonusPromptStep, setBonusPromptStep] = useState<1 | 2>(
-    restoredRun?.bonusPromptStep ?? 1
+    bootFromUrl ? 1 : restoredRun?.bonusPromptStep ?? 1
   );
 
-  // Opponent Ban System (Normal: 3 bans, Hard/Master: 6 bans)
-  const [bannedPlayers, setBannedPlayers] = useState<Player[]>(restoredRun?.bannedPlayers ?? []);
+  // Opponent Ban System (Normal: 0 bans, Hard: 3 bans, Master: 6 bans)
+  const [bannedPlayers, setBannedPlayers] = useState<Player[]>(
+    bootFromUrl ? [] : restoredRun?.bannedPlayers ?? []
+  );
   const [showBansModal, setShowBansModal] = useState<boolean>(false);
 
-  // Load campaign history and player records from localStorage
+  // Load campaign history, player records and unlocked frames from localStorage
   useEffect(() => {
     let loadedCampaigns: CampaignHistory[] = [];
     try {
@@ -112,58 +164,95 @@ export default function App() {
       console.error('Failed to load campaigns history', e);
     }
     setPlayerRecords(loadPlayerRecords(loadedCampaigns));
+    const ach = evaluateAchievements(loadedCampaigns);
+    setEquippedFrameId(loadEquippedFrame(ach));
   }, []);
 
-  const drawThreeTeams = useCallback((excludeIds: string[] = []) => {
-    const availablePool = TEAMS_DATABASE.filter(t => !excludeIds.includes(t.id));
-    const pool = availablePool.length >= 3 ? availablePool : TEAMS_DATABASE;
+  // Initialize a new draft run with seed, rule, rerolls and opponent bans
+  const initializeDraftRun = useCallback(
+    (
+      targetDifficulty: Difficulty,
+      openBansNotification: boolean = true,
+      overrides?: { seed?: string; rule?: RunRuleId; isDaily?: boolean }
+    ) => {
+      clearActiveRun();
+      const targetRule = overrides?.rule ?? runRule;
+      const targetSeed = overrides?.seed ?? generateRandomSeed();
+      const targetDaily = overrides?.isDaily ?? false;
 
-    // Shuffle pool and roll traits for the rosters
-    const shuffled = [...pool].sort(() => 0.5 - Math.random());
-    const withTraits = shuffled.slice(0, 3).map(team => assignTraitsToTeam(team));
-    setAvailableTeams(withTraits);
-  }, []);
+      if (!overrides?.seed) {
+        clearUrlSeedParams();
+      }
 
-  // Initialize a new draft run with rerolls and opponent bans
-  const initializeDraftRun = useCallback((targetDifficulty: Difficulty, openBansNotification: boolean = true) => {
-    clearActiveRun();
-    setSavedTournamentState(null);
-    setLineup({
-      Duelist: null,
-      Controller: null,
-      Initiator: null,
-      Sentinel: null,
-      Flex: null,
-    });
-    setIsTournamentActive(false);
-    setSelectedBonuses([]);
-    setPendingBonusChoices(null);
-    setBonusPromptStep(1);
+      const emptyLineup: Lineup = {
+        Duelist: null,
+        Controller: null,
+        Initiator: null,
+        Sentinel: null,
+        Flex: null,
+      };
 
-    if (targetDifficulty === 'normal') setRerollsLeft(3);
-    else if (targetDifficulty === 'hard') setRerollsLeft(2);
-    else if (targetDifficulty === 'master') setRerollsLeft(1);
+      setSavedTournamentState(null);
+      setLineup(emptyLineup);
+      setIsTournamentActive(false);
+      setSelectedBonuses([]);
+      setPendingBonusChoices(null);
+      setBonusPromptStep(1);
+      setRunSeed(targetSeed);
+      setRunRule(targetRule);
+      setIsDailyRun(targetDaily);
+      setDrawStep(0);
+      setRerollsUsed(0);
 
-    const bans = rollOpponentBans(targetDifficulty);
-    setBannedPlayers(bans);
-    if (bans.length > 0 && openBansNotification) {
-      setShowBansModal(true);
-      setPendingBansNotice(false);
-    } else if (bans.length > 0) {
-      setPendingBansNotice(true);
-    } else {
-      setPendingBansNotice(false);
-    }
+      if (targetRule === 'no_reroll') {
+        setRerollsLeft(0);
+      } else if (targetDifficulty === 'normal') {
+        setRerollsLeft(3);
+      } else if (targetDifficulty === 'hard') {
+        setRerollsLeft(2);
+      } else {
+        setRerollsLeft(1);
+      }
 
-    drawThreeTeams([]);
-  }, [drawThreeTeams]);
+      const bans = rollOpponentBans(targetDifficulty, targetSeed, targetRule);
+      setBannedPlayers(bans);
+      if (bans.length > 0 && openBansNotification) {
+        setShowBansModal(true);
+        setPendingBansNotice(false);
+      } else if (bans.length > 0) {
+        setPendingBansNotice(true);
+      } else {
+        setPendingBansNotice(false);
+      }
+
+      setAvailableTeams(
+        drawThreeTeamsForRun({
+          rule: targetRule,
+          seed: targetSeed,
+          step: 0,
+          excludeIds: [],
+          lineup: emptyLineup,
+          bannedPlayers: bans,
+        })
+      );
+    },
+    [runRule]
+  );
 
   // Initial draw only if no valid saved run restored availableTeams
   useEffect(() => {
     if (availableTeams.length === 0) {
-      initializeDraftRun('normal', false);
+      if (bootFromUrl && urlBoot) {
+        initializeDraftRun(urlBoot.difficulty, true, {
+          seed: urlBoot.seed,
+          rule: urlBoot.rule,
+          isDaily: urlBoot.isDaily,
+        });
+      } else {
+        initializeDraftRun(difficulty, false, { seed: runSeed, rule: runRule, isDaily: isDailyRun });
+      }
     }
-  }, [availableTeams.length, initializeDraftRun]);
+  }, [availableTeams.length]);
 
   // Show short 3-step tutorial only on first visit to Draft mode (and when no modal blocks it)
   useEffect(() => {
@@ -189,6 +278,11 @@ export default function App() {
       version: 1,
       savedAt: Date.now(),
       difficulty,
+      runRule,
+      seed: runSeed,
+      drawStep,
+      rerollsUsed,
+      isDaily: isDailyRun,
       teamIdentity,
       lineup,
       availableTeams,
@@ -202,6 +296,11 @@ export default function App() {
     });
   }, [
     difficulty,
+    runRule,
+    runSeed,
+    drawStep,
+    rerollsUsed,
+    isDailyRun,
     teamIdentity,
     lineup,
     availableTeams,
@@ -234,29 +333,91 @@ export default function App() {
 
   const handleDifficultyChange = (newDifficulty: Difficulty) => {
     setDifficulty(newDifficulty);
-    initializeDraftRun(newDifficulty, currentTab === 'draft');
+    initializeDraftRun(newDifficulty, currentTab === 'draft', { rule: runRule });
+  };
+
+  const handleRunRuleChange = (nextRule: RunRuleId) => {
+    setRunRule(nextRule);
+    initializeDraftRun(difficulty, false, { rule: nextRule });
+  };
+
+  const handleStartDailyDraft = () => {
+    const dailySeed = getDailyDraftSeed();
+    setDifficulty('normal');
+    setRunRule('standard');
+    setCurrentTab('draft');
+    initializeDraftRun('normal', false, {
+      seed: dailySeed,
+      rule: 'standard',
+      isDaily: true,
+    });
+  };
+
+  const handleCopySeedUrl = () => {
+    const url = buildShareDraftUrl(runSeed, runRule, difficulty);
+    if (!url) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(url);
+      }
+    } catch {
+      // Fallback ignored on restricted permissions
+    }
+    setSeedCopied(true);
+    window.setTimeout(() => setSeedCopied(false), 2400);
+  };
+
+  const handleSelectFrame = (frameId: CardFrameId) => {
+    setEquippedFrameId(frameId);
+    saveEquippedFrame(frameId);
   };
 
   const handleReroll = () => {
-    if (rerollsLeft <= 0 || pendingBonusChoices) return;
+    if (rerollsLeft <= 0 || pendingBonusChoices || runRule === 'no_reroll') return;
+    const nextStep = drawStep + 1;
+    setDrawStep(nextStep);
     setRerollsLeft(prev => prev - 1);
+    setRerollsUsed(prev => prev + 1);
     const currentIds = availableTeams.map(t => t.id);
-    drawThreeTeams(currentIds);
+    setAvailableTeams(
+      drawThreeTeamsForRun({
+        rule: runRule,
+        seed: runSeed,
+        step: nextStep,
+        excludeIds: currentIds,
+        lineup,
+        bannedPlayers,
+      })
+    );
   };
 
   const commitNewPick = (updatedLineup: Lineup) => {
     const prevCount = Object.values(lineup).filter(p => p !== null).length;
     const nextCount = Object.values(updatedLineup).filter(p => p !== null).length;
+    const nextStep = drawStep + 1;
 
+    setDrawStep(nextStep);
     setLineup(updatedLineup);
     playLockSound();
     vibrateLight();
     setWarningMessage(null);
-    drawThreeTeams(availableTeams.map(t => t.id));
+    setAvailableTeams(
+      drawThreeTeamsForRun({
+        rule: runRule,
+        seed: runSeed,
+        step: nextStep,
+        excludeIds: availableTeams.map(t => t.id),
+        lineup: updatedLineup,
+        bannedPlayers,
+      })
+    );
 
     if (nextCount > prevCount) {
       if (nextCount >= 2 && selectedBonuses.length === 0) {
-        const offer = rollMayhemBonusChoices([], 3);
+        const offer = rollMayhemBonusChoices([], 3, {
+          rng: createSeededRng(`${runSeed}-bonus-1`),
+          rule: runRule,
+        });
         if (offer.length > 0) {
           setBonusPromptStep(1);
           setPendingBonusChoices(offer);
@@ -266,7 +427,11 @@ export default function App() {
       } else if (nextCount >= 4 && selectedBonuses.length === 1) {
         const offer = rollMayhemBonusChoices(
           selectedBonuses.map(b => b.id),
-          3
+          3,
+          {
+            rng: createSeededRng(`${runSeed}-bonus-2`),
+            rule: runRule,
+          }
         );
         if (offer.length > 0) {
           setBonusPromptStep(2);
@@ -294,6 +459,12 @@ export default function App() {
   // Assign player to a specific role in the lineup (supports moving/swapping already drafted players)
   const handleAssignRole = (player: Player, targetRole: Role) => {
     if (pendingBonusChoices) return;
+
+    if (!isPlayerEligibleForRule(player, runRule)) {
+      setWarningMessage(`${player.ign} não participa desta regra (${getRunRuleMeta(runRule).label}).`);
+      setTimeout(() => setWarningMessage(null), 3000);
+      return;
+    }
 
     if (isPlayerBanned(player, bannedPlayers)) {
       setWarningMessage(`${player.ign} foi vetado pelo adversário nessa run.`);
@@ -324,6 +495,12 @@ export default function App() {
   // Smart selection when player chip is clicked from team card
   const handleSelectPlayerFromCard = (player: Player) => {
     if (pendingBonusChoices) return;
+
+    if (!isPlayerEligibleForRule(player, runRule)) {
+      setWarningMessage(`${player.ign} não participa desta regra (${getRunRuleMeta(runRule).label}).`);
+      setTimeout(() => setWarningMessage(null), 3000);
+      return;
+    }
 
     if (isPlayerBanned(player, bannedPlayers)) {
       setWarningMessage(`${player.ign} foi vetado pelo adversário nessa run.`);
@@ -395,7 +572,7 @@ export default function App() {
   };
 
   const handleClearLineup = () => {
-    initializeDraftRun(difficulty, false);
+    initializeDraftRun(difficulty, false, { rule: runRule });
   };
 
   const handleStartTournament = () => {
@@ -406,7 +583,7 @@ export default function App() {
   };
 
   const handleResetTournament = () => {
-    initializeDraftRun(difficulty, true);
+    initializeDraftRun(difficulty, true, { rule: runRule });
   };
 
   const handleSaveCampaign = (record: CampaignHistory) => {
@@ -416,6 +593,10 @@ export default function App() {
       localStorage.setItem('vct_mayhem_campaigns', JSON.stringify(updated));
     } catch (e) {
       console.error('Failed to save campaign', e);
+    }
+    if (record.isDaily || isDailyRun) {
+      markDailyDraftCompleted();
+      setDailyCompleted(true);
     }
     setPlayerRecords(prev => recordCampaignAndSave(prev, record));
   };
@@ -474,6 +655,10 @@ export default function App() {
               <HomeScreen
                 difficulty={difficulty}
                 onDifficultyChange={handleDifficultyChange}
+                runRule={runRule}
+                onRunRuleChange={handleRunRuleChange}
+                onStartDailyDraft={handleStartDailyDraft}
+                isDailyCompleted={dailyCompleted}
                 onSelectMode={handleTabChange}
                 onOpenHelp={() => setShowRulesModal(true)}
                 trophiesCount={championshipsCount}
@@ -492,6 +677,12 @@ export default function App() {
                     rerollsLeft={rerollsLeft}
                     selectedBonuses={selectedBonuses}
                     teamIdentity={teamIdentity}
+                    frameId={equippedFrameId}
+                    runRule={runRule}
+                    seed={runSeed}
+                    isDaily={isDailyRun}
+                    onCopySeedUrl={handleCopySeedUrl}
+                    seedCopied={seedCopied}
                     onEditTeamIdentity={() => setShowTeamIdentityModal(true)}
                     bannedPlayers={bannedPlayers}
                     onOpenBansModal={() => setShowBansModal(true)}
@@ -507,6 +698,13 @@ export default function App() {
                   <TournamentSimulation
                     lineup={lineup}
                     difficulty={difficulty}
+                    runRule={runRule}
+                    seed={runSeed}
+                    rerollsUsed={rerollsUsed}
+                    isDaily={isDailyRun}
+                    frameId={equippedFrameId}
+                    seedCopied={seedCopied}
+                    onCopySeedUrl={handleCopySeedUrl}
                     selectedBonuses={selectedBonuses}
                     bannedPlayers={bannedPlayers}
                     teamIdentity={teamIdentity}
@@ -533,6 +731,8 @@ export default function App() {
               <TrophyRoomModal
                 history={campaignHistory}
                 records={playerRecords}
+                equippedFrameId={equippedFrameId}
+                onSelectFrame={handleSelectFrame}
                 onClearHistory={handleClearHistory}
                 onClose={() => setCurrentTab('draft')}
               />
