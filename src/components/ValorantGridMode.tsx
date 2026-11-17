@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   HelpCircle,
   ChevronRight,
@@ -8,9 +8,20 @@ import {
   Layers,
   AlertTriangle,
   Flag,
+  Calendar,
+  Flame,
+  RotateCcw,
+  Check,
+  Trophy,
 } from 'lucide-react';
 import { GridCellState, Player } from '../types';
 import { GRID_PUZZLES, GridPuzzle, playerMatchesCriterion, GRID_PLAYERS_DATABASE } from '../data/gridPuzzles';
+import {
+  generateDailyGridPuzzle,
+  getLocalDateKey,
+  getPreviousDateKey,
+  formatDateKeyPtBr,
+} from '../data/infiniteGridGenerator';
 import { GridPlayerSearchModal } from './GridPlayerSearchModal';
 import { GridResultModal } from './GridResultModal';
 import { GridVisualBadge } from './GridVisualBadge';
@@ -20,37 +31,150 @@ import { playSelectSound, playRoundLossSound, playRoundWinSound } from '../utils
 import { Card, PrimaryButton, SecondaryButton, StatPill } from './ui';
 
 const MAX_GRID_ATTEMPTS = 9;
+const DAILY_STORAGE_PREFIX = 'vct_grid_daily_v1_';
+const DAILY_STREAK_KEY = 'vct_grid_daily_streak_v1';
+const CLASSIC_STORAGE_KEY = 'vct_grid_classic_v1';
+
+interface SerializedCell {
+  playerId: string | null;
+  isSolved: boolean;
+  points: number;
+  wrongGuessesCount: number;
+}
+
+interface StoredBoardState {
+  cells: SerializedCell[][];
+  attemptsLeft: number;
+  hasSurrendered: boolean;
+  bestScore?: number;
+  bestSolved?: number;
+}
+
+interface DailyStreakData {
+  streak: number;
+  lastCompletedDate: string | null;
+}
+
+const createEmptyCells = (): GridCellState[][] =>
+  Array(3)
+    .fill(null)
+    .map((_, r) =>
+      Array(3)
+        .fill(null)
+        .map((_, c) => ({
+          row: r,
+          col: c,
+          player: null,
+          isSolved: false,
+          points: 60,
+          wrongGuessesCount: 0,
+        }))
+    );
+
+const serializeCells = (cells: GridCellState[][]): SerializedCell[][] =>
+  cells.map(row =>
+    row.map(c => ({
+      playerId: c.player?.id ?? null,
+      isSolved: c.isSolved,
+      points: c.points,
+      wrongGuessesCount: c.wrongGuessesCount,
+    }))
+  );
+
+const deserializeCells = (saved?: SerializedCell[][]): GridCellState[][] => {
+  if (!saved || saved.length !== 3) return createEmptyCells();
+  return saved.map((row, r) =>
+    row.map((c, col) => ({
+      row: r,
+      col,
+      player: c.playerId ? GRID_PLAYERS_DATABASE.find(p => p.id === c.playerId) || null : null,
+      isSolved: Boolean(c.isSolved && c.playerId),
+      points: typeof c.points === 'number' ? c.points : 60,
+      wrongGuessesCount: typeof c.wrongGuessesCount === 'number' ? c.wrongGuessesCount : 0,
+    }))
+  );
+};
+
+const loadDailyState = (dateKey: string): StoredBoardState | null => {
+  try {
+    const raw = localStorage.getItem(`${DAILY_STORAGE_PREFIX}${dateKey}`);
+    return raw ? (JSON.parse(raw) as StoredBoardState) : null;
+  } catch {
+    return null;
+  }
+};
+
+const loadClassicStates = (): Record<string, StoredBoardState> => {
+  try {
+    const raw = localStorage.getItem(CLASSIC_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, StoredBoardState>) : {};
+  } catch {
+    return {};
+  }
+};
+
+const loadDailyStreak = (todayKey: string): DailyStreakData => {
+  try {
+    const raw = localStorage.getItem(DAILY_STREAK_KEY);
+    if (!raw) return { streak: 0, lastCompletedDate: null };
+    const parsed = JSON.parse(raw) as DailyStreakData;
+    const yesterdayKey = getPreviousDateKey(todayKey);
+    if (
+      parsed.lastCompletedDate &&
+      parsed.lastCompletedDate !== todayKey &&
+      parsed.lastCompletedDate !== yesterdayKey
+    ) {
+      return { streak: 0, lastCompletedDate: parsed.lastCompletedDate };
+    }
+    return {
+      streak: parsed.streak || 0,
+      lastCompletedDate: parsed.lastCompletedDate || null,
+    };
+  } catch {
+    return { streak: 0, lastCompletedDate: null };
+  }
+};
 
 export const ValorantGridMode: React.FC = () => {
+  const [todayKey] = useState<string>(() => getLocalDateKey());
+  const [mode, setMode] = useState<'daily' | 'classic'>('daily');
   const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0);
 
-  const puzzle: GridPuzzle = GRID_PUZZLES[currentPuzzleIndex] || GRID_PUZZLES[0];
+  const dailyPuzzle = useMemo(() => generateDailyGridPuzzle(todayKey), [todayKey]);
+  const puzzle: GridPuzzle =
+    mode === 'daily' ? dailyPuzzle : GRID_PUZZLES[currentPuzzleIndex] || GRID_PUZZLES[0];
 
-  const createEmptyCells = (): GridCellState[][] =>
-    Array(3)
-      .fill(null)
-      .map((_, r) =>
-        Array(3)
-          .fill(null)
-          .map((_, c) => ({
-            row: r,
-            col: c,
-            player: null,
-            isSolved: false,
-            points: 60,
-            wrongGuessesCount: 0,
-          }))
-      );
+  const [dailyStreak, setDailyStreak] = useState<number>(() => loadDailyStreak(todayKey).streak);
+  const [classicStates, setClassicStates] = useState<Record<string, StoredBoardState>>(loadClassicStates);
 
-  const [cells, setCells] = useState<GridCellState[][]>(createEmptyCells);
-  const [attemptsLeft, setAttemptsLeft] = useState(MAX_GRID_ATTEMPTS);
-  const [hasSurrendered, setHasSurrendered] = useState(false);
+  const initialDaily = useMemo(() => loadDailyState(todayKey), [todayKey]);
+
+  const [cells, setCells] = useState<GridCellState[][]>(() =>
+    initialDaily ? deserializeCells(initialDaily.cells) : createEmptyCells()
+  );
+  const [attemptsLeft, setAttemptsLeft] = useState<number>(() =>
+    initialDaily ? initialDaily.attemptsLeft : MAX_GRID_ATTEMPTS
+  );
+  const [hasSurrendered, setHasSurrendered] = useState<boolean>(() =>
+    initialDaily ? Boolean(initialDaily.hasSurrendered) : false
+  );
+
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [showRulesInfo, setShowRulesInfo] = useState(false);
   const [showGridPicker, setShowGridPicker] = useState(false);
   const [showSolutionsWarning, setShowSolutionsWarning] = useState(false);
   const [showSolutionsModal, setShowSolutionsModal] = useState(false);
+
+  // Track which puzzle already had its end-of-game sound/modal triggered so restoring completed boards doesn't replay fanfare
+  const completedFeedbackShownRef = useRef<string | null>(
+    initialDaily &&
+      (deserializeCells(initialDaily.cells).reduce((acc, r) => acc + r.filter(c => c.isSolved).length, 0) === 9 ||
+        initialDaily.attemptsLeft <= 0 ||
+        initialDaily.hasSurrendered)
+      ? dailyPuzzle.id
+      : null
+  );
 
   const solvedCount = useMemo(() => {
     return cells.reduce((acc, row) => acc + row.filter(c => c.isSolved).length, 0);
@@ -98,7 +222,68 @@ export const ValorantGridMode: React.FC = () => {
 
   const isGameOver = solvedCount === 9 || attemptsLeft <= 0 || hasSurrendered;
 
+  // Persist current board progress automatically
   useEffect(() => {
+    const serialized: StoredBoardState = {
+      cells: serializeCells(cells),
+      attemptsLeft,
+      hasSurrendered,
+    };
+
+    if (mode === 'daily') {
+      try {
+        localStorage.setItem(`${DAILY_STORAGE_PREFIX}${todayKey}`, JSON.stringify(serialized));
+      } catch {
+        // ignore storage quota errors
+      }
+    } else {
+      setClassicStates(prev => {
+        const existing = prev[puzzle.id];
+        const nextEntry: StoredBoardState = {
+          ...serialized,
+          bestScore: Math.max(existing?.bestScore ?? 0, totalScore),
+          bestSolved: Math.max(existing?.bestSolved ?? 0, solvedCount),
+        };
+        const updated = { ...prev, [puzzle.id]: nextEntry };
+        try {
+          localStorage.setItem(CLASSIC_STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+    }
+  }, [cells, attemptsLeft, hasSurrendered, mode, puzzle.id, todayKey, totalScore, solvedCount]);
+
+  // Handle end-of-game sound, modal & daily streak updates once per puzzle completion
+  useEffect(() => {
+    if (!isGameOver) return;
+    if (completedFeedbackShownRef.current === puzzle.id) return;
+    completedFeedbackShownRef.current = puzzle.id;
+
+    if (mode === 'daily') {
+      const streakData = loadDailyStreak(todayKey);
+      if (streakData.lastCompletedDate !== todayKey) {
+        const yesterdayKey = getPreviousDateKey(todayKey);
+        const nextStreak =
+          solvedCount === 9
+            ? streakData.lastCompletedDate === yesterdayKey
+              ? streakData.streak + 1
+              : 1
+            : 0;
+        const nextData: DailyStreakData = {
+          streak: nextStreak,
+          lastCompletedDate: todayKey,
+        };
+        setDailyStreak(nextStreak);
+        try {
+          localStorage.setItem(DAILY_STREAK_KEY, JSON.stringify(nextData));
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     if (solvedCount === 9) {
       playRoundWinSound();
       const timer = setTimeout(() => {
@@ -106,6 +291,7 @@ export const ValorantGridMode: React.FC = () => {
       }, 600);
       return () => clearTimeout(timer);
     }
+
     if (attemptsLeft <= 0 && !hasSurrendered) {
       playRoundLossSound();
       const timer = setTimeout(() => {
@@ -113,10 +299,48 @@ export const ValorantGridMode: React.FC = () => {
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [solvedCount, attemptsLeft, hasSurrendered]);
+  }, [isGameOver, solvedCount, attemptsLeft, hasSurrendered, mode, puzzle.id, todayKey]);
 
-  const resetBoardState = (nextIndex: number) => {
-    setCurrentPuzzleIndex(nextIndex);
+  const loadBoardIntoView = (targetMode: 'daily' | 'classic', classicIdx: number) => {
+    setActiveCell(null);
+    setIsResultModalOpen(false);
+    setShowSolutionsWarning(false);
+    setShowSolutionsModal(false);
+
+    if (targetMode === 'daily') {
+      const saved = loadDailyState(todayKey);
+      const nextCells = saved ? deserializeCells(saved.cells) : createEmptyCells();
+      const nextAttempts = saved ? saved.attemptsLeft : MAX_GRID_ATTEMPTS;
+      const nextSurrender = saved ? Boolean(saved.hasSurrendered) : false;
+      const nextSolved = nextCells.reduce((acc, r) => acc + r.filter(c => c.isSolved).length, 0);
+      const alreadyDone = nextSolved === 9 || nextAttempts <= 0 || nextSurrender;
+      completedFeedbackShownRef.current = alreadyDone ? dailyPuzzle.id : null;
+      setMode('daily');
+      setCells(nextCells);
+      setAttemptsLeft(nextAttempts);
+      setHasSurrendered(nextSurrender);
+      return;
+    }
+
+    const targetPuzzle = GRID_PUZZLES[classicIdx] || GRID_PUZZLES[0];
+    const savedClassic = classicStates[targetPuzzle.id];
+    const nextCells = savedClassic ? deserializeCells(savedClassic.cells) : createEmptyCells();
+    const nextAttempts = savedClassic ? savedClassic.attemptsLeft : MAX_GRID_ATTEMPTS;
+    const nextSurrender = savedClassic ? Boolean(savedClassic.hasSurrendered) : false;
+    const nextSolved = nextCells.reduce((acc, r) => acc + r.filter(c => c.isSolved).length, 0);
+    const alreadyDone = nextSolved === 9 || nextAttempts <= 0 || nextSurrender;
+    completedFeedbackShownRef.current = alreadyDone ? targetPuzzle.id : null;
+    setMode('classic');
+    setCurrentPuzzleIndex(classicIdx);
+    setCells(nextCells);
+    setAttemptsLeft(nextAttempts);
+    setHasSurrendered(nextSurrender);
+  };
+
+  const resetCurrentClassicBoard = () => {
+    if (mode !== 'classic') return;
+    playSelectSound();
+    completedFeedbackShownRef.current = null;
     setCells(createEmptyCells());
     setAttemptsLeft(MAX_GRID_ATTEMPTS);
     setHasSurrendered(false);
@@ -129,18 +353,18 @@ export const ValorantGridMode: React.FC = () => {
   const handlePrevPuzzle = () => {
     playSelectSound();
     const prev = (currentPuzzleIndex - 1 + GRID_PUZZLES.length) % GRID_PUZZLES.length;
-    resetBoardState(prev);
+    loadBoardIntoView('classic', prev);
   };
 
   const handleNextPuzzle = () => {
     playSelectSound();
     const next = (currentPuzzleIndex + 1) % GRID_PUZZLES.length;
-    resetBoardState(next);
+    loadBoardIntoView('classic', next);
   };
 
   const selectPuzzle = (index: number) => {
     playSelectSound();
-    resetBoardState(index);
+    loadBoardIntoView('classic', index);
     setShowGridPicker(false);
   };
 
@@ -192,12 +416,60 @@ export const ValorantGridMode: React.FC = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto py-1 sm:py-2 space-y-2.5 sm:space-y-4">
+      {/* Mode Switcher Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-xl border border-white/10">
+          <button
+            id="grid-mode-daily-btn"
+            onClick={() => {
+              playSelectSound();
+              setShowGridPicker(false);
+              loadBoardIntoView('daily', currentPuzzleIndex);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              mode === 'daily'
+                ? 'bg-[#ff4655] text-white shadow-sm'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Grid Diário</span>
+          </button>
+          <button
+            id="grid-mode-classic-btn"
+            onClick={() => {
+              playSelectSound();
+              loadBoardIntoView('classic', currentPuzzleIndex);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              mode === 'classic'
+                ? 'bg-[#ff4655] text-white shadow-sm'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Tabuleiros Clássicos</span>
+          </button>
+        </div>
+
+        {mode === 'daily' && (
+          <div className="flex items-center gap-2 text-xs font-mono-vct text-slate-300 bg-[#11151d] border border-white/10 rounded-[3px] px-2.5 py-1.5">
+            <Flame className="w-3.5 h-3.5 text-amber-400" />
+            <span>
+              Sequência: <strong className="text-amber-400">{dailyStreak}</strong>
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Top Header Card */}
       <Card padding="none" className="p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4">
         <div>
           <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
             <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714]">
-              Grid {puzzle.number}/{GRID_PUZZLES.length}
+              {mode === 'daily'
+                ? `Diário · ${formatDateKeyPtBr(todayKey)}`
+                : `Clássico ${puzzle.number}/${GRID_PUZZLES.length}`}
             </span>
             <span className="text-slate-600">·</span>
             <span className="font-mono-vct text-xs font-bold text-slate-300">
@@ -221,50 +493,56 @@ export const ValorantGridMode: React.FC = () => {
           />
           <StatPill label="PTS" value={totalScore} color="#e2b714" />
 
-          <SecondaryButton
-            id="open-grid-picker-btn"
-            size="sm"
-            onClick={() => setShowGridPicker(prev => !prev)}
-            title="Escolher um dos tabuleiros temáticos"
-          >
-            <Layers className="w-4 h-4 text-[#e2b714]" />
-            <span>
-              {`Tabuleiro ${puzzle.number}/${GRID_PUZZLES.length}`}
-            </span>
-          </SecondaryButton>
+          {mode === 'classic' && (
+            <>
+              <SecondaryButton
+                id="open-grid-picker-btn"
+                size="sm"
+                onClick={() => setShowGridPicker(prev => !prev)}
+                title="Escolher um dos tabuleiros temáticos"
+              >
+                <Layers className="w-4 h-4 text-[#e2b714]" />
+                <span>
+                  {`Tabuleiro ${puzzle.number}/${GRID_PUZZLES.length}`}
+                </span>
+              </SecondaryButton>
 
-          <SecondaryButton
-            id="prev-grid-puzzle-btn"
-            size="sm"
-            onClick={handlePrevPuzzle}
-            title="Tabuleiro Anterior"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </SecondaryButton>
+              <SecondaryButton
+                id="prev-grid-puzzle-btn"
+                size="sm"
+                onClick={handlePrevPuzzle}
+                title="Tabuleiro Anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </SecondaryButton>
 
-          <SecondaryButton
-            id="switch-grid-puzzle-btn"
-            size="sm"
-            onClick={handleNextPuzzle}
-            title="Próximo Tabuleiro"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </SecondaryButton>
+              <SecondaryButton
+                id="switch-grid-puzzle-btn"
+                size="sm"
+                onClick={handleNextPuzzle}
+                title="Próximo Tabuleiro"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </SecondaryButton>
+            </>
+          )}
         </div>
       </Card>
 
       {/* Grid Picker Drawer */}
-      {showGridPicker && (
+      {mode === 'classic' && showGridPicker && (
         <Card padding="md" className="animate-fadeIn">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <span className="text-xs font-mono-vct font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-[#e2b714]" />
-              Tabuleiros disponíveis ({GRID_PUZZLES.length})
+              Tabuleiros clássicos ({GRID_PUZZLES.length})
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             {GRID_PUZZLES.map((g, idx) => {
               const isSelected = idx === currentPuzzleIndex;
+              const progress = classicStates[g.id];
+              const isCleared = (progress?.bestSolved ?? 0) === 9;
               return (
                 <button
                   key={g.id}
@@ -279,7 +557,15 @@ export const ValorantGridMode: React.FC = () => {
                     <span className="font-mono-vct font-bold text-xs text-[#e2b714]">
                       Grid #{g.number}
                     </span>
-                    {isSelected && <span className="w-2 h-2 rounded-[1px] bg-[#ff4655]" />}
+                    <div className="flex items-center gap-1.5">
+                      {isCleared && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-mono-vct text-emerald-400">
+                          <Check className="w-3 h-3" />
+                          {progress?.bestScore} pts
+                        </span>
+                      )}
+                      {isSelected && <span className="w-2 h-2 rounded-[1px] bg-[#ff4655]" />}
+                    </div>
                   </div>
                   <span className="font-bold text-sm text-white leading-tight line-clamp-2">
                     {g.title}
@@ -421,17 +707,42 @@ export const ValorantGridMode: React.FC = () => {
               <span>Desistir</span>
             </SecondaryButton>
           ) : (
-            <SecondaryButton
-              id="grid-show-solutions-btn"
-              size="sm"
-              onClick={() => {
-                playSelectSound();
-                setShowSolutionsModal(true);
-              }}
-            >
-              <Eye className="w-4 h-4 text-[#e2b714]" />
-              <span>Ver Gabarito</span>
-            </SecondaryButton>
+            <>
+              <SecondaryButton
+                id="grid-show-solutions-btn"
+                size="sm"
+                onClick={() => {
+                  playSelectSound();
+                  setShowSolutionsModal(true);
+                }}
+              >
+                <Eye className="w-4 h-4 text-[#e2b714]" />
+                <span>Ver Gabarito</span>
+              </SecondaryButton>
+
+              <SecondaryButton
+                id="grid-show-result-btn"
+                size="sm"
+                onClick={() => {
+                  playSelectSound();
+                  setIsResultModalOpen(true);
+                }}
+              >
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <span>Resumo</span>
+              </SecondaryButton>
+
+              {mode === 'classic' && (
+                <SecondaryButton
+                  id="grid-replay-classic-btn"
+                  size="sm"
+                  onClick={resetCurrentClassicBoard}
+                >
+                  <RotateCcw className="w-4 h-4 text-slate-300" />
+                  <span>Tentar Novamente</span>
+                </SecondaryButton>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -609,9 +920,15 @@ export const ValorantGridMode: React.FC = () => {
           setShowSolutionsModal(true);
         }}
         onNextPuzzle={handleNextPuzzle}
-        hasNextPuzzle={true}
-        isInfiniteMode={false}
-        streak={0}
+        hasNextPuzzle={mode === 'classic'}
+        isDailyMode={mode === 'daily'}
+        streak={dailyStreak}
+        onSwitchToClassic={() => {
+          playSelectSound();
+          setIsResultModalOpen(false);
+          loadBoardIntoView('classic', currentPuzzleIndex);
+        }}
+        onReplayClassic={mode === 'classic' ? resetCurrentClassicBoard : undefined}
       />
     </div>
   );

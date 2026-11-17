@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, X, Share2, ArrowRight, Eye, ShieldAlert } from 'lucide-react';
+import { Trophy, X, Share2, ArrowRight, Eye, ShieldAlert, RotateCcw, Calendar } from 'lucide-react';
 import { GridCellState } from '../types';
 import { GridPuzzle } from '../data/gridPuzzles';
 import { Card, PrimaryButton, SecondaryButton } from './ui';
@@ -17,8 +17,10 @@ interface GridResultModalProps {
   onViewSolutions?: () => void;
   onNextPuzzle: () => void;
   hasNextPuzzle: boolean;
-  isInfiniteMode?: boolean;
+  isDailyMode?: boolean;
   streak?: number;
+  onSwitchToClassic?: () => void;
+  onReplayClassic?: () => void;
 }
 
 export const GridResultModal: React.FC<GridResultModalProps> = ({
@@ -34,8 +36,10 @@ export const GridResultModal: React.FC<GridResultModalProps> = ({
   onViewSolutions,
   onNextPuzzle,
   hasNextPuzzle,
-  isInfiniteMode = false,
+  isDailyMode = false,
   streak = 0,
+  onSwitchToClassic,
+  onReplayClassic,
 }) => {
   const [copied, setCopied] = React.useState(false);
 
@@ -55,13 +59,16 @@ export const GridResultModal: React.FC<GridResultModalProps> = ({
 
   const rank = getRankBadge();
   const modalHeadline = isCompleted
-    ? 'Grid fechado'
+    ? isDailyMode
+      ? `Grid Diário #${puzzle.number} fechado`
+      : 'Grid fechado'
     : hasSurrendered
       ? 'Partida encerrada'
       : 'Sem vidas restantes';
 
   const handleShare = () => {
-    const text = `VCT GRID #${puzzle.number} (${puzzle.title})
+    const label = isDailyMode ? `VCT GRID DIÁRIO #${puzzle.number}` : `VCT GRID CLÁSSICO #${puzzle.number}`;
+    const text = `${label} (${puzzle.title})
 Resultado: ${solvedCount}/9 células
 Pontuação: ${totalScore}/${maxPossible} pts
 Rank: ${rank.title}
@@ -111,7 +118,7 @@ Jogue também no VALORANT Champions Mayhem.`;
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-2.5 p-4 bg-[#11151d] border-b border-white/[0.08] text-center">
+        <div className={`grid gap-2.5 p-4 bg-[#11151d] border-b border-white/[0.08] text-center ${isDailyMode ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
           <div className="surface-sub p-3">
             <div className="text-2xl font-bold text-amber-400 font-mono-vct tabular-nums">
               {totalScore} <span className="text-xs text-slate-400 font-normal">/ {maxPossible}</span>
@@ -139,8 +146,8 @@ Jogue também no VALORANT Champions Mayhem.`;
             </div>
           </div>
 
-          {isInfiniteMode && (
-            <div className="surface-sub p-3 border-amber-500/30 col-span-2 sm:col-span-1 flex flex-col justify-center">
+          {isDailyMode && (
+            <div className="surface-sub p-3 border-amber-500/30 flex flex-col justify-center">
               <div className="text-2xl font-bold text-amber-400 font-mono-vct tabular-nums">
                 {streak}
               </div>
@@ -209,15 +216,46 @@ Jogue também no VALORANT Champions Mayhem.`;
             <span>{copied ? 'Copiado!' : 'Compartilhar resultado'}</span>
           </SecondaryButton>
 
-          {hasNextPuzzle && (
-            <PrimaryButton
-              onClick={onNextPuzzle}
-              size="md"
-              className="w-full"
-            >
-              <span>Próximo Grid</span>
-              <ArrowRight className="w-4 h-4" />
-            </PrimaryButton>
+          {isDailyMode ? (
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-center gap-1.5 text-xs font-mono-vct text-slate-400">
+                <Calendar className="w-3.5 h-3.5 text-[#38bdf8]" />
+                <span>Volte amanhã para o próximo Grid Diário</span>
+              </div>
+              {onSwitchToClassic && (
+                <PrimaryButton
+                  onClick={onSwitchToClassic}
+                  size="md"
+                  className="w-full"
+                >
+                  <span>Jogar Tabuleiros Clássicos</span>
+                  <ArrowRight className="w-4 h-4" />
+                </PrimaryButton>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-2">
+              {onReplayClassic && (
+                <SecondaryButton
+                  onClick={onReplayClassic}
+                  size="md"
+                  className="flex-1"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Tentar Novamente</span>
+                </SecondaryButton>
+              )}
+              {hasNextPuzzle && (
+                <PrimaryButton
+                  onClick={onNextPuzzle}
+                  size="md"
+                  className="flex-1"
+                >
+                  <span>Próximo Grid</span>
+                  <ArrowRight className="w-4 h-4" />
+                </PrimaryButton>
+              )}
+            </div>
           )}
         </div>
       </Card>

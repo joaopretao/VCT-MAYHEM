@@ -469,7 +469,7 @@ export function playerMatchesCriterion(player: Player, criterion: GridCriterion)
 }
 
 /**
- * Grids Oficiais de Janelas de Transferência & Conquistas
+ * Grids Clássicos de Janelas de Transferência & Nacionalidades
  */
 export const GRID_PUZZLES: GridPuzzle[] = [
   {
@@ -523,33 +523,33 @@ export const GRID_PUZZLES: GridPuzzle[] = [
   {
     id: 'grid-4-ponte-americas-emea',
     number: 4,
-    title: 'Grid 4: Ponte Américas × EMEA (Dificuldade: Média/Difícil)',
-    description: 'Conexões entre LOUD, KRÜ e Leviatán contra MIBR, FURIA e Team Vitality.',
+    title: 'Grid 4: Ponte Américas × EMEA (Dificuldade: Difícil)',
+    description: 'Janelas intercontinentais cruzando NRG, Fnatic e Karmine Corp com Liquid, NAVI e Estados Unidos.',
     cols: [
-      { id: 'c1', label: 'MIBR', subLabel: 'VCT Americas', type: 'team', value: 'MIBR', color: '#009c3b', shortCode: 'MIBR' },
-      { id: 'c2', label: 'FURIA', subLabel: 'VCT Americas', type: 'team', value: 'FURIA', color: '#ffffff', shortCode: 'FUR' },
-      { id: 'c3', label: 'Team Vitality', subLabel: 'VCT EMEA', type: 'team', value: 'Team Vitality', color: '#f5c518', shortCode: 'VIT' },
+      { id: 'c1', label: 'NRG', subLabel: 'VCT Americas', type: 'team', value: 'NRG', color: '#ff3800', shortCode: 'NRG' },
+      { id: 'c2', label: 'Fnatic', subLabel: 'VCT EMEA', type: 'team', value: 'Fnatic', color: '#ff5900', shortCode: 'FNC' },
+      { id: 'c3', label: 'Karmine Corp', subLabel: 'VCT EMEA', type: 'team', value: 'Karmine Corp', color: '#00c8ff', shortCode: 'KC' },
     ],
     rows: [
-      { id: 'r1', label: 'LOUD', subLabel: 'Jogou na LOUD', type: 'team', value: 'LOUD', color: '#00ff88', shortCode: 'LOUD' },
-      { id: 'r2', label: 'KRÜ Esports', subLabel: 'Jogou na KRÜ', type: 'team', value: 'KRÜ Esports', color: '#ff007f', shortCode: 'KRÜ' },
-      { id: 'r3', label: 'Leviatán', subLabel: 'Jogou na Leviatán', type: 'team', value: 'Leviatán', color: '#4ea5de', shortCode: 'LEV' },
+      { id: 'r1', label: 'Estados Unidos', subLabel: 'Nacionalidade', type: 'nationality', value: 'estados unidos', color: '#3b82f6', shortCode: 'USA' },
+      { id: 'r2', label: 'Team Liquid', subLabel: 'Jogou na Team Liquid', type: 'team', value: 'Team Liquid', color: '#2b7fff', shortCode: 'TL' },
+      { id: 'r3', label: 'Natus Vincere (NAVI)', subLabel: 'Jogou na NAVI', type: 'team', value: 'Natus Vincere', color: '#fff200', shortCode: 'NAVI' },
     ],
   },
   {
     id: 'grid-5-dinastia-coreana',
     number: 5,
-    title: 'Grid 5: Dinastia Coreana & Conquistas (Dificuldade: Difícil)',
-    description: 'Gen.G, T1 e DRX cruzadas com o legado da Vision Strikers, títulos de Masters e presença no Champions 2026.',
+    title: 'Grid 5: Ponte Américas × Pacífico (Dificuldade: Média/Difícil)',
+    description: 'Transferências e origens conectando Evil Geniuses, XSET e T1 contra 100 Thieves, Gen.G e Estados Unidos.',
     cols: [
-      { id: 'c1', label: 'Vision Strikers', subLabel: 'Legado KR', type: 'team', value: 'Vision Strikers', color: '#ef4444', shortCode: 'VS' },
-      { id: 'c2', label: 'Campeão de Masters', subLabel: 'Conquista VCT', type: 'achievement', value: 'masters_winner', color: '#a855f7', shortCode: 'MST' },
-      { id: 'c3', label: 'Jogou o Champions 2026', subLabel: 'Xangai 2026', type: 'achievement', value: 'champions_2026', color: '#e2b714', shortCode: '2026' },
+      { id: 'c1', label: 'Evil Geniuses', subLabel: 'VCT Americas', type: 'team', value: 'Evil Geniuses', color: '#053e6b', shortCode: 'EG' },
+      { id: 'c2', label: 'XSET', subLabel: 'Champions 2022', type: 'team', value: 'XSET', color: '#ef4444', shortCode: 'XSET' },
+      { id: 'c3', label: 'T1', subLabel: 'VCT Pacific', type: 'team', value: 'T1', color: '#e4002b', shortCode: 'T1' },
     ],
     rows: [
-      { id: 'r1', label: 'Gen.G Esports', subLabel: 'Jogou na Gen.G', type: 'team', value: 'Gen.G', color: '#aa8a00', shortCode: 'GEN' },
-      { id: 'r2', label: 'T1', subLabel: 'Jogou na T1', type: 'team', value: 'T1', color: '#e4002b', shortCode: 'T1' },
-      { id: 'r3', label: 'DRX', subLabel: 'Jogou na DRX', type: 'team', value: 'DRX', color: '#2563eb', shortCode: 'DRX' },
+      { id: 'r1', label: 'Estados Unidos', subLabel: 'Nacionalidade', type: 'nationality', value: 'estados unidos', color: '#3b82f6', shortCode: 'USA' },
+      { id: 'r2', label: '100 Thieves', subLabel: 'Jogou na 100 Thieves', type: 'team', value: '100 Thieves', color: '#de1f26', shortCode: '100T' },
+      { id: 'r3', label: 'Gen.G', subLabel: 'Jogou na Gen.G', type: 'team', value: 'Gen.G', color: '#aa8a00', shortCode: 'GEN' },
     ],
   },
 ];

@@ -1,4 +1,4 @@
-import { GridPuzzle, GridCriterion, playerMatchesCriterion, GRID_PLAYERS_DATABASE } from './gridPuzzles';
+import { GridPuzzle, GridCriterion, GRID_PUZZLES, playerMatchesCriterion, GRID_PLAYERS_DATABASE } from './gridPuzzles';
 
 // Candidate Column Criteria — 100% Single Teams (No "A ou B")
 export const INFINITE_COL_CRITERIA: GridCriterion[] = [
@@ -110,42 +110,187 @@ export function isGridSolvable(
   return backtrack(0);
 }
 
-function shuffle<T>(array: T[]): T[] {
+function hashString(str: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return function () {
+    let t = (a += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle<T>(array: T[], rng: () => number = Math.random): T[] {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
 }
 
+export function getLocalDateKey(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getPreviousDateKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dt = new Date(y, (m || 1) - 1, (d || 1) - 1);
+  return getLocalDateKey(dt);
+}
+
+export function formatDateKeyPtBr(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-');
+  if (!y || !m || !d) return dateKey;
+  return `${d}/${m}/${y}`;
+}
+
+export function getDailyGridNumber(dateKey: string): number {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const anchor = Date.UTC(2026, 10, 1); // 2026-11-01
+  const target = Date.UTC(y || 2026, (m || 1) - 1, d || 1);
+  const diffDays = Math.floor((target - anchor) / (1000 * 60 * 60 * 24));
+  return Math.max(1, diffDays + 1);
+}
+
+let cachedCritSets: Map<string, Set<string>> | null = null;
+
+function getCriteriaPlayerSets(): Map<string, Set<string>> {
+  if (cachedCritSets) return cachedCritSets;
+  const dedupPlayers = Array.from(
+    new Map(GRID_PLAYERS_DATABASE.map(p => [p.ign.toLowerCase(), p])).values()
+  );
+  const map = new Map<string, Set<string>>();
+  for (const cr of [...INFINITE_COL_CRITERIA, ...INFINITE_ROW_CRITERIA]) {
+    const set = new Set<string>();
+    for (const p of dedupPlayers) {
+      if (playerMatchesCriterion(p, cr)) {
+        set.add(p.ign.toLowerCase());
+      }
+    }
+    map.set(cr.id, set);
+  }
+  cachedCritSets = map;
+  return map;
+}
+
+function hasIntersection(a: Set<string>, b: Set<string>): boolean {
+  for (const val of a) {
+    if (b.has(val)) return true;
+  }
+  return false;
+}
+
+function solveWithCachedSets(
+  rowIds: [string, string, string],
+  colIds: [string, string, string],
+  critSets: Map<string, Set<string>>
+): number[] | null {
+  const candidatesPerCell: string[][] = [];
+  for (const rId of rowIds) {
+    const rSet = critSets.get(rId);
+    if (!rSet) return null;
+    for (const cId of colIds) {
+      const cSet = critSets.get(cId);
+      if (!cSet) return null;
+      const inter: string[] = [];
+      for (const ign of rSet) {
+        if (cSet.has(ign)) inter.push(ign);
+      }
+      if (inter.length === 0) return null;
+      candidatesPerCell.push(inter);
+    }
+  }
+
+  const order = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(
+    (a, b) => candidatesPerCell[a].length - candidatesPerCell[b].length
+  );
+  const used = new Set<string>();
+
+  function bt(idx: number): boolean {
+    if (idx === 9) return true;
+    for (const ign of candidatesPerCell[order[idx]]) {
+      if (!used.has(ign)) {
+        used.add(ign);
+        if (bt(idx + 1)) return true;
+        used.delete(ign);
+      }
+    }
+    return false;
+  }
+
+  return bt(0) ? candidatesPerCell.map(c => c.length) : null;
+}
+
 /**
- * Dynamically generates a 100% verified solvable 3x3 Grid Puzzle using ONLY Single Teams & Single Nationalities
+ * Deterministically generates a verified solvable 3x3 Daily Grid Puzzle using ONLY Teams & Nationalities
  */
-export function generateInfiniteGridPuzzle(roundNumber: number): GridPuzzle {
-  const maxAttempts = 300;
+export function generateDailyGridPuzzle(dateKey: string = getLocalDateKey()): GridPuzzle {
+  const dailyNumber = getDailyGridNumber(dateKey);
+  const rng = mulberry32(hashString(`vct-daily-grid-${dateKey}`));
+  const critSets = getCriteriaPlayerSets();
+
+  // Pre-filter columns that actually have compatible partners
+  const activeCols = INFINITE_COL_CRITERIA.filter(c => (critSets.get(c.id)?.size ?? 0) > 0);
+  const maxAttempts = 250;
+
+  let bestCandidate: {
+    rows: [GridCriterion, GridCriterion, GridCriterion];
+    cols: [GridCriterion, GridCriterion, GridCriterion];
+    score: number;
+  } | null = null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const shuffledCols = shuffle(INFINITE_COL_CRITERIA);
-    const chosenCols: [GridCriterion, GridCriterion, GridCriterion] = [
-      shuffledCols[0],
-      shuffledCols[1],
-      shuffledCols[2],
-    ];
+    const col0 = activeCols[Math.floor(rng() * activeCols.length)];
+    const col0Partners = INFINITE_ROW_CRITERIA.filter(
+      r =>
+        !(r.type === 'team' && r.value.toLowerCase() === col0.value.toLowerCase()) &&
+        hasIntersection(critSets.get(r.id)!, critSets.get(col0.id)!)
+    );
+    if (col0Partners.length < 3) continue;
 
+    // Restrict remaining columns to ones that also overlap with at least 3 of col0's row partners
+    const eligibleCols = activeCols.filter(c => {
+      if (c.id === col0.id) return false;
+      const cSet = critSets.get(c.id)!;
+      let sharedRows = 0;
+      for (const r of col0Partners) {
+        if (r.type === 'team' && r.value.toLowerCase() === c.value.toLowerCase()) continue;
+        if (hasIntersection(critSets.get(r.id)!, cSet)) sharedRows++;
+        if (sharedRows >= 3) return true;
+      }
+      return false;
+    });
+    if (eligibleCols.length < 2) continue;
+
+    const shuffledEligible = shuffle(eligibleCols, rng);
+    const chosenCols: [GridCriterion, GridCriterion, GridCriterion] = [
+      col0,
+      shuffledEligible[0],
+      shuffledEligible[1],
+    ];
     const colTeams = new Set(chosenCols.map(c => c.value.toLowerCase()));
 
     const compatibleRows = shuffle(
-      INFINITE_ROW_CRITERIA.filter(r => {
-        if (r.type === 'team' && colTeams.has(r.value.toLowerCase())) {
-          return false;
-        }
-        return chosenCols.every(col =>
-          GRID_PLAYERS_DATABASE.some(
-            p => playerMatchesCriterion(p, r) && playerMatchesCriterion(p, col)
-          )
-        );
-      })
+      col0Partners.filter(r => {
+        if (r.type === 'team' && colTeams.has(r.value.toLowerCase())) return false;
+        const rSet = critSets.get(r.id)!;
+        return hasIntersection(rSet, critSets.get(chosenCols[1].id)!) &&
+          hasIntersection(rSet, critSets.get(chosenCols[2].id)!);
+      }),
+      rng
     );
 
     if (compatibleRows.length < 3) continue;
@@ -158,36 +303,61 @@ export function generateInfiniteGridPuzzle(roundNumber: number): GridPuzzle {
             compatibleRows[j],
             compatibleRows[k],
           ];
-
-          if (isGridSolvable(chosenRows, chosenCols)) {
-            return {
-              id: `transfer-grid-${Date.now()}-${roundNumber}-${attempt}`,
-              number: roundNumber,
-              title: `Desafio #${roundNumber}: ${chosenCols.map(c => c.label).join(' × ')}`,
-              description: `Cruzamento de transferências: ${chosenCols.map(c => c.label).join(', ')} vs ${chosenRows.map(r => r.label).join(', ')}.`,
-              cols: chosenCols,
-              rows: chosenRows,
-            };
+          const counts = solveWithCachedSets(
+            [chosenRows[0].id, chosenRows[1].id, chosenRows[2].id],
+            [chosenCols[0].id, chosenCols[1].id, chosenCols[2].id],
+            critSets
+          );
+          if (counts) {
+            const minCount = Math.min(...counts);
+            const totalCount = counts.reduce((s, n) => s + n, 0);
+            const boardScore = minCount * 100 + totalCount;
+            if (!bestCandidate || boardScore > bestCandidate.score) {
+              bestCandidate = { rows: chosenRows, cols: chosenCols, score: boardScore };
+            }
+            // Fast-exit as soon as we find a generous board (every cell has >= 2 valid picks)
+            if (minCount >= 2) {
+              return {
+                id: `daily-grid-${dateKey}`,
+                number: dailyNumber,
+                title: `Grid Diário #${dailyNumber}`,
+                description: `Desafio de ${formatDateKeyPtBr(dateKey)} — cruze times e nacionalidades do VCT (2021–2026).`,
+                cols: chosenCols,
+                rows: chosenRows,
+              };
+            }
           }
         }
       }
     }
+
+    if (bestCandidate && attempt >= 45) break;
   }
 
+  if (bestCandidate) {
+    return {
+      id: `daily-grid-${dateKey}`,
+      number: dailyNumber,
+      title: `Grid Diário #${dailyNumber}`,
+      description: `Desafio de ${formatDateKeyPtBr(dateKey)} — cruze times e nacionalidades do VCT (2021–2026).`,
+      cols: bestCandidate.cols,
+      rows: bestCandidate.rows,
+    };
+  }
+
+  const fallback = GRID_PUZZLES[hashString(dateKey) % GRID_PUZZLES.length];
   return {
-    id: `transfer-grid-fallback-${roundNumber}`,
-    number: roundNumber,
-    title: `Grid de Teste: LOUD, MIBR & FURIA vs Sentinels, KRÜ & Leviatán`,
-    description: 'Cada linha e coluna tem apenas 1 único time.',
-    cols: [
-      { id: 'c1', label: 'LOUD', subLabel: 'VCT Americas', type: 'team', value: 'LOUD', color: '#00ff88', shortCode: 'LOUD' },
-      { id: 'c2', label: 'MIBR', subLabel: 'VCT Americas', type: 'team', value: 'MIBR', color: '#009c3b', shortCode: 'MIBR' },
-      { id: 'c3', label: 'FURIA', subLabel: 'VCT Americas', type: 'team', value: 'FURIA', color: '#ffffff', shortCode: 'FUR' },
-    ],
-    rows: [
-      { id: 'r1', label: 'KRÜ Esports', subLabel: 'Jogou na KRÜ', type: 'team', value: 'KRÜ Esports', color: '#ff007f', shortCode: 'KRÜ' },
-      { id: 'r2', label: 'Leviatán', subLabel: 'Jogou na Leviatán', type: 'team', value: 'Leviatán', color: '#4ea5de', shortCode: 'LEV' },
-      { id: 'r3', label: 'Brasil', subLabel: 'Nacionalidade', type: 'nationality', value: 'brasil', color: '#009c3b', shortCode: 'BRA' },
-    ],
+    ...fallback,
+    id: `daily-grid-${dateKey}`,
+    number: dailyNumber,
+    title: `Grid Diário #${dailyNumber}`,
+    description: `Desafio de ${formatDateKeyPtBr(dateKey)} — ${fallback.description}`,
   };
+}
+
+/**
+ * Dynamically generates a 100% verified solvable 3x3 Grid Puzzle using ONLY Single Teams & Single Nationalities
+ */
+export function generateInfiniteGridPuzzle(roundNumber: number): GridPuzzle {
+  return generateDailyGridPuzzle(`practice-${Date.now()}-${roundNumber}`);
 }
