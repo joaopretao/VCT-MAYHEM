@@ -1,5 +1,6 @@
-import { ActiveRunSave, Difficulty, Lineup, RunRuleId, SavedTournamentState, UserTeamIdentity } from '../types';
+import { ActiveRunSave, Difficulty, Lineup, Player, RunRuleId, SavedTournamentState, UserTeamIdentity } from '../types';
 import { DEFAULT_TEAM_IDENTITY } from '../components/TeamCrest';
+import { isSamePlayer } from './runRules';
 
 const ACTIVE_RUN_STORAGE_KEY = 'vct_mayhem_active_run_v1';
 
@@ -15,6 +16,22 @@ function isValidLineup(value: unknown): value is Lineup {
   if (!isRecord(value)) return false;
   const roles: (keyof Lineup)[] = ['Duelist', 'Controller', 'Initiator', 'Sentinel', 'Flex'];
   return roles.every(role => role in value && (value[role] === null || isRecord(value[role])));
+}
+
+function deduplicateLineup(lineup: Lineup): Lineup {
+  const seen: Player[] = [];
+  const roles: (keyof Lineup)[] = ['Duelist', 'Controller', 'Initiator', 'Sentinel', 'Flex'];
+  const cleaned: Lineup = { ...lineup };
+  for (const r of roles) {
+    const p = cleaned[r];
+    if (!p) continue;
+    if (seen.some(existing => isSamePlayer(existing, p))) {
+      cleaned[r] = null;
+    } else {
+      seen.push(p);
+    }
+  }
+  return cleaned;
 }
 
 function sanitizeTeamIdentity(value: unknown): UserTeamIdentity {
@@ -129,7 +146,7 @@ export function loadActiveRun(): ActiveRunSave | null {
       rerollsUsed: typeof parsed.rerollsUsed === 'number' ? parsed.rerollsUsed : 0,
       isDaily: Boolean(parsed.isDaily),
       teamIdentity: sanitizeTeamIdentity(parsed.teamIdentity),
-      lineup: parsed.lineup,
+      lineup: deduplicateLineup(parsed.lineup),
       availableTeams: parsed.availableTeams as ActiveRunSave['availableTeams'],
       rerollsLeft: parsed.rerollsLeft,
       selectedBonuses: Array.isArray(parsed.selectedBonuses) ? parsed.selectedBonuses : [],

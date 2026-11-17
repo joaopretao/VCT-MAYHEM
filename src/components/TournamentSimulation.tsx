@@ -883,10 +883,12 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                 Adversário
               </span>
               <h2 className="font-display text-xl sm:text-2xl md:text-3xl leading-none md:leading-tight text-white uppercase tracking-wide break-words line-clamp-1 md:line-clamp-2">
-                {series.opponent.tag || series.opponent.name}
-                <span className="hidden md:inline">
-                  {series.opponent.name !== series.opponent.tag ? '' : ''}
-                </span>
+                {(() => {
+                  const tag = series.opponent.tag || series.opponent.name;
+                  if (tag.includes("'")) return tag;
+                  const yrMatch = series.opponent.name.match(/\((\d{4})\)/);
+                  return yrMatch ? `${tag} '${yrMatch[1].slice(2)}` : tag;
+                })()}
               </h2>
               <span className="hidden md:block font-mono-vct text-xs text-slate-300 mt-0.5">
                 Força Geral: <strong className="text-white">{series.opponent.rating} OVR</strong>

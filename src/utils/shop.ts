@@ -12,7 +12,7 @@ import { PLAYERS_DATABASE } from '../data/teamsAndPlayers';
 import { rollPlayerTrait } from '../data/traits';
 import { rollMayhemBonusChoices } from '../data/mayhemBonuses';
 import { isPlayerBanned } from './bans';
-import { isPlayerEligibleForRule } from './runRules';
+import { isPlayerEligibleForRule, isPlayerInLineup, isSamePlayer } from './runRules';
 
 export const PLAYER_SWAP_COST = 5;
 export const SHOP_BONUS_COST = 4;
@@ -78,23 +78,11 @@ export function generateIntermissionShopOffer(
   bannedPlayers: Player[] = [],
   rule: RunRuleId = 'standard'
 ): IntermissionShopOffer {
-  const draftedIds = new Set(
-    Object.values(lineup)
-      .filter((p): p is Player => p !== null)
-      .map(p => p.id)
-  );
-  const draftedIgns = new Set(
-    Object.values(lineup)
-      .filter((p): p is Player => p !== null)
-      .map(p => p.ign.toLowerCase())
-  );
-
-  // Build deduplicated pool by IGN + pick compatible market swaps respecting runRule
+  // Build pool excluding drafted (same IGN/real name) and banned athletes
   const pool = PLAYERS_DATABASE.filter(
     p =>
       isPlayerEligibleForRule(p, rule) &&
-      !draftedIds.has(p.id) &&
-      !draftedIgns.has(p.ign.toLowerCase()) &&
+      !isPlayerInLineup(p, lineup) &&
       !isPlayerBanned(p, bannedPlayers)
   );
 
@@ -104,6 +92,7 @@ export function generateIntermissionShopOffer(
 
   for (const candidate of shuffledPool) {
     if (swapCandidates.length >= 2) break;
+    if (swapCandidates.some(s => isSamePlayer(s.player, candidate))) continue;
     const role = resolveTargetRoleForCandidate(candidate, lineup);
     if (!role) continue;
     // Prefer distinct target roles when available so user has real choice

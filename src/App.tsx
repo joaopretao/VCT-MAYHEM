@@ -38,6 +38,7 @@ import {
   drawThreeTeamsForRun,
   isPlayerEligibleForRule,
   isPlayerInLineup,
+  isSamePlayer,
   getRunRuleMeta,
 } from './utils/runRules';
 import {
@@ -397,8 +398,19 @@ export default function App() {
   };
 
   const commitNewPick = (updatedLineup: Lineup) => {
+    const pickedList = Object.values(updatedLineup).filter((p): p is Player => p !== null);
+    for (let i = 0; i < pickedList.length; i++) {
+      for (let j = i + 1; j < pickedList.length; j++) {
+        if (isSamePlayer(pickedList[i], pickedList[j])) {
+          setWarningMessage(`${pickedList[i].ign} já foi escalado em sua equipe.`);
+          setTimeout(() => setWarningMessage(null), 3000);
+          return;
+        }
+      }
+    }
+
     const prevCount = Object.values(lineup).filter(p => p !== null).length;
-    const nextCount = Object.values(updatedLineup).filter(p => p !== null).length;
+    const nextCount = pickedList.length;
     const nextStep = drawStep + 1;
 
     setDrawStep(nextStep);

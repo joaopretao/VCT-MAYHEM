@@ -295,7 +295,7 @@ export function generateTournamentSeries(
     opponent: {
       id: opponentTeam.id,
       name: `${opponentTeam.name} (${opponentTeam.year})`,
-      tag: opponentTeam.shortName,
+      tag: `${opponentTeam.shortName} '${opponentTeam.year.toString().slice(2)}`,
       region: opponentTeam.region,
       rating: finalOpponentRating,
       logoColor: opponentTeam.primaryColor,

@@ -78,7 +78,11 @@ export function isTeamEligibleForRule(team: Team, rule: RunRuleId = 'standard'):
 }
 
 export function isSamePlayer(a: Player, b: Player): boolean {
-  return a.id === b.id || a.ign.trim().toLowerCase() === b.ign.trim().toLowerCase();
+  if (a.id === b.id) return true;
+  if (a.ign.trim().toLowerCase() === b.ign.trim().toLowerCase()) return true;
+  const nameA = a.name?.trim().toLowerCase();
+  const nameB = b.name?.trim().toLowerCase();
+  return Boolean(nameA && nameB && nameA === nameB);
 }
 
 export function isPlayerInLineup(player: Player, lineup: Lineup): boolean {
