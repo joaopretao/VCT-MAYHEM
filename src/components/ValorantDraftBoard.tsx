@@ -8,7 +8,7 @@ import { PlayerAvatar } from './PlayerAvatar';
 import { CountryFlag } from './CountryFlag';
 import { LineupBar } from './LineupBar';
 import { isPlayerBanned } from '../utils/bans';
-import { getRunRuleMeta, isPlayerEligibleForRule } from '../utils/runRules';
+import { getRunRuleMeta, isPlayerEligibleForRule, isPlayerInLineup } from '../utils/runRules';
 import { playSelectSound } from '../utils/audio';
 import { Info, Check, Trophy } from 'lucide-react';
 import { Card } from './ui';
@@ -75,13 +75,13 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
     setTimeout(() => setLocalWarning(null), 3000);
   };
 
-  const isPlayerDrafted = (playerId: string) => Object.values(lineup).some(p => p?.id === playerId);
+  const isPlayerDrafted = (player: Player) => isPlayerInLineup(player, lineup);
 
   const getDestinationSlot = (player: Player): { role: Role | null; available: boolean } => {
     if (!isPlayerEligibleForRule(player, runRule)) {
       return { role: null, available: false };
     }
-    if (isPlayerBanned(player, bannedPlayers) || isPlayerDrafted(player.id)) {
+    if (isPlayerBanned(player, bannedPlayers) || isPlayerDrafted(player)) {
       return { role: null, available: false };
     }
     if (!lineup[player.primaryRole]) {
@@ -116,7 +116,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
       flashWarning(`${player.ign} foi vetado pelo adversário nessa run.`);
       return;
     }
-    if (isPlayerDrafted(player.id)) return;
+    if (isPlayerDrafted(player)) return;
     const slot = getDestinationSlot(player);
     if (slot.available) {
       setHoveredPlayer(null);
@@ -254,7 +254,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                   {/* 5 Player Rows */}
                   <div className="flex flex-col gap-2">
                     {team.roster.map(player => {
-                      const drafted = isPlayerDrafted(player.id);
+                      const drafted = isPlayerDrafted(player);
                       const banned = isPlayerBanned(player, bannedPlayers);
                       const ruleBlocked = !isPlayerEligibleForRule(player, runRule);
                       const slot = getDestinationSlot(player);

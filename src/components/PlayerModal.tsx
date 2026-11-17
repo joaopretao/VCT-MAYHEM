@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Award, Crosshair, CheckCircle, Zap, Shield } from 'lucide-react';
 import { Player, Lineup, Role } from '../types';
 import { playLockSound, playSelectSound } from '../utils/audio';
+import { isPlayerInLineup } from '../utils/runRules';
 import { TeamLogo } from './TeamLogo';
 import { RoleEmblem } from './RoleEmblem';
 import { TraitBadge } from './TraitBadge';
@@ -28,12 +29,13 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
   // Determine compatible slots
   const availableSlots: Role[] = [];
   const isCurrentlyIn = Object.entries(lineup).find(([_, p]) => p?.id === player.id)?.[0] as Role | undefined;
+  const isAnotherEditionIn = !isCurrentlyIn && isPlayerInLineup(player, lineup);
 
   const compatibleRoles: Role[] = Array.from(
     new Set([player.primaryRole, ...player.secondaryRoles, 'Flex' as Role])
   );
 
-  if (!isCurrentlyIn) {
+  if (!isCurrentlyIn && !isAnotherEditionIn) {
     if (!lineup[player.primaryRole]) availableSlots.push(player.primaryRole);
     if (!lineup.Flex && !availableSlots.includes('Flex')) availableSlots.push('Flex');
     for (const sec of player.secondaryRoles) {
@@ -248,6 +250,11 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+          ) : isAnotherEditionIn ? (
+            <div className="w-full py-2.5 px-3 rounded-[3px] bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-center text-xs font-bold flex items-center justify-center gap-2">
+              <CheckCircle className="w-4 h-4" />
+              {player.ign} já está escalado no seu time (outra edição)
             </div>
           ) : availableSlots.length > 0 ? (
             <div className="space-y-2">

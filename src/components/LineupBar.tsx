@@ -7,7 +7,7 @@ import { AGENT_FULL_PORTRAITS, AGENT_ICONS, ROLE_SILHOUETTES } from '../data/age
 import { getPlayerPhotoUrl } from '../data/playerPhotos';
 import { getTeamLogoData } from '../data/teamLogos';
 import { getFrameMeta } from '../data/frames';
-import { getRunRuleMeta } from '../utils/runRules';
+import { getRunRuleMeta, isPlayerInLineup } from '../utils/runRules';
 import { calculateTeamStats } from '../utils/simulation';
 import { playSelectSound, playRosterCompleteSound, playRerollSound } from '../utils/audio';
 import { RoleEmblem } from './RoleEmblem';
@@ -64,7 +64,7 @@ export function computePreviewAssignment(
   shiftedPlayer: Player | null;
 } {
   if (!candidate) return { targetRole: null, shiftedRole: null, shiftedPlayer: null };
-  if (Object.values(lineup).some(p => p?.id === candidate.id)) {
+  if (isPlayerInLineup(candidate, lineup)) {
     return { targetRole: null, shiftedRole: null, shiftedPlayer: null };
   }
 

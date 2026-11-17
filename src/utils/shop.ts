@@ -18,7 +18,7 @@ export const PLAYER_SWAP_COST = 5;
 export const SHOP_BONUS_COST = 4;
 export const SHOP_REROLL_COST = 2;
 export const SHOP_TACTIC_COST = 3;
-export const MAX_RUN_BONUSES = 4;
+export const MAX_RUN_BONUSES = 3;
 
 export function getStartingCredits(difficulty: Difficulty): number {
   if (difficulty === 'normal') return 2;

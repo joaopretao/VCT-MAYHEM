@@ -12,6 +12,7 @@ import {
   BonusUsageSummary,
   TacticalStance,
   SeriesTacticBuff,
+  RunRuleId,
 } from '../types';
 import { TEAMS_DATABASE } from '../data/teamsAndPlayers';
 
@@ -98,8 +99,9 @@ export function calculateTeamStats(
     extraPlayerRating > 0 ? Math.min(99, p.rating + extraPlayerRating) : p.rating
   );
   let consistency = avg(p => p.consistency);
-  let clutch = avg(p => p.clutch);
-  let synergy = avg(p => p.synergy);
+  // Keep raw average room below the 99 ceiling so Synergy/Clutch bonuses genuinely differentiate builds
+  let clutch = Math.round(avg(p => p.clutch) * 0.95);
+  let synergy = Math.round(avg(p => p.synergy) * 0.93);
   const flexibility = avg(p => p.flexibility);
 
   const synergyBonuses: string[] = [];
@@ -176,7 +178,7 @@ export function calculateTeamStats(
   // Champions Winners Aura bonus
   const championsWinners = players.filter(p => p.isChampionsWinner);
   if (championsWinners.length > 0) {
-    const baseChampClutch = championsWinners.length * 2;
+    const baseChampClutch = championsWinners.length;
     const bonusVeteranClutch = championsWinners.length * bonusClutchPerChamp;
     const totalChampClutch = baseChampClutch + bonusVeteranClutch;
     clutch += totalChampClutch;
@@ -234,7 +236,8 @@ export function calculateTeamStats(
 export function generateTournamentSeries(
   stage: TournamentStage,
   difficulty: Difficulty,
-  usedOpponents: string[] = []
+  usedOpponents: string[] = [],
+  runRule: RunRuleId = 'standard'
 ): SeriesMatch {
   // Select an appropriate opponent from the database
   const candidateTeams = TEAMS_DATABASE.filter(t => !usedOpponents.includes(t.id));
@@ -279,6 +282,11 @@ export function generateTournamentSeries(
   if (difficulty === 'normal') finalOpponentRating += 1;
   if (difficulty === 'hard') finalOpponentRating += 3;
   if (difficulty === 'master') finalOpponentRating += 5;
+
+  // Concentrated star pools (Só Campeões / Só BR) face tougher competition to preserve challenge
+  if (runRule === 'only_champions' || runRule === 'only_br') {
+    finalOpponentRating += 2;
+  }
   finalOpponentRating = Math.min(99, Math.max(87, finalOpponentRating));
 
   return {
@@ -307,6 +315,7 @@ export function generateTournamentSeries(
 export interface SimulateMapOptions {
   bonuses?: MayhemBonus[];
   lostPreviousMap?: boolean;
+  isSecondChanceReplay?: boolean;
   difficulty?: Difficulty;
   stance?: TacticalStance;
   seriesBuff?: SeriesTacticBuff;
@@ -356,7 +365,7 @@ export function simulateSingleMap(
       dynamicRatingDelta += m.comebackMapBonus;
       addTrigger(b.id, 1);
     }
-    if (m.underdogStrongBonus && stats.overallRating < opponentRating) {
+    if (m.underdogStrongBonus && stats.overallRating <= opponentRating - 3) {
       dynamicRatingDelta += m.underdogStrongBonus;
       addTrigger(b.id, 1);
     } else if (m.underdogWeakPenalty && stats.overallRating > opponentRating) {
@@ -385,6 +394,10 @@ export function simulateSingleMap(
   const seriesBuff = options?.seriesBuff;
   const difficulty = options?.difficulty;
 
+  if (options?.isSecondChanceReplay) {
+    dynamicRatingDelta -= 3;
+  }
+
   if (seriesBuff === 'rating_boost') {
     dynamicRatingDelta += 2;
   } else if (seriesBuff === 'pistol_prep') {
@@ -396,15 +409,17 @@ export function simulateSingleMap(
   }
 
   if (stance === 'aggressive') {
-    pistolBonus += 0.045;
-    ecoBonus += 0.045;
-    retakeBonus -= 0.025;
+    pistolBonus += 0.035;
+    ecoBonus += 0.035;
+    retakeBonus -= 0.02;
+    deciderBonus -= 0.02;
   } else if (stance === 'balanced') {
-    fullBuyBonus += 0.01;
-    deciderBonus += 0.01;
+    fullBuyBonus += 0.025;
+    retakeBonus += 0.015;
+    deciderBonus += 0.015;
   } else if (stance === 'disciplined') {
-    retakeBonus += 0.04;
-    deciderBonus += 0.04;
+    retakeBonus += 0.035;
+    deciderBonus += 0.035;
     pistolBonus -= 0.02;
     ecoBonus -= 0.02;
     dynamicConsistencyDelta += 1;
@@ -419,7 +434,7 @@ export function simulateSingleMap(
   // Base probability of winning a round situation - calibrated for harder authentic VCT tier competition
   const effectiveOverallRating = Math.max(60, stats.overallRating + dynamicRatingDelta);
   const ratingDiff = effectiveOverallRating - opponentRating;
-  const synergyMod = (stats.synergy - 78) * 0.0022;
+  const synergyMod = (stats.synergy - 77) * 0.0023;
   const consistencyMod = (Math.max(60, stats.consistency + dynamicConsistencyDelta) - 78) * 0.0015;
   const clutchMod = (stats.clutch - 78) * 0.0020;
 
@@ -432,7 +447,7 @@ export function simulateSingleMap(
 
   // Champions winners aura
   const champWinnersCount = players.filter(p => p.isChampionsWinner).length;
-  const champModifier = champWinnersCount * 0.007;
+  const champModifier = champWinnersCount * 0.0045;
 
   // Detect active lineup traits
   const fbKingPlayer = players.find(p => p.trait?.id === 'first_blood_king');

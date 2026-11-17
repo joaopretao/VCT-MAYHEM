@@ -133,6 +133,7 @@ function simulateTournament(lineup: Lineup, bonuses: MayhemBonus[]): boolean {
     let playerWins = 0;
     let opponentWins = 0;
     let lostPreviousMap = false;
+    let isSecondChanceReplay = false;
     const usedMaps: string[] = [];
     let mapIdx = 0;
 
@@ -140,7 +141,9 @@ function simulateTournament(lineup: Lineup, bonuses: MayhemBonus[]): boolean {
       const map = simulateSingleMap(lineup, series.opponent.rating, mapIdx, usedMaps, {
         bonuses,
         lostPreviousMap,
+        isSecondChanceReplay,
       });
+      isSecondChanceReplay = false;
       usedMaps.push(map.mapName);
 
       if (map.playerWon) {
@@ -152,6 +155,7 @@ function simulateTournament(lineup: Lineup, bonuses: MayhemBonus[]): boolean {
         if (wouldLoseSeries && hasSecondChance && !secondChanceUsed) {
           secondChanceUsed = true;
           lostPreviousMap = true;
+          isSecondChanceReplay = true;
           // Replay deciding map without incrementing opponentWins
           continue;
         }

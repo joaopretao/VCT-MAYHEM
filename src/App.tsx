@@ -34,7 +34,12 @@ import { loadEquippedFrame, saveEquippedFrame } from './data/frames';
 import { rollOpponentBans, isPlayerBanned } from './utils/bans';
 import { playLockSound, playSelectSound, playBonusRevealSound } from './utils/audio';
 import { vibrateLight, vibrateBonus } from './utils/haptics';
-import { drawThreeTeamsForRun, isPlayerEligibleForRule, getRunRuleMeta } from './utils/runRules';
+import {
+  drawThreeTeamsForRun,
+  isPlayerEligibleForRule,
+  isPlayerInLineup,
+  getRunRuleMeta,
+} from './utils/runRules';
 import {
   buildShareDraftUrl,
   clearUrlSeedParams,
@@ -472,7 +477,7 @@ export default function App() {
       return;
     }
 
-    // Check if player is already somewhere in lineup
+    // Check if this exact player card is already in lineup (moving/swapping slots)
     const existingEntry = Object.entries(lineup).find(([_, p]) => p?.id === player.id);
     const updatedLineup = { ...lineup };
 
@@ -485,6 +490,13 @@ export default function App() {
       setLineup(updatedLineup);
       playSelectSound();
       setWarningMessage(null);
+      return;
+    }
+
+    // Prevent drafting another team/year version of an already drafted player
+    if (isPlayerInLineup(player, lineup)) {
+      setWarningMessage(`${player.ign} já foi escalado em sua equipe (outra edição).`);
+      setTimeout(() => setWarningMessage(null), 3000);
       return;
     }
 
@@ -508,9 +520,8 @@ export default function App() {
       return;
     }
 
-    // Check if player is already drafted
-    const isAlreadyDrafted = Object.values(lineup).some(p => p?.id === player.id);
-    if (isAlreadyDrafted) {
+    // Check if player (any team/year edition) is already drafted
+    if (isPlayerInLineup(player, lineup)) {
       setWarningMessage(`${player.ign} já foi escalado em sua equipe.`);
       setTimeout(() => setWarningMessage(null), 3000);
       return;

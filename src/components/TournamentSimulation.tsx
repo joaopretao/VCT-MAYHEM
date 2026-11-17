@@ -351,7 +351,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     stance: TacticalStance = 'balanced',
     buff: SeriesTacticBuff = activeSeriesBuff
   ) => {
-    const newSeries = generateTournamentSeries(stage, difficulty, currentUsedIds);
+    const newSeries = generateTournamentSeries(stage, difficulty, currentUsedIds, runRule);
     if (newSeries.opponent.id) {
       setUsedOpponentIds(prev => (prev.includes(newSeries.opponent.id!) ? prev : [...prev, newSeries.opponent.id!]));
     }
@@ -528,6 +528,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         {
           bonuses: selectedBonuses,
           lostPreviousMap: true,
+          isSecondChanceReplay: true,
           difficulty,
           stance: selectedStance,
           seriesBuff: activeSeriesBuff,

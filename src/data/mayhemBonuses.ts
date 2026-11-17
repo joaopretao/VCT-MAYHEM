@@ -144,14 +144,14 @@ export const MAYHEM_BONUSES: MayhemBonus[] = [
   {
     id: 'bandeira_unida',
     name: 'Bandeira Unida',
-    description: 'Com 3+ jogadores do mesmo país, +12 de sinergia (e +2 de força base).',
-    shortEffect: '3+ país: +12 sin. / +2',
+    description: 'Com 3+ jogadores do mesmo país, +10 de sinergia (e +1 de força base).',
+    shortEffect: '3+ país: +10 sin. / +1',
     rarity: 'rare',
     icon: 'Flag',
     modifiers: {
       sameNationThreshold: 3,
-      sameNationSynergy: 12,
-      ratingFlat: 2,
+      sameNationSynergy: 10,
+      ratingFlat: 1,
     },
   },
   {
@@ -168,26 +168,25 @@ export const MAYHEM_BONUSES: MayhemBonus[] = [
   {
     id: 'segunda_chance',
     name: 'Segunda Chance',
-    description: 'Uma vez por run, ao perder uma série, rejoga o último mapa (-3 de força no time).',
-    shortEffect: 'Rejoga mapa / -3 força',
+    description: 'Uma vez por run, ao perder uma série, rejoga o último mapa (-2 de força na campanha e -3 no replay).',
+    shortEffect: 'Rejoga mapa (-2 força)',
     rarity: 'rare',
     icon: 'RefreshCw',
     modifiers: {
       onceSecondChance: true,
-      ratingFlat: -3,
+      ratingFlat: -2,
     },
   },
   {
     id: 'mestre_flex',
     name: 'Mestre Flex',
-    description: 'O jogador Flex cobre a função que faltar, dá +6 de sinergia e +1 de força.',
-    shortEffect: 'Flex +6 sin. / +1 força',
+    description: 'O jogador Flex cobre a função que faltar e dá +5 de sinergia no time.',
+    shortEffect: 'Flex +5 sinergia',
     rarity: 'rare',
     icon: 'Layers',
     modifiers: {
       flexCountsAsMissingRole: true,
-      synergyFlat: 6,
-      ratingFlat: 1,
+      synergyFlat: 5,
     },
   },
 
@@ -220,13 +219,13 @@ export const MAYHEM_BONUSES: MayhemBonus[] = [
   {
     id: 'underdog',
     name: 'Underdog',
-    description: '+12 de força contra adversários mais fortes e -2 de consistência contra os mais fracos.',
-    shortEffect: '+12 forte / -2 cons. fraco',
+    description: '+7 de força contra adversários mais fortes (3+ OVR acima) e -3 de consistência contra os mais fracos.',
+    shortEffect: '+7 forte / -3 cons. fraco',
     rarity: 'epic',
     icon: 'TrendingUp',
     modifiers: {
-      underdogStrongBonus: 12,
-      underdogWeakPenalty: -2,
+      underdogStrongBonus: 7,
+      underdogWeakPenalty: -3,
     },
   },
 ];

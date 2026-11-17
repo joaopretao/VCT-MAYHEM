@@ -77,9 +77,17 @@ export function isTeamEligibleForRule(team: Team, rule: RunRuleId = 'standard'):
   return true;
 }
 
+export function isSamePlayer(a: Player, b: Player): boolean {
+  return a.id === b.id || a.ign.trim().toLowerCase() === b.ign.trim().toLowerCase();
+}
+
+export function isPlayerInLineup(player: Player, lineup: Lineup): boolean {
+  return Object.values(lineup).some(p => p !== null && isSamePlayer(p, player));
+}
+
 function canPlayerFitOpenSlot(player: Player, lineup: Lineup, banned: Player[]): boolean {
   if (isPlayerBanned(player, banned)) return false;
-  if (Object.values(lineup).some(p => p?.id === player.id)) return false;
+  if (isPlayerInLineup(player, lineup)) return false;
   if (!lineup[player.primaryRole]) return true;
   for (const sec of player.secondaryRoles) {
     if (!lineup[sec]) return true;
