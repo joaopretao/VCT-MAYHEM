@@ -26,6 +26,9 @@ import {
   BonusUsageSummary,
   UserTeamIdentity,
   SavedTournamentState,
+  TacticalStance,
+  SeriesTacticBuff,
+  IntermissionShopOffer,
 } from '../types';
 import {
   generateTournamentSeries,
@@ -46,6 +49,17 @@ import {
 } from '../utils/audio';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { StageQualifiedScreen } from './StageQualifiedScreen';
+import { TacticalPrepCard } from './TacticalPrepCard';
+import { TACTICAL_STANCES } from '../utils/scouting';
+import {
+  PLAYER_SWAP_COST,
+  SHOP_BONUS_COST,
+  SHOP_REROLL_COST,
+  generateIntermissionShopOffer,
+  getSeriesCreditsReward,
+  getStartingCredits,
+  rollTournamentShopBonus,
+} from '../utils/shop';
 import { TeamLogo } from './TeamLogo';
 import { TeamCrest, DEFAULT_TEAM_IDENTITY } from './TeamCrest';
 import { TraitBadge } from './TraitBadge';
@@ -158,9 +172,12 @@ interface TournamentSimulationProps {
   lineup: Lineup;
   difficulty: Difficulty;
   selectedBonuses?: MayhemBonus[];
+  bannedPlayers?: Player[];
   teamIdentity?: UserTeamIdentity;
   initialSavedState?: SavedTournamentState | null;
   onTournamentStateChange?: (state: SavedTournamentState) => void;
+  onUpdateLineup?: (nextLineup: Lineup) => void;
+  onAddShopBonus?: (bonus: MayhemBonus) => void;
   onResetTournament: () => void;
   onSaveCampaign: (history: CampaignHistory) => void;
 }
@@ -171,9 +188,12 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   lineup,
   difficulty,
   selectedBonuses = [],
+  bannedPlayers = [],
   teamIdentity = DEFAULT_TEAM_IDENTITY,
   initialSavedState = null,
   onTournamentStateChange,
+  onUpdateLineup,
+  onAddShopBonus,
   onResetTournament,
   onSaveCampaign,
 }) => {
@@ -182,6 +202,24 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   );
   const [showQualifiedScreen, setShowQualifiedScreen] = useState<boolean>(
     initialSavedState?.showQualifiedScreen ?? false
+  );
+  const [isPreSeriesPrep, setIsPreSeriesPrep] = useState<boolean>(
+    initialSavedState?.isPreSeriesPrep ?? true
+  );
+  const [selectedStance, setSelectedStance] = useState<TacticalStance>(
+    initialSavedState?.selectedStance ?? 'balanced'
+  );
+  const [credits, setCredits] = useState<number>(
+    initialSavedState?.credits ?? getStartingCredits(difficulty)
+  );
+  const [lastSeriesCreditsEarned, setLastSeriesCreditsEarned] = useState<number>(
+    initialSavedState?.lastSeriesCreditsEarned ?? 0
+  );
+  const [activeSeriesBuff, setActiveSeriesBuff] = useState<SeriesTacticBuff>(
+    initialSavedState?.activeSeriesBuff ?? 'none'
+  );
+  const [shopOffer, setShopOffer] = useState<IntermissionShopOffer | null>(
+    initialSavedState?.shopOffer ?? null
   );
   const [series, setSeries] = useState<SeriesMatch | null>(initialSavedState?.series ?? null);
   const [currentMap, setCurrentMap] = useState<MapGame | null>(
@@ -239,12 +277,19 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   const teamStats = calculateTeamStats(lineup, selectedBonuses);
   const currentStage = STAGES[currentStageIndex];
 
-  const initSeriesForStage = (stage: TournamentStage, currentUsedIds: string[] = usedOpponentIds) => {
+  const initSeriesForStage = (
+    stage: TournamentStage,
+    currentUsedIds: string[] = usedOpponentIds,
+    stance: TacticalStance = 'balanced',
+    buff: SeriesTacticBuff = activeSeriesBuff
+  ) => {
     const newSeries = generateTournamentSeries(stage, difficulty, currentUsedIds);
     if (newSeries.opponent.id) {
       setUsedOpponentIds(prev => (prev.includes(newSeries.opponent.id!) ? prev : [...prev, newSeries.opponent.id!]));
     }
     setSeries(newSeries);
+    setSelectedStance(stance);
+    setIsPreSeriesPrep(true);
     setIsSeriesDecided(false);
     setShowCurrentMapStats(false);
     setLostPreviousMapInSeries(false);
@@ -253,9 +298,28 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     const firstMap = simulateSingleMap(lineup, newSeries.opponent.rating, 0, [], {
       bonuses: selectedBonuses,
       lostPreviousMap: false,
+      difficulty,
+      stance,
+      seriesBuff: buff,
     });
     setCurrentMap(firstMap);
     setRevealedEventsCount(1);
+  };
+
+  const handleConfirmSeriesPrep = () => {
+    if (!series) return;
+    const firstMap = simulateSingleMap(lineup, series.opponent.rating, 0, [], {
+      bonuses: selectedBonuses,
+      lostPreviousMap: false,
+      difficulty,
+      stance: selectedStance,
+      seriesBuff: activeSeriesBuff,
+    });
+    skipNextRoundSoundRef.current = false;
+    setCurrentMap(firstMap);
+    setRevealedEventsCount(1);
+    setShowCurrentMapStats(false);
+    setIsPreSeriesPrep(false);
   };
 
   useEffect(() => {
@@ -269,6 +333,12 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     onTournamentStateChange({
       currentStageIndex,
       showQualifiedScreen,
+      isPreSeriesPrep,
+      selectedStance,
+      credits,
+      lastSeriesCreditsEarned,
+      activeSeriesBuff,
+      shopOffer,
       series,
       currentMap,
       allTournamentMaps,
@@ -291,6 +361,12 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     onTournamentStateChange,
     currentStageIndex,
     showQualifiedScreen,
+    isPreSeriesPrep,
+    selectedStance,
+    credits,
+    lastSeriesCreditsEarned,
+    activeSeriesBuff,
+    shopOffer,
     series,
     currentMap,
     allTournamentMaps,
@@ -381,7 +457,13 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         series.opponent.rating,
         series.currentMapIndex,
         series.maps.map(m => m.mapName),
-        { bonuses: selectedBonuses, lostPreviousMap: true }
+        {
+          bonuses: selectedBonuses,
+          lostPreviousMap: true,
+          difficulty,
+          stance: selectedStance,
+          seriesBuff: activeSeriesBuff,
+        }
       );
       setCurrentMap(replayedMap);
       setRevealedEventsCount(1);
@@ -448,7 +530,12 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           saveCampaignRecord(true, currentStage, mvp, playerWins, opponentWins, summaries, summaryLine);
         } else {
           const currentSeriesMvp = calculateTournamentMvp(lineup, updatedMaps);
+          const earnedCredits = getSeriesCreditsReward(playerWins, opponentWins);
           setSeriesMvp(currentSeriesMvp);
+          setLastSeriesCreditsEarned(earnedCredits);
+          setCredits(prev => prev + earnedCredits);
+          setActiveSeriesBuff('none');
+          setShopOffer(generateIntermissionShopOffer(lineup, selectedBonuses, bannedPlayers));
           setShowQualifiedScreen(true);
         }
       } else {
@@ -464,7 +551,13 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         series.opponent.rating,
         updatedSeries.currentMapIndex,
         updatedMaps.map(m => m.mapName),
-        { bonuses: selectedBonuses, lostPreviousMap: lostCurrent }
+        {
+          bonuses: selectedBonuses,
+          lostPreviousMap: lostCurrent,
+          difficulty,
+          stance: selectedStance,
+          seriesBuff: activeSeriesBuff,
+        }
       );
       setCurrentMap(nextMap);
       setRevealedEventsCount(1);
@@ -529,12 +622,46 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     onSaveCampaign(record);
   };
 
+  const handleShopSwapPlayer = (newPlayer: Player, targetRole: Role) => {
+    if (!shopOffer || shopOffer.swapUsed || credits < PLAYER_SWAP_COST) return;
+    const updatedLineup: Lineup = { ...lineup, [targetRole]: newPlayer };
+    onUpdateLineup?.(updatedLineup);
+    setCredits(prev => prev - PLAYER_SWAP_COST);
+    setShopOffer(prev => (prev ? { ...prev, swapUsed: true } : prev));
+  };
+
+  const handleShopBuyBonus = (bonus: MayhemBonus) => {
+    if (!shopOffer || shopOffer.bonusBought || credits < SHOP_BONUS_COST) return;
+    onAddShopBonus?.(bonus);
+    setCredits(prev => prev - SHOP_BONUS_COST);
+    setShopOffer(prev => (prev ? { ...prev, bonusBought: true } : prev));
+  };
+
+  const handleShopRerollBonus = () => {
+    if (!shopOffer || shopOffer.bonusBought || credits < SHOP_REROLL_COST) return;
+    const excludeWithCurrent = shopOffer.bonusOffer
+      ? [...selectedBonuses, shopOffer.bonusOffer]
+      : selectedBonuses;
+    let nextBonus = rollTournamentShopBonus(excludeWithCurrent);
+    if (!nextBonus) nextBonus = rollTournamentShopBonus(selectedBonuses);
+    setCredits(prev => prev - SHOP_REROLL_COST);
+    setShopOffer(prev => (prev ? { ...prev, bonusOffer: nextBonus } : prev));
+  };
+
+  const handleShopBuyTacticBuff = (buffId: SeriesTacticBuff, cost: number) => {
+    if (!shopOffer || shopOffer.tacticBought || credits < cost) return;
+    setCredits(prev => prev - cost);
+    setActiveSeriesBuff(buffId);
+    setShopOffer(prev => (prev ? { ...prev, tacticBought: true } : prev));
+  };
+
   const handleNextStageFromScreen = () => {
     const nextIdx = currentStageIndex + 1;
     setShowQualifiedScreen(false);
+    setShopOffer(null);
     setSeriesMvp(null);
     setCurrentStageIndex(nextIdx);
-    initSeriesForStage(STAGES[nextIdx], usedOpponentIds);
+    initSeriesForStage(STAGES[nextIdx], usedOpponentIds, 'balanced', activeSeriesBuff);
   };
 
   if (showQualifiedScreen) {
@@ -546,6 +673,15 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         opponentName={series?.opponent.name}
         scoreLabel={series ? `${series.playerWins}–${series.opponentWins}` : undefined}
         seriesMvp={seriesMvp}
+        credits={credits}
+        lastEarnedCredits={lastSeriesCreditsEarned}
+        shopOffer={shopOffer}
+        selectedBonuses={selectedBonuses}
+        activeSeriesBuff={activeSeriesBuff}
+        onSwapPlayer={handleShopSwapPlayer}
+        onBuyBonus={handleShopBuyBonus}
+        onRerollBonus={handleShopRerollBonus}
+        onBuyTacticBuff={handleShopBuyTacticBuff}
         onNextStage={handleNextStageFromScreen}
       />
     );
@@ -592,6 +728,14 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         <div className="flex items-center justify-center gap-2 mb-2 md:mb-3 flex-wrap">
           <Badge tone="red">{series.stageTitle}</Badge>
           <Badge tone="neutral">MD{series.bestOf}</Badge>
+          {!isPreSeriesPrep && (
+            <Badge tone="cyan">
+              Postura: {TACTICAL_STANCES.find(s => s.id === selectedStance)?.label || 'Equilibrada'}
+            </Badge>
+          )}
+          {!isPreSeriesPrep && activeSeriesBuff !== 'none' && (
+            <Badge tone="gold">Preparo ativo</Badge>
+          )}
           {lostPreviousMapInSeries && selectedBonuses.some(b => b.id === 'folego') && (
             <Badge tone="gold">Fôlego ativo (+3)</Badge>
           )}
@@ -698,7 +842,18 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         </div>
       )}
 
-      {/* BELOW: TWO TOP-ALIGNED COLUMNS (On mobile: compact Maps strip + Live Timeline) */}
+      {/* BELOW: PRE-SERIES SCOUTING & TACTIC SELECTION OR LIVE SERIES COLUMNS */}
+      {isPreSeriesPrep ? (
+        <TacticalPrepCard
+          series={series}
+          difficulty={difficulty}
+          selectedStance={selectedStance}
+          onSelectStance={setSelectedStance}
+          activeSeriesBuff={activeSeriesBuff}
+          teamSynergy={teamStats.synergy}
+          onStartSeries={handleConfirmSeriesPrep}
+        />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 md:gap-4 items-start">
         {/* LEFT NARROW COLUMN */}
         <div className="lg:col-span-4 flex flex-col gap-2.5 md:gap-4">
@@ -1083,6 +1238,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* Grand Final Championship Victory Screen */}
       {isChampionshipWon && (

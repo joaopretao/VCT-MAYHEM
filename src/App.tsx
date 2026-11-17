@@ -508,9 +508,16 @@ export default function App() {
                     lineup={lineup}
                     difficulty={difficulty}
                     selectedBonuses={selectedBonuses}
+                    bannedPlayers={bannedPlayers}
                     teamIdentity={teamIdentity}
                     initialSavedState={savedTournamentState}
                     onTournamentStateChange={setSavedTournamentState}
+                    onUpdateLineup={setLineup}
+                    onAddShopBonus={bonus =>
+                      setSelectedBonuses(prev =>
+                        prev.some(b => b.id === bonus.id) ? prev : [...prev, bonus]
+                      )
+                    }
                     onResetTournament={handleResetTournament}
                     onSaveCampaign={handleSaveCampaign}
                   />

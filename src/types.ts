@@ -286,6 +286,26 @@ export interface Achievement {
 
 export type CustomEmblemId = 'shield' | 'flame' | 'crown' | 'sword' | 'phoenix' | 'bolt';
 
+export type TacticalStance = 'aggressive' | 'balanced' | 'disciplined';
+
+export type SeriesTacticBuff = 'none' | 'rating_boost' | 'pistol_prep' | 'clutch_prep';
+
+export interface IntermissionTacticOption {
+  id: SeriesTacticBuff;
+  name: string;
+  description: string;
+  cost: number;
+}
+
+export interface IntermissionShopOffer {
+  swapCandidates: { player: Player; targetRole: Role }[];
+  bonusOffer: MayhemBonus | null;
+  tacticOptions: IntermissionTacticOption[];
+  swapUsed: boolean;
+  bonusBought: boolean;
+  tacticBought: boolean;
+}
+
 export interface UserTeamIdentity {
   name: string;
   emblemId: CustomEmblemId;
@@ -312,6 +332,12 @@ export interface SavedTournamentState {
   runBonusSummaries: BonusUsageSummary[];
   runSummaryLine: string;
   campaignSaved: boolean;
+  isPreSeriesPrep?: boolean;
+  selectedStance?: TacticalStance;
+  credits?: number;
+  lastSeriesCreditsEarned?: number;
+  activeSeriesBuff?: SeriesTacticBuff;
+  shopOffer?: IntermissionShopOffer | null;
 }
 
 export interface ActiveRunSave {

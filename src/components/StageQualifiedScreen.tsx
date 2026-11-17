@@ -1,12 +1,23 @@
 import React from 'react';
 import { ArrowRight, Award } from 'lucide-react';
-import { Lineup, TournamentMvpStats, TournamentStage, UserTeamIdentity } from '../types';
+import {
+  IntermissionShopOffer,
+  Lineup,
+  MayhemBonus,
+  Player,
+  Role,
+  SeriesTacticBuff,
+  TournamentMvpStats,
+  TournamentStage,
+  UserTeamIdentity,
+} from '../types';
 import { playVictoryFanfare, playSelectSound } from '../utils/audio';
 import { ROLE_ORDER } from './roleOrder';
 import { ROLE_COLORS, ROLE_NAMES_PT } from '../data/roleIcons';
 import { PlayerAvatar } from './PlayerAvatar';
 import { TraitBadge } from './TraitBadge';
 import { TeamCrest, DEFAULT_TEAM_IDENTITY } from './TeamCrest';
+import { IntermissionShop } from './IntermissionShop';
 import { Card, PrimaryButton } from './ui';
 
 interface StageQualifiedScreenProps {
@@ -16,6 +27,15 @@ interface StageQualifiedScreenProps {
   opponentName?: string;
   scoreLabel?: string;
   seriesMvp?: TournamentMvpStats | null;
+  credits?: number;
+  lastEarnedCredits?: number;
+  shopOffer?: IntermissionShopOffer | null;
+  selectedBonuses?: MayhemBonus[];
+  activeSeriesBuff?: SeriesTacticBuff;
+  onSwapPlayer?: (newPlayer: Player, targetRole: Role) => void;
+  onBuyBonus?: (bonus: MayhemBonus) => void;
+  onRerollBonus?: () => void;
+  onBuyTacticBuff?: (buffId: SeriesTacticBuff, cost: number) => void;
   onNextStage: () => void;
 }
 
@@ -33,6 +53,15 @@ export const StageQualifiedScreen: React.FC<StageQualifiedScreenProps> = ({
   opponentName,
   scoreLabel,
   seriesMvp,
+  credits = 0,
+  lastEarnedCredits = 0,
+  shopOffer = null,
+  selectedBonuses = [],
+  activeSeriesBuff = 'none',
+  onSwapPlayer,
+  onBuyBonus,
+  onRerollBonus,
+  onBuyTacticBuff,
   onNextStage,
 }) => {
   React.useEffect(() => {
@@ -42,11 +71,13 @@ export const StageQualifiedScreen: React.FC<StageQualifiedScreenProps> = ({
   const copy = STAGE_COPY[stage];
 
   return (
-    <div className="min-h-[58vh] flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-in fade-in duration-200">
+    <div className="min-h-[58vh] flex flex-col items-center justify-center p-3 sm:p-5 text-center animate-in fade-in duration-200">
       <Card
         padding="lg"
         cutCorner
-        className="border-emerald-500/35 max-w-xl w-full flex flex-col items-center animate-popIn relative overflow-hidden"
+        className={`border-emerald-500/35 ${
+          shopOffer ? 'max-w-3xl' : 'max-w-xl'
+        } w-full flex flex-col items-center animate-popIn relative overflow-hidden`}
       >
         <div className="absolute inset-x-0 top-0 h-1 bg-emerald-400" aria-hidden />
 
@@ -136,6 +167,24 @@ export const StageQualifiedScreen: React.FC<StageQualifiedScreenProps> = ({
                 <strong className="text-sm text-sky-400">{seriesMvp.clutchesWon}</strong>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Balatro-style Compact Intermission Shop */}
+        {shopOffer && lineup && onSwapPlayer && onBuyBonus && onRerollBonus && onBuyTacticBuff && (
+          <div className="w-full mb-5">
+            <IntermissionShop
+              credits={credits}
+              lastEarned={lastEarnedCredits}
+              offer={shopOffer}
+              lineup={lineup}
+              selectedBonuses={selectedBonuses}
+              activeSeriesBuff={activeSeriesBuff}
+              onSwapPlayer={onSwapPlayer}
+              onBuyBonus={onBuyBonus}
+              onRerollBonus={onRerollBonus}
+              onBuyTacticBuff={onBuyTacticBuff}
+            />
           </div>
         )}
 

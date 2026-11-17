@@ -25,9 +25,9 @@ const TABS: { id: TabId; label: string; Icon: LucideIcon; accent: string }[] = [
 ];
 
 const DIFFICULTIES: { id: Difficulty; label: string; title: string; color: string; text: string }[] = [
-  { id: 'normal', label: 'Normal', title: 'Normal: 3 rerolls, sem vetos', color: '#10b981', text: '#0b0e14' },
-  { id: 'hard', label: 'Difícil', title: 'Difícil: 2 rerolls, 3 vetos', color: '#e2b714', text: '#0b0e14' },
-  { id: 'master', label: 'Master', title: 'Master: 1 reroll, 6 vetos', color: '#ff4655', text: '#ffffff' },
+  { id: 'normal', label: 'Normal', title: 'Normal: 3 rerolls, sem vetos, scouting completo', color: '#10b981', text: '#0b0e14' },
+  { id: 'hard', label: 'Difícil', title: 'Difícil: 2 rerolls, 3 vetos, scouting parcial', color: '#e2b714', text: '#0b0e14' },
+  { id: 'master', label: 'Master', title: 'Master: 1 reroll, 6 vetos, scouting cego e punição de química baixa', color: '#ff4655', text: '#ffffff' },
 ];
 
 const SPRING = { type: 'spring' as const, stiffness: 460, damping: 36 };

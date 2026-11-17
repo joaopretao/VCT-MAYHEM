@@ -10,6 +10,8 @@ import {
   TournamentMvpStats,
   MayhemBonus,
   BonusUsageSummary,
+  TacticalStance,
+  SeriesTacticBuff,
 } from '../types';
 import { TEAMS_DATABASE } from '../data/teamsAndPlayers';
 
@@ -305,6 +307,9 @@ export function generateTournamentSeries(
 export interface SimulateMapOptions {
   bonuses?: MayhemBonus[];
   lostPreviousMap?: boolean;
+  difficulty?: Difficulty;
+  stance?: TacticalStance;
+  seriesBuff?: SeriesTacticBuff;
 }
 
 export function simulateSingleMap(
@@ -375,6 +380,42 @@ export function simulateSingleMap(
     }
   }
 
+  // Apply Tactical Prep & Difficulty tactical pressure (Fase 3)
+  const stance = options?.stance;
+  const seriesBuff = options?.seriesBuff;
+  const difficulty = options?.difficulty;
+
+  if (seriesBuff === 'rating_boost') {
+    dynamicRatingDelta += 2;
+  } else if (seriesBuff === 'pistol_prep') {
+    pistolBonus += 0.05;
+    ecoBonus += 0.05;
+  } else if (seriesBuff === 'clutch_prep') {
+    retakeBonus += 0.05;
+    deciderBonus += 0.05;
+  }
+
+  if (stance === 'aggressive') {
+    pistolBonus += 0.045;
+    ecoBonus += 0.045;
+    retakeBonus -= 0.025;
+  } else if (stance === 'balanced') {
+    fullBuyBonus += 0.01;
+    deciderBonus += 0.01;
+  } else if (stance === 'disciplined') {
+    retakeBonus += 0.04;
+    deciderBonus += 0.04;
+    pistolBonus -= 0.02;
+    ecoBonus -= 0.02;
+    dynamicConsistencyDelta += 1;
+  }
+
+  // Master difficulty punishes uncoordinated rosters with low team synergy
+  if (difficulty === 'master' && stats.synergy < 78) {
+    dynamicConsistencyDelta -= 2;
+    retakeBonus -= 0.02;
+  }
+
   // Base probability of winning a round situation - calibrated for harder authentic VCT tier competition
   const effectiveOverallRating = Math.max(60, stats.overallRating + dynamicRatingDelta);
   const ratingDiff = effectiveOverallRating - opponentRating;
@@ -401,10 +442,17 @@ export function simulateSingleMap(
   const chokePlayer = players.find(p => p.trait?.id === 'choke_artist');
   const tiltedPlayer = players.find(p => p.trait?.id === 'tilted');
 
-  // Preserve exact historical clamps when no bonuses are active; allow only modest headroom for round-specific bonuses
+  // Preserve exact historical clamps when no bonuses are active; allow modest headroom when tactics/bonuses apply
   const baseUpperCap = 0.59;
-  const hasSitRoundBonus = pistolBonus > 0 || ecoBonus > 0 || fullBuyBonus > 0 || retakeBonus > 0 || deciderBonus > 0;
-  const sitUpperCap = hasSitRoundBonus ? 0.625 : 0.605;
+  const hasSitRoundBonus =
+    pistolBonus > 0 ||
+    ecoBonus > 0 ||
+    fullBuyBonus > 0 ||
+    retakeBonus > 0 ||
+    deciderBonus > 0 ||
+    Boolean(stance) ||
+    (Boolean(seriesBuff) && seriesBuff !== 'none');
+  const sitUpperCap = hasSitRoundBonus ? 0.63 : 0.605;
 
   // Calibrated base probability (+0.5% round edge -> ~2% softer tournament run)
   let baseRoundProb = 0.425 + (ratingDiff * 0.009) + synergyMod + consistencyMod + compModifier + champModifier;

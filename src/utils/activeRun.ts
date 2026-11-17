@@ -93,6 +93,26 @@ export function loadActiveRun(): ActiveRunSave | null {
         runBonusSummaries: Array.isArray(ts.runBonusSummaries) ? ts.runBonusSummaries : [],
         runSummaryLine: typeof ts.runSummaryLine === 'string' ? ts.runSummaryLine : '',
         campaignSaved: Boolean(ts.campaignSaved),
+        isPreSeriesPrep:
+          typeof ts.isPreSeriesPrep === 'boolean' ? ts.isPreSeriesPrep : false,
+        selectedStance:
+          ts.selectedStance === 'aggressive' ||
+          ts.selectedStance === 'balanced' ||
+          ts.selectedStance === 'disciplined'
+            ? ts.selectedStance
+            : 'balanced',
+        credits: typeof ts.credits === 'number' ? ts.credits : 0,
+        lastSeriesCreditsEarned:
+          typeof ts.lastSeriesCreditsEarned === 'number' ? ts.lastSeriesCreditsEarned : 0,
+        activeSeriesBuff:
+          ts.activeSeriesBuff === 'rating_boost' ||
+          ts.activeSeriesBuff === 'pistol_prep' ||
+          ts.activeSeriesBuff === 'clutch_prep'
+            ? ts.activeSeriesBuff
+            : 'none',
+        shopOffer: isRecord(ts.shopOffer)
+          ? (ts.shopOffer as unknown as SavedTournamentState['shopOffer'])
+          : null,
       };
     }
 

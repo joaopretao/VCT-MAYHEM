@@ -127,15 +127,15 @@ export const RulesModal: React.FC<RulesModalProps> = ({ onClose, onReplayTutoria
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
             <div className="p-2.5 bg-[#080b10] border border-emerald-500/25 rounded-[2px]">
               <strong className="text-emerald-400 block">Normal</strong>
-              <span className="text-slate-300">3 rerolls · Sem vetos</span>
+              <span className="text-slate-300">3 rerolls · Sem vetos · Scouting total</span>
             </div>
             <div className="p-2.5 bg-[#080b10] border border-amber-500/25 rounded-[2px]">
               <strong className="text-amber-300 block">Difícil</strong>
-              <span className="text-slate-300">2 rerolls · 3 vetos</span>
+              <span className="text-slate-300">2 rerolls · 3 vetos · Scouting parcial</span>
             </div>
             <div className="p-2.5 bg-[#080b10] border border-rose-500/25 rounded-[2px]">
               <strong className="text-rose-400 block">Master</strong>
-              <span className="text-slate-300">1 reroll · 6 vetos</span>
+              <span className="text-slate-300">1 reroll · 6 vetos · Scouting cego</span>
             </div>
           </div>
         </div>

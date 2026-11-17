@@ -26,6 +26,7 @@ export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
 }) => {
   const baselineStats = lineup ? calculateTeamStats(lineup, selectedBonuses) : null;
   const hidePreviewNumbers = difficulty === 'master';
+  const showClutchPreview = difficulty === 'normal';
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -214,7 +215,7 @@ export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
                             <span>+{projectedStats.synergy}</span>
                           </span>
                         )}
-                        {clutchDelta !== 0 && (
+                        {showClutchPreview && clutchDelta !== 0 && (
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border font-mono-vct text-xs font-bold ${
                               clutchDelta > 0
@@ -227,12 +228,12 @@ export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
                             <span>{projectedStats.clutch}</span>
                           </span>
                         )}
-                        {synDelta === 0 && clutchDelta === 0 && bonus.modifiers.extraRerolls && (
+                        {synDelta === 0 && (!showClutchPreview || clutchDelta === 0) && bonus.modifiers.extraRerolls && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-[#e2b714]/40 font-mono-vct text-xs font-bold text-[#e2b714]">
                             +{bonus.modifiers.extraRerolls} Rerolls na hora
                           </span>
                         )}
-                        {synDelta === 0 && clutchDelta === 0 && bonus.modifiers.zeroRerolls && (
+                        {synDelta === 0 && (!showClutchPreview || clutchDelta === 0) && bonus.modifiers.zeroRerolls && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-rose-500/40 font-mono-vct text-xs font-bold text-rose-300">
                             Rerolls zeram agora
                           </span>

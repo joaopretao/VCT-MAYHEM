@@ -29,9 +29,9 @@ const FEATURED_CRESTS = [
 ];
 
 const DIFFICULTY_OPTIONS: { id: Difficulty; label: string; hint: string; color: string; text: string }[] = [
-  { id: 'normal', label: 'Normal', hint: '3 rerolls · Sem vetos', color: '#10b981', text: '#0b0e14' },
-  { id: 'hard', label: 'Difícil', hint: '2 rerolls · 3 vetos', color: '#e2b714', text: '#0b0e14' },
-  { id: 'master', label: 'Master', hint: '1 reroll · 6 vetos', color: '#ff4655', text: '#ffffff' },
+  { id: 'normal', label: 'Normal', hint: '3 rerolls · Sem vetos · Scouting total', color: '#10b981', text: '#0b0e14' },
+  { id: 'hard', label: 'Difícil', hint: '2 rerolls · 3 vetos · Scouting parcial', color: '#e2b714', text: '#0b0e14' },
+  { id: 'master', label: 'Master', hint: '1 reroll · 6 vetos · Scouting cego', color: '#ff4655', text: '#ffffff' },
 ];
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
