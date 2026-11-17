@@ -15,6 +15,8 @@ interface HomeScreenProps {
   onOpenHelp: () => void;
   trophiesCount: number;
   totalCampaigns: number;
+  hasActiveRun?: boolean;
+  activeRunLabel?: string | null;
 }
 
 const FEATURED_CRESTS = [
@@ -39,6 +41,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenHelp,
   trophiesCount,
   totalCampaigns,
+  hasActiveRun = false,
+  activeRunLabel = null,
 }) => {
   const activeDiff = DIFFICULTY_OPTIONS.find(d => d.id === difficulty) || DIFFICULTY_OPTIONS[0];
 
@@ -102,9 +106,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-3 md:space-y-4">
               <div className="space-y-1">
-                <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-[#ff4655] block">
-                  Modo Principal
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-[#ff4655]">
+                    Modo Principal
+                  </span>
+                  {hasActiveRun && activeRunLabel && (
+                    <span className="font-mono-vct text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-emerald-500/15 border border-emerald-500/40 text-emerald-300">
+                      Run salva · {activeRunLabel}
+                    </span>
+                  )}
+                </div>
                 <h1 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[0.92] text-white uppercase tracking-wide">
                   CHAMPIONS MAYHEM
                 </h1>
@@ -133,7 +144,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   }}
                   className="w-full sm:w-auto text-sm md:text-base px-6 py-2.5 md:px-8 md:py-3.5"
                 >
-                  <span>JOGAR MAYHEM</span>
+                  <span>{hasActiveRun ? 'CONTINUAR RUN' : 'JOGAR MAYHEM'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </PrimaryButton>
 

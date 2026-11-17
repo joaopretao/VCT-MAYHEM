@@ -1,0 +1,136 @@
+import { ActiveRunSave, Difficulty, Lineup, SavedTournamentState, UserTeamIdentity } from '../types';
+import { DEFAULT_TEAM_IDENTITY } from '../components/TeamCrest';
+
+const ACTIVE_RUN_STORAGE_KEY = 'vct_mayhem_active_run_v1';
+
+const VALID_DIFFICULTIES: Difficulty[] = ['normal', 'hard', 'master'];
+const VALID_EMBLEMS = new Set(['shield', 'flame', 'crown', 'sword', 'phoenix', 'bolt']);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isValidLineup(value: unknown): value is Lineup {
+  if (!isRecord(value)) return false;
+  const roles: (keyof Lineup)[] = ['Duelist', 'Controller', 'Initiator', 'Sentinel', 'Flex'];
+  return roles.every(role => role in value && (value[role] === null || isRecord(value[role])));
+}
+
+function sanitizeTeamIdentity(value: unknown): UserTeamIdentity {
+  if (!isRecord(value)) return { ...DEFAULT_TEAM_IDENTITY };
+  const name =
+    typeof value.name === 'string' && value.name.trim().length > 0
+      ? value.name.trim().slice(0, 18).toUpperCase()
+      : DEFAULT_TEAM_IDENTITY.name;
+  const emblemId =
+    typeof value.emblemId === 'string' && VALID_EMBLEMS.has(value.emblemId)
+      ? (value.emblemId as UserTeamIdentity['emblemId'])
+      : DEFAULT_TEAM_IDENTITY.emblemId;
+  const color =
+    typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)
+      ? value.color
+      : DEFAULT_TEAM_IDENTITY.color;
+  return { name, emblemId, color };
+}
+
+export function saveActiveRun(run: ActiveRunSave): void {
+  try {
+    localStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(run));
+  } catch (e) {
+    console.error('Failed to auto-save active run', e);
+  }
+}
+
+export function loadActiveRun(): ActiveRunSave | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_RUN_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed)) return null;
+    if (parsed.version !== 1) return null;
+    if (!VALID_DIFFICULTIES.includes(parsed.difficulty as Difficulty)) return null;
+    if (!isValidLineup(parsed.lineup)) return null;
+    if (!Array.isArray(parsed.availableTeams) || parsed.availableTeams.length === 0) return null;
+    if (typeof parsed.rerollsLeft !== 'number' || Number.isNaN(parsed.rerollsLeft)) return null;
+
+    const isTournamentActive = Boolean(parsed.isTournamentActive);
+    let tournamentState: SavedTournamentState | null = null;
+
+    if (isTournamentActive) {
+      if (!isRecord(parsed.tournamentState)) return null;
+      const ts = parsed.tournamentState;
+      if (
+        typeof ts.currentStageIndex !== 'number' ||
+        !isRecord(ts.series) ||
+        !isRecord(ts.currentMap) ||
+        !Array.isArray(ts.currentMap.events)
+      ) {
+        return null;
+      }
+      tournamentState = {
+        currentStageIndex: ts.currentStageIndex,
+        showQualifiedScreen: Boolean(ts.showQualifiedScreen),
+        series: ts.series as unknown as SavedTournamentState['series'],
+        currentMap: ts.currentMap as unknown as SavedTournamentState['currentMap'],
+        allTournamentMaps: Array.isArray(ts.allTournamentMaps) ? ts.allTournamentMaps : [],
+        usedOpponentIds: Array.isArray(ts.usedOpponentIds) ? ts.usedOpponentIds : [],
+        revealedEventsCount: typeof ts.revealedEventsCount === 'number' ? ts.revealedEventsCount : 1,
+        isSeriesDecided: Boolean(ts.isSeriesDecided),
+        isChampionshipWon: Boolean(ts.isChampionshipWon),
+        isEliminated: Boolean(ts.isEliminated),
+        lostPreviousMapInSeries: Boolean(ts.lostPreviousMapInSeries),
+        secondChanceUsedCount:
+          typeof ts.secondChanceUsedCount === 'number' ? ts.secondChanceUsedCount : 0,
+        secondChanceNotice:
+          typeof ts.secondChanceNotice === 'string' ? ts.secondChanceNotice : null,
+        seriesMvp: isRecord(ts.seriesMvp)
+          ? (ts.seriesMvp as unknown as SavedTournamentState['seriesMvp'])
+          : null,
+        tournamentMvp: isRecord(ts.tournamentMvp)
+          ? (ts.tournamentMvp as unknown as SavedTournamentState['tournamentMvp'])
+          : null,
+        teamPerformances: Array.isArray(ts.teamPerformances) ? ts.teamPerformances : [],
+        runBonusSummaries: Array.isArray(ts.runBonusSummaries) ? ts.runBonusSummaries : [],
+        runSummaryLine: typeof ts.runSummaryLine === 'string' ? ts.runSummaryLine : '',
+        campaignSaved: Boolean(ts.campaignSaved),
+      };
+    }
+
+    return {
+      version: 1,
+      savedAt: typeof parsed.savedAt === 'number' ? parsed.savedAt : Date.now(),
+      difficulty: parsed.difficulty as Difficulty,
+      teamIdentity: sanitizeTeamIdentity(parsed.teamIdentity),
+      lineup: parsed.lineup,
+      availableTeams: parsed.availableTeams as ActiveRunSave['availableTeams'],
+      rerollsLeft: parsed.rerollsLeft,
+      selectedBonuses: Array.isArray(parsed.selectedBonuses) ? parsed.selectedBonuses : [],
+      pendingBonusChoices: Array.isArray(parsed.pendingBonusChoices)
+        ? parsed.pendingBonusChoices
+        : null,
+      bonusPromptStep: parsed.bonusPromptStep === 2 ? 2 : 1,
+      bannedPlayers: Array.isArray(parsed.bannedPlayers) ? parsed.bannedPlayers : [],
+      isTournamentActive,
+      tournamentState,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function clearActiveRun(): void {
+  try {
+    localStorage.removeItem(ACTIVE_RUN_STORAGE_KEY);
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function hasSavedProgress(run: ActiveRunSave | null): boolean {
+  if (!run) return false;
+  if (run.isTournamentActive && run.tournamentState && !run.tournamentState.isChampionshipWon && !run.tournamentState.isEliminated) {
+    return true;
+  }
+  const picks = Object.values(run.lineup).filter(Boolean).length;
+  return picks > 0 || !!run.pendingBonusChoices;
+}

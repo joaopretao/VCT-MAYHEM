@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Trophy, RotateCcw, Check, ShieldAlert, AlertCircle } from 'lucide-react';
-import { Lineup, Role, Player, MayhemBonus } from '../types';
+import { X, Trophy, RotateCcw, Check, ShieldAlert, AlertCircle, Pencil } from 'lucide-react';
+import { Lineup, Role, Player, MayhemBonus, UserTeamIdentity } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { AGENT_FULL_PORTRAITS, AGENT_ICONS, ROLE_SILHOUETTES } from '../data/agentIcons';
 import { getPlayerPhotoUrl } from '../data/playerPhotos';
@@ -12,15 +12,18 @@ import { RoleEmblem } from './RoleEmblem';
 import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
 import { CountryFlag } from './CountryFlag';
+import { TeamCrest, DEFAULT_TEAM_IDENTITY } from './TeamCrest';
 import { MayhemBonusChip } from './MayhemBonusChip';
 import { Confetti } from './Confetti';
 import { ROLE_ORDER, getNextOpenRole } from './roleOrder';
-import { Card, StatPill, PrimaryButton, SecondaryButton } from './ui';
+import { Card, StatPill, PrimaryButton, SecondaryButton, AnimatedNumber } from './ui';
 
 interface LineupBarProps {
   lineup: Lineup;
   hoveredPlayer?: Player | null;
   selectedBonuses?: MayhemBonus[];
+  teamIdentity?: UserTeamIdentity;
+  onEditTeamIdentity?: () => void;
   rerollsLeft?: number;
   bannedPlayers?: Player[];
   onOpenBansModal?: () => void;
@@ -105,6 +108,8 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   lineup,
   hoveredPlayer = null,
   selectedBonuses = [],
+  teamIdentity = DEFAULT_TEAM_IDENTITY,
+  onEditTeamIdentity,
   rerollsLeft,
   bannedPlayers = [],
   onOpenBansModal,
@@ -131,6 +136,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   }, [isComplete]);
 
   const preview = computePreviewAssignment(lineup, hoveredPlayer);
+  const hasCustomIdentity = teamIdentity.name !== DEFAULT_TEAM_IDENTITY.name;
 
   const markImgError = (key: string) => {
     setImgErrors(prev => ({ ...prev, [key]: true }));
@@ -141,10 +147,35 @@ export const LineupBar: React.FC<LineupBarProps> = ({
       {/* Unified Header: SEU TIME + PICK X/5 + Progress + Stats + Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3 mb-2">
         <div className="flex items-center gap-2 md:gap-3 flex-wrap min-w-0">
-          <span className="vct-slash h-5 md:h-[22px]" aria-hidden />
-          <h2 className="font-display text-2xl md:text-3xl leading-none text-white tracking-wide uppercase">
-            Seu Time
-          </h2>
+          {onEditTeamIdentity ? (
+            <button
+              id="edit-team-identity-btn"
+              type="button"
+              onClick={() => {
+                playSelectSound();
+                onEditTeamIdentity();
+              }}
+              className="group/team inline-flex items-center gap-2 pr-1.5 rounded-[3px] hover:bg-white/[0.06] transition-colors cursor-pointer"
+              title="Personalizar nome e escudo do seu time (opcional)"
+            >
+              <TeamCrest
+                emblemId={teamIdentity.emblemId}
+                color={teamIdentity.color}
+                size="sm"
+              />
+              <span className="font-display text-2xl md:text-3xl leading-none text-white tracking-wide uppercase truncate max-w-[170px] sm:max-w-none">
+                {hasCustomIdentity ? teamIdentity.name : 'Seu Time'}
+              </span>
+              <Pencil className="w-3.5 h-3.5 text-slate-400 group-hover/team:text-white transition-colors shrink-0" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="vct-slash h-5 md:h-[22px]" aria-hidden />
+              <h2 className="font-display text-2xl md:text-3xl leading-none text-white tracking-wide uppercase">
+                Seu Time
+              </h2>
+            </div>
+          )}
           <span
             className={`font-mono-vct text-xs sm:text-sm font-bold px-2 py-0.5 rounded-[2px] border uppercase tracking-wide ${
               isComplete
@@ -187,14 +218,14 @@ export const LineupBar: React.FC<LineupBarProps> = ({
           <div className="flex items-center gap-1.5 md:gap-2">
             <StatPill
               label="Química"
-              value={stats.synergy ? `+${stats.synergy}` : '0'}
+              value={<AnimatedNumber value={stats.synergy} prefix="+" />}
               color="#38bdf8"
               title="Sinergia entre jogadores do mesmo time ou composição completa"
             />
             <div className="hidden md:block">
               <StatPill
                 label="Clutch"
-                value={stats.clutch || '--'}
+                value={<AnimatedNumber value={stats.clutch > 0 ? stats.clutch : null} fallback="--" />}
                 color="#ff4655"
                 title="Média do elenco em rounds decisivos"
               />

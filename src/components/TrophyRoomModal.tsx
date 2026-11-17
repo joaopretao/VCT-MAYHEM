@@ -22,6 +22,7 @@ import { ROLE_NAMES_PT } from '../data/roleIcons';
 import { playSelectSound } from '../utils/audio';
 import { buildRecordsFromCampaigns, getMostUsedBonus } from '../utils/records';
 import { TeamLogo } from './TeamLogo';
+import { TeamCrest } from './TeamCrest';
 import { MayhemBonusChip } from './MayhemBonusChip';
 import { Card } from './ui';
 
@@ -301,6 +302,16 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2.5 border-b border-white/[0.07]">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {camp.teamName && (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-white/10 text-xs font-bold text-white uppercase">
+                          <TeamCrest
+                            emblemId={camp.teamEmblemId}
+                            color={camp.teamColor}
+                            size="xs"
+                          />
+                          <span>{camp.teamName}</span>
+                        </span>
+                      )}
                       {camp.wonChampionship ? (
                         <span className="px-2 py-0.5 rounded-[2px] bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-1 border border-amber-500/35">
                           <Trophy className="w-3.5 h-3.5" /> Campeão
@@ -311,7 +322,7 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
                         </span>
                       )}
 
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-slate-300">
                         {camp.date} · {DIFFICULTY_NAMES_PT[camp.difficulty] || camp.difficulty}
                       </span>
                     </div>

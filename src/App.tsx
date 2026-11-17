@@ -12,13 +12,32 @@ import { TrophyRoomModal } from './components/TrophyRoomModal';
 import { RulesModal } from './components/RulesModal';
 import { OpponentBansModal } from './components/OpponentBansModal';
 import { MayhemBonusModal } from './components/MayhemBonusModal';
-import { Lineup, Role, Player, Team, Difficulty, CampaignHistory, MayhemBonus, PlayerRecords } from './types';
+import { TeamIdentityModal, DEFAULT_TEAM_IDENTITY } from './components/TeamCrest';
+import { DraftTutorialModal, hasSeenDraftTutorial } from './components/DraftTutorialModal';
+import {
+  Lineup,
+  Role,
+  Player,
+  Team,
+  Difficulty,
+  CampaignHistory,
+  MayhemBonus,
+  PlayerRecords,
+  UserTeamIdentity,
+  SavedTournamentState,
+} from './types';
 import { TEAMS_DATABASE } from './data/teamsAndPlayers';
 import { assignTraitsToTeam } from './data/traits';
 import { rollMayhemBonusChoices } from './data/mayhemBonuses';
 import { rollOpponentBans, isPlayerBanned } from './utils/bans';
 import { playLockSound, playSelectSound, playBonusRevealSound } from './utils/audio';
 import { vibrateLight, vibrateBonus } from './utils/haptics';
+import {
+  loadActiveRun,
+  saveActiveRun,
+  clearActiveRun,
+  hasSavedProgress,
+} from './utils/activeRun';
 import {
   EMPTY_PLAYER_RECORDS,
   loadPlayerRecords,
@@ -27,20 +46,35 @@ import {
 } from './utils/records';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<TabId>('home');
-  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
-  const [pendingBansNotice, setPendingBansNotice] = useState<boolean>(false);
-  const [lineup, setLineup] = useState<Lineup>({
-    Duelist: null,
-    Controller: null,
-    Initiator: null,
-    Sentinel: null,
-    Flex: null,
-  });
+  const [restoredRun] = useState(() => loadActiveRun());
+  const canResumeRun = hasSavedProgress(restoredRun);
 
-  const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
-  const [rerollsLeft, setRerollsLeft] = useState<number>(3);
-  const [isTournamentActive, setIsTournamentActive] = useState<boolean>(false);
+  const [currentTab, setCurrentTab] = useState<TabId>(canResumeRun ? 'draft' : 'home');
+  const [difficulty, setDifficulty] = useState<Difficulty>(restoredRun?.difficulty ?? 'normal');
+  const [teamIdentity, setTeamIdentity] = useState<UserTeamIdentity>(
+    restoredRun?.teamIdentity ?? DEFAULT_TEAM_IDENTITY
+  );
+  const [showTeamIdentityModal, setShowTeamIdentityModal] = useState<boolean>(false);
+  const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
+  const [pendingBansNotice, setPendingBansNotice] = useState<boolean>(false);
+  const [lineup, setLineup] = useState<Lineup>(
+    restoredRun?.lineup ?? {
+      Duelist: null,
+      Controller: null,
+      Initiator: null,
+      Sentinel: null,
+      Flex: null,
+    }
+  );
+
+  const [availableTeams, setAvailableTeams] = useState<Team[]>(restoredRun?.availableTeams ?? []);
+  const [rerollsLeft, setRerollsLeft] = useState<number>(restoredRun?.rerollsLeft ?? 3);
+  const [isTournamentActive, setIsTournamentActive] = useState<boolean>(
+    canResumeRun && Boolean(restoredRun?.isTournamentActive)
+  );
+  const [savedTournamentState, setSavedTournamentState] = useState<SavedTournamentState | null>(
+    restoredRun?.tournamentState ?? null
+  );
   const [inspectedPlayer, setInspectedPlayer] = useState<Player | null>(null);
   const [showRulesModal, setShowRulesModal] = useState<boolean>(false);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
@@ -48,12 +82,18 @@ export default function App() {
   const [playerRecords, setPlayerRecords] = useState<PlayerRecords>(EMPTY_PLAYER_RECORDS);
 
   // Roguelike Mayhem Bonuses (max 2 per run: after pick 2 and pick 4)
-  const [selectedBonuses, setSelectedBonuses] = useState<MayhemBonus[]>([]);
-  const [pendingBonusChoices, setPendingBonusChoices] = useState<MayhemBonus[] | null>(null);
-  const [bonusPromptStep, setBonusPromptStep] = useState<1 | 2>(1);
+  const [selectedBonuses, setSelectedBonuses] = useState<MayhemBonus[]>(
+    restoredRun?.selectedBonuses ?? []
+  );
+  const [pendingBonusChoices, setPendingBonusChoices] = useState<MayhemBonus[] | null>(
+    restoredRun?.pendingBonusChoices ?? null
+  );
+  const [bonusPromptStep, setBonusPromptStep] = useState<1 | 2>(
+    restoredRun?.bonusPromptStep ?? 1
+  );
 
   // Opponent Ban System (Normal: 3 bans, Hard/Master: 6 bans)
-  const [bannedPlayers, setBannedPlayers] = useState<Player[]>([]);
+  const [bannedPlayers, setBannedPlayers] = useState<Player[]>(restoredRun?.bannedPlayers ?? []);
   const [showBansModal, setShowBansModal] = useState<boolean>(false);
 
   // Load campaign history and player records from localStorage
@@ -86,6 +126,8 @@ export default function App() {
 
   // Initialize a new draft run with rerolls and opponent bans
   const initializeDraftRun = useCallback((targetDifficulty: Difficulty, openBansNotification: boolean = true) => {
+    clearActiveRun();
+    setSavedTournamentState(null);
     setLineup({
       Duelist: null,
       Controller: null,
@@ -116,18 +158,77 @@ export default function App() {
     drawThreeTeams([]);
   }, [drawThreeTeams]);
 
-  // Initial draw & initial bans on app mount
+  // Initial draw only if no valid saved run restored availableTeams
   useEffect(() => {
-    initializeDraftRun('normal', false);
-  }, [initializeDraftRun]);
+    if (availableTeams.length === 0) {
+      initializeDraftRun('normal', false);
+    }
+  }, [availableTeams.length, initializeDraftRun]);
+
+  // Show short 3-step tutorial only on first visit to Draft mode (and when no modal blocks it)
+  useEffect(() => {
+    if (
+      currentTab === 'draft' &&
+      !isTournamentActive &&
+      !pendingBonusChoices &&
+      !showBansModal &&
+      !hasSeenDraftTutorial()
+    ) {
+      setShowTutorialModal(true);
+    }
+  }, [currentTab, isTournamentActive, pendingBonusChoices, showBansModal]);
+
+  // Auto-save active run to localStorage
+  useEffect(() => {
+    if (availableTeams.length === 0) return;
+    if (savedTournamentState?.isChampionshipWon || savedTournamentState?.isEliminated) {
+      clearActiveRun();
+      return;
+    }
+    saveActiveRun({
+      version: 1,
+      savedAt: Date.now(),
+      difficulty,
+      teamIdentity,
+      lineup,
+      availableTeams,
+      rerollsLeft,
+      selectedBonuses,
+      pendingBonusChoices,
+      bonusPromptStep,
+      bannedPlayers,
+      isTournamentActive,
+      tournamentState: savedTournamentState,
+    });
+  }, [
+    difficulty,
+    teamIdentity,
+    lineup,
+    availableTeams,
+    rerollsLeft,
+    selectedBonuses,
+    pendingBonusChoices,
+    bonusPromptStep,
+    bannedPlayers,
+    isTournamentActive,
+    savedTournamentState,
+  ]);
 
   const handleTabChange = (tab: TabId) => {
     setCurrentTab(tab);
     if (tab !== 'draft') {
       setIsTournamentActive(false);
-    } else if (pendingBansNotice && bannedPlayers.length > 0) {
-      setShowBansModal(true);
-      setPendingBansNotice(false);
+    } else {
+      if (
+        savedTournamentState &&
+        !savedTournamentState.isChampionshipWon &&
+        !savedTournamentState.isEliminated
+      ) {
+        setIsTournamentActive(true);
+      } else if (pendingBansNotice && bannedPlayers.length > 0) {
+        setShowBansModal(true);
+        setPendingBansNotice(false);
+      }
     }
   };
 
@@ -330,6 +431,17 @@ export default function App() {
   };
 
   const championshipsCount = campaignHistory.filter(c => c.wonChampionship).length;
+  const picksCount = Object.values(lineup).filter(Boolean).length;
+  const hasOngoingTournament =
+    Boolean(savedTournamentState) &&
+    !savedTournamentState?.isChampionshipWon &&
+    !savedTournamentState?.isEliminated;
+  const homeHasActiveRun = hasOngoingTournament || picksCount > 0 || Boolean(pendingBonusChoices);
+  const activeRunLabel = hasOngoingTournament
+    ? savedTournamentState?.series?.stageTitle?.split(' - ')[0] || 'Torneio'
+    : homeHasActiveRun
+    ? `Pick ${Math.min(5, picksCount)}/5`
+    : null;
 
   return (
     <MotionConfig reducedMotion="user">
@@ -366,6 +478,8 @@ export default function App() {
                 onOpenHelp={() => setShowRulesModal(true)}
                 trophiesCount={championshipsCount}
                 totalCampaigns={campaignHistory.length}
+                hasActiveRun={homeHasActiveRun}
+                activeRunLabel={activeRunLabel}
               />
             )}
 
@@ -377,6 +491,8 @@ export default function App() {
                     lineup={lineup}
                     rerollsLeft={rerollsLeft}
                     selectedBonuses={selectedBonuses}
+                    teamIdentity={teamIdentity}
+                    onEditTeamIdentity={() => setShowTeamIdentityModal(true)}
                     bannedPlayers={bannedPlayers}
                     onOpenBansModal={() => setShowBansModal(true)}
                     onReroll={handleReroll}
@@ -392,6 +508,9 @@ export default function App() {
                     lineup={lineup}
                     difficulty={difficulty}
                     selectedBonuses={selectedBonuses}
+                    teamIdentity={teamIdentity}
+                    initialSavedState={savedTournamentState}
+                    onTournamentStateChange={setSavedTournamentState}
                     onResetTournament={handleResetTournament}
                     onSaveCampaign={handleSaveCampaign}
                   />
@@ -420,8 +539,25 @@ export default function App() {
         <MayhemBonusModal
           choices={pendingBonusChoices}
           stepNumber={bonusPromptStep}
+          lineup={lineup}
+          selectedBonuses={selectedBonuses}
+          difficulty={difficulty}
           onSelect={handleSelectMayhemBonus}
         />
+      )}
+
+      {/* Team Identity Editor Modal */}
+      {showTeamIdentityModal && (
+        <TeamIdentityModal
+          identity={teamIdentity}
+          onSave={setTeamIdentity}
+          onClose={() => setShowTeamIdentityModal(false)}
+        />
+      )}
+
+      {/* First-Run 3-Step Tutorial Modal */}
+      {showTutorialModal && (
+        <DraftTutorialModal onClose={() => setShowTutorialModal(false)} />
       )}
 
       {/* Opponent Bans Modal */}
@@ -442,7 +578,15 @@ export default function App() {
       />
 
       {/* Rules Guide Modal */}
-      {showRulesModal && <RulesModal onClose={() => setShowRulesModal(false)} />}
+      {showRulesModal && (
+        <RulesModal
+          onClose={() => setShowRulesModal(false)}
+          onReplayTutorial={() => {
+            setCurrentTab('draft');
+            setShowTutorialModal(true);
+          }}
+        />
+      )}
     </div>
     </MotionConfig>
   );

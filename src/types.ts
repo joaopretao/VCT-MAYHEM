@@ -150,6 +150,9 @@ export interface CampaignHistory {
   id: string;
   date: string;
   difficulty: Difficulty;
+  teamName?: string;
+  teamEmblemId?: CustomEmblemId;
+  teamColor?: string;
   lineup: {
     role: Role;
     ign: string;
@@ -279,4 +282,50 @@ export interface Achievement {
   progressText?: string;
   unlockedDate?: string;
   rewardLabel?: string;
+}
+
+export type CustomEmblemId = 'shield' | 'flame' | 'crown' | 'sword' | 'phoenix' | 'bolt';
+
+export interface UserTeamIdentity {
+  name: string;
+  emblemId: CustomEmblemId;
+  color: string;
+}
+
+export interface SavedTournamentState {
+  currentStageIndex: number;
+  showQualifiedScreen: boolean;
+  series: SeriesMatch | null;
+  currentMap: MapGame | null;
+  allTournamentMaps: MapGame[];
+  usedOpponentIds: string[];
+  revealedEventsCount: number;
+  isSeriesDecided: boolean;
+  isChampionshipWon: boolean;
+  isEliminated: boolean;
+  lostPreviousMapInSeries: boolean;
+  secondChanceUsedCount: number;
+  secondChanceNotice: string | null;
+  seriesMvp: TournamentMvpStats | null;
+  tournamentMvp: TournamentMvpStats | null;
+  teamPerformances: PlayerPerformance[];
+  runBonusSummaries: BonusUsageSummary[];
+  runSummaryLine: string;
+  campaignSaved: boolean;
+}
+
+export interface ActiveRunSave {
+  version: 1;
+  savedAt: number;
+  difficulty: Difficulty;
+  teamIdentity: UserTeamIdentity;
+  lineup: Lineup;
+  availableTeams: Team[];
+  rerollsLeft: number;
+  selectedBonuses: MayhemBonus[];
+  pendingBonusChoices: MayhemBonus[] | null;
+  bonusPromptStep: 1 | 2;
+  bannedPlayers: Player[];
+  isTournamentActive: boolean;
+  tournamentState: SavedTournamentState | null;
 }

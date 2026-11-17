@@ -5,9 +5,10 @@ import { Card, PrimaryButton } from './ui';
 
 interface RulesModalProps {
   onClose: () => void;
+  onReplayTutorial?: () => void;
 }
 
-export const RulesModal: React.FC<RulesModalProps> = ({ onClose }) => {
+export const RulesModal: React.FC<RulesModalProps> = ({ onClose, onReplayTutorial }) => {
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
       <Card variant="modal" padding="lg" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto text-white animate-popIn">
@@ -139,16 +140,31 @@ export const RulesModal: React.FC<RulesModalProps> = ({ onClose }) => {
           </div>
         </div>
 
-        <PrimaryButton
-          size="md"
-          onClick={() => {
-            playSelectSound();
-            onClose();
-          }}
-          className="w-full"
-        >
-          Entendido, voltar
-        </PrimaryButton>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {onReplayTutorial && (
+            <button
+              type="button"
+              onClick={() => {
+                playSelectSound();
+                onClose();
+                onReplayTutorial();
+              }}
+              className="px-4 py-2.5 rounded-[3px] border border-white/15 bg-[#0b0e14] hover:bg-white/10 text-xs font-mono-vct font-bold uppercase tracking-wider text-slate-200 cursor-pointer transition-colors"
+            >
+              Rever tutorial (3 passos)
+            </button>
+          )}
+          <PrimaryButton
+            size="md"
+            onClick={() => {
+              playSelectSound();
+              onClose();
+            }}
+            className="flex-1"
+          >
+            Entendido, voltar
+          </PrimaryButton>
+        </div>
       </Card>
     </div>
   );

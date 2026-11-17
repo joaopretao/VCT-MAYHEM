@@ -1,21 +1,31 @@
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { MayhemBonus } from '../types';
+import { ArrowRight } from 'lucide-react';
+import { Difficulty, Lineup, MayhemBonus } from '../types';
 import { BONUS_RARITY_META } from '../data/mayhemBonuses';
+import { calculateTeamStats } from '../utils/simulation';
 import { MayhemBonusIconSvg } from './MayhemBonusChip';
 import { Card } from './ui';
 
 interface MayhemBonusModalProps {
   choices: MayhemBonus[];
   stepNumber: 1 | 2;
+  lineup?: Lineup;
+  selectedBonuses?: MayhemBonus[];
+  difficulty?: Difficulty;
   onSelect: (bonus: MayhemBonus) => void;
 }
 
 export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
   choices,
   stepNumber,
+  lineup,
+  selectedBonuses = [],
+  difficulty = 'normal',
   onSelect,
 }) => {
+  const baselineStats = lineup ? calculateTeamStats(lineup, selectedBonuses) : null;
+  const hidePreviewNumbers = difficulty === 'master';
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -78,24 +88,40 @@ export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
             </span>
           </div>
 
-          {/* 3 Bonus Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
+          {/* 3 Bonus Cards with 3D reveal flip + Synergy preview */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4 [perspective:1100px]">
             {choices.map((bonus, idx) => {
               const meta = BONUS_RARITY_META[bonus.rarity];
               const hotkey = idx + 1;
+              const projectedStats =
+                lineup && baselineStats && !hidePreviewNumbers
+                  ? calculateTeamStats(lineup, [...selectedBonuses, bonus])
+                  : null;
+              const synDelta =
+                projectedStats && baselineStats
+                  ? projectedStats.synergy - baselineStats.synergy
+                  : 0;
+              const clutchDelta =
+                projectedStats && baselineStats
+                  ? projectedStats.clutch - baselineStats.clutch
+                  : 0;
 
               return (
                 <motion.button
                   key={bonus.id}
                   id={`mayhem-bonus-card-${idx}`}
                   type="button"
-                  initial={{ opacity: 0, y: 14, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: idx * 0.06, duration: 0.2, ease: 'easeOut' }}
+                  initial={{ opacity: 0, rotateY: 85, scale: 0.96 }}
+                  animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+                  transition={{
+                    delay: idx * 0.08,
+                    duration: 0.34,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
                   whileHover={{ y: -3 }}
                   whileTap={{ scale: 0.985 }}
                   onClick={() => onSelect(bonus)}
-                  className="group relative text-left rounded-[4px] border bg-[#11151d] hover:bg-[#161c27] active:bg-[#1a212e] p-3.5 sm:p-5 flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 sm:gap-4 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/60 overflow-hidden"
+                  className="group relative text-left rounded-[4px] border bg-[#11151d] hover:bg-[#161c27] active:bg-[#1a212e] p-3.5 sm:p-5 flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 sm:gap-4 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/60 overflow-hidden [transform-style:preserve-3d]"
                   style={{
                     borderColor: meta.borderColor,
                     boxShadow: meta.glowShadow,
@@ -147,7 +173,7 @@ export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
                   </div>
 
                   {/* Body */}
-                  <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-center justify-between gap-2 md:hidden">
                       <span
                         className="font-mono-vct text-xs font-bold uppercase"
@@ -167,6 +193,52 @@ export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
                     <p className="text-xs sm:text-sm text-slate-200 leading-snug">
                       {bonus.description}
                     </p>
+
+                    {/* Live Preview (Synergy X -> Y / Clutch / Rerolls), hidden on Master */}
+                    {hidePreviewNumbers ? (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-white/10 font-mono-vct text-xs text-slate-300">
+                        Impacto exato oculto no Master
+                      </div>
+                    ) : baselineStats && projectedStats ? (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        {synDelta !== 0 && (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border font-mono-vct text-xs font-bold ${
+                              synDelta > 0
+                                ? 'border-emerald-500/40 text-emerald-300'
+                                : 'border-rose-500/40 text-rose-300'
+                            }`}
+                          >
+                            <span>Química +{baselineStats.synergy}</span>
+                            <ArrowRight className="w-3 h-3" />
+                            <span>+{projectedStats.synergy}</span>
+                          </span>
+                        )}
+                        {clutchDelta !== 0 && (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border font-mono-vct text-xs font-bold ${
+                              clutchDelta > 0
+                                ? 'border-amber-500/40 text-amber-300'
+                                : 'border-rose-500/40 text-rose-300'
+                            }`}
+                          >
+                            <span>Clutch {baselineStats.clutch}</span>
+                            <ArrowRight className="w-3 h-3" />
+                            <span>{projectedStats.clutch}</span>
+                          </span>
+                        )}
+                        {synDelta === 0 && clutchDelta === 0 && bonus.modifiers.extraRerolls && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-[#e2b714]/40 font-mono-vct text-xs font-bold text-[#e2b714]">
+                            +{bonus.modifiers.extraRerolls} Rerolls na hora
+                          </span>
+                        )}
+                        {synDelta === 0 && clutchDelta === 0 && bonus.modifiers.zeroRerolls && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#0b0e14] border border-rose-500/40 font-mono-vct text-xs font-bold text-rose-300">
+                            Rerolls zeram agora
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Action cue */}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
-  Trophy,
   ArrowRight,
   Play,
   FastForward,
@@ -25,6 +24,8 @@ import {
   PlayerPerformance,
   MayhemBonus,
   BonusUsageSummary,
+  UserTeamIdentity,
+  SavedTournamentState,
 } from '../types';
 import {
   generateTournamentSeries,
@@ -46,6 +47,7 @@ import {
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { StageQualifiedScreen } from './StageQualifiedScreen';
 import { TeamLogo } from './TeamLogo';
+import { TeamCrest, DEFAULT_TEAM_IDENTITY } from './TeamCrest';
 import { TraitBadge } from './TraitBadge';
 import { RoleEmblem } from './RoleEmblem';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -95,10 +97,70 @@ const RunSummaryPanel: React.FC<RunSummaryPanelProps> = ({ bonusSummaries, summa
   </div>
 );
 
+interface RoundTrackNode {
+  label: string;
+  pScore: number;
+  oScore: number;
+  type: 'start' | 'win' | 'loss';
+}
+
+function buildRoundProgressionSteps(
+  events: MapGame['events'],
+  revealedCount: number,
+  finalPlayerScore: number,
+  finalOpponentScore: number,
+  isEnded: boolean
+): RoundTrackNode[] {
+  const nodes: RoundTrackNode[] = [{ label: 'Início', pScore: 0, oScore: 0, type: 'start' }];
+  const visibleCount = Math.min(revealedCount, events.length);
+  const baseMilestones = [0, 4, 8, 13];
+  let pWins = 0;
+  let oWins = 0;
+  let curP = 0;
+  let curO = 0;
+
+  for (let i = 0; i < visibleCount; i++) {
+    const ev = events[i];
+    const isLastVisible = i === visibleCount - 1;
+    if (ev.type === 'win') {
+      pWins++;
+    } else {
+      oWins++;
+    }
+
+    if (isEnded && isLastVisible) {
+      curP = finalPlayerScore;
+      curO = finalOpponentScore;
+    } else {
+      const targetWinP = ev.type === 'win'
+        ? Math.max(curP + 1, baseMilestones[Math.min(3, pWins)] ?? curP + 3)
+        : Math.min(11, curP + (oWins > 1 ? 2 : 1));
+      const targetWinO = ev.type === 'loss'
+        ? Math.max(curO + 1, baseMilestones[Math.min(3, oWins)] ?? curO + 3)
+        : Math.min(11, curO + (pWins > 1 ? 2 : 1));
+
+      curP = isEnded ? Math.min(finalPlayerScore, targetWinP) : Math.min(12, targetWinP);
+      curO = isEnded ? Math.min(finalOpponentScore, targetWinO) : Math.min(12, targetWinO);
+    }
+
+    nodes.push({
+      label: `#${i + 1}`,
+      pScore: curP,
+      oScore: curO,
+      type: ev.type === 'win' ? 'win' : 'loss',
+    });
+  }
+
+  return nodes;
+}
+
 interface TournamentSimulationProps {
   lineup: Lineup;
   difficulty: Difficulty;
   selectedBonuses?: MayhemBonus[];
+  teamIdentity?: UserTeamIdentity;
+  initialSavedState?: SavedTournamentState | null;
+  onTournamentStateChange?: (state: SavedTournamentState) => void;
   onResetTournament: () => void;
   onSaveCampaign: (history: CampaignHistory) => void;
 }
@@ -109,40 +171,78 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   lineup,
   difficulty,
   selectedBonuses = [],
+  teamIdentity = DEFAULT_TEAM_IDENTITY,
+  initialSavedState = null,
+  onTournamentStateChange,
   onResetTournament,
   onSaveCampaign,
 }) => {
-  const [currentStageIndex, setCurrentStageIndex] = useState<number>(0);
-  const [showQualifiedScreen, setShowQualifiedScreen] = useState<boolean>(false);
-  const [series, setSeries] = useState<SeriesMatch | null>(null);
-  const [currentMap, setCurrentMap] = useState<MapGame | null>(null);
-  const [allTournamentMaps, setAllTournamentMaps] = useState<MapGame[]>([]);
-  const [usedOpponentIds, setUsedOpponentIds] = useState<string[]>([]);
-  const [revealedEventsCount, setRevealedEventsCount] = useState<number>(0);
-  const [isSeriesDecided, setIsSeriesDecided] = useState<boolean>(false);
-  const [isChampionshipWon, setIsChampionshipWon] = useState<boolean>(false);
-  const [isEliminated, setIsEliminated] = useState<boolean>(false);
+  const [currentStageIndex, setCurrentStageIndex] = useState<number>(
+    initialSavedState?.currentStageIndex ?? 0
+  );
+  const [showQualifiedScreen, setShowQualifiedScreen] = useState<boolean>(
+    initialSavedState?.showQualifiedScreen ?? false
+  );
+  const [series, setSeries] = useState<SeriesMatch | null>(initialSavedState?.series ?? null);
+  const [currentMap, setCurrentMap] = useState<MapGame | null>(
+    initialSavedState?.currentMap ?? null
+  );
+  const [allTournamentMaps, setAllTournamentMaps] = useState<MapGame[]>(
+    initialSavedState?.allTournamentMaps ?? []
+  );
+  const [usedOpponentIds, setUsedOpponentIds] = useState<string[]>(
+    initialSavedState?.usedOpponentIds ?? []
+  );
+  const [revealedEventsCount, setRevealedEventsCount] = useState<number>(
+    initialSavedState?.revealedEventsCount ?? 0
+  );
+  const [isSeriesDecided, setIsSeriesDecided] = useState<boolean>(
+    initialSavedState?.isSeriesDecided ?? false
+  );
+  const [isChampionshipWon, setIsChampionshipWon] = useState<boolean>(
+    initialSavedState?.isChampionshipWon ?? false
+  );
+  const [isEliminated, setIsEliminated] = useState<boolean>(
+    initialSavedState?.isEliminated ?? false
+  );
   const [showScoreboardModal, setShowScoreboardModal] = useState<boolean>(false);
   const [showCurrentMapStats, setShowCurrentMapStats] = useState<boolean>(false);
-  const [tournamentMvp, setTournamentMvp] = useState<TournamentMvpStats | null>(null);
-  const [teamPerformances, setTeamPerformances] = useState<PlayerPerformance[]>([]);
-  const [lostPreviousMapInSeries, setLostPreviousMapInSeries] = useState<boolean>(false);
-  const [secondChanceUsedCount, setSecondChanceUsedCount] = useState<number>(0);
-  const [secondChanceNotice, setSecondChanceNotice] = useState<string | null>(null);
-  const [runBonusSummaries, setRunBonusSummaries] = useState<BonusUsageSummary[]>([]);
-  const [runSummaryLine, setRunSummaryLine] = useState<string>('');
+  const [seriesMvp, setSeriesMvp] = useState<TournamentMvpStats | null>(
+    initialSavedState?.seriesMvp ?? null
+  );
+  const [tournamentMvp, setTournamentMvp] = useState<TournamentMvpStats | null>(
+    initialSavedState?.tournamentMvp ?? null
+  );
+  const [teamPerformances, setTeamPerformances] = useState<PlayerPerformance[]>(
+    initialSavedState?.teamPerformances ?? []
+  );
+  const [lostPreviousMapInSeries, setLostPreviousMapInSeries] = useState<boolean>(
+    initialSavedState?.lostPreviousMapInSeries ?? false
+  );
+  const [secondChanceUsedCount, setSecondChanceUsedCount] = useState<number>(
+    initialSavedState?.secondChanceUsedCount ?? 0
+  );
+  const [secondChanceNotice, setSecondChanceNotice] = useState<string | null>(
+    initialSavedState?.secondChanceNotice ?? null
+  );
+  const [runBonusSummaries, setRunBonusSummaries] = useState<BonusUsageSummary[]>(
+    initialSavedState?.runBonusSummaries ?? []
+  );
+  const [runSummaryLine, setRunSummaryLine] = useState<string>(
+    initialSavedState?.runSummaryLine ?? ''
+  );
+  const [campaignSaved, setCampaignSaved] = useState<boolean>(
+    initialSavedState?.campaignSaved ?? false
+  );
+  const skipNextRoundSoundRef = React.useRef<boolean>(Boolean(initialSavedState?.series));
 
   const teamStats = calculateTeamStats(lineup, selectedBonuses);
   const currentStage = STAGES[currentStageIndex];
 
-  useEffect(() => {
-    initSeriesForStage(currentStage);
-  }, [currentStageIndex]);
-
-  const initSeriesForStage = (stage: TournamentStage) => {
-    const newSeries = generateTournamentSeries(stage, difficulty, usedOpponentIds);
+  const initSeriesForStage = (stage: TournamentStage, currentUsedIds: string[] = usedOpponentIds) => {
+    const newSeries = generateTournamentSeries(stage, difficulty, currentUsedIds);
     if (newSeries.opponent.id) {
-      setUsedOpponentIds(prev => [...prev, newSeries.opponent.id!]);
+      setUsedOpponentIds(prev => (prev.includes(newSeries.opponent.id!) ? prev : [...prev, newSeries.opponent.id!]));
     }
     setSeries(newSeries);
     setIsSeriesDecided(false);
@@ -159,7 +259,63 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   };
 
   useEffect(() => {
+    if (!series || !currentMap) {
+      initSeriesForStage(STAGES[currentStageIndex], usedOpponentIds);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!onTournamentStateChange || !series) return;
+    onTournamentStateChange({
+      currentStageIndex,
+      showQualifiedScreen,
+      series,
+      currentMap,
+      allTournamentMaps,
+      usedOpponentIds,
+      revealedEventsCount,
+      isSeriesDecided,
+      isChampionshipWon,
+      isEliminated,
+      lostPreviousMapInSeries,
+      secondChanceUsedCount,
+      secondChanceNotice,
+      seriesMvp,
+      tournamentMvp,
+      teamPerformances,
+      runBonusSummaries,
+      runSummaryLine,
+      campaignSaved,
+    });
+  }, [
+    onTournamentStateChange,
+    currentStageIndex,
+    showQualifiedScreen,
+    series,
+    currentMap,
+    allTournamentMaps,
+    usedOpponentIds,
+    revealedEventsCount,
+    isSeriesDecided,
+    isChampionshipWon,
+    isEliminated,
+    lostPreviousMapInSeries,
+    secondChanceUsedCount,
+    secondChanceNotice,
+    seriesMvp,
+    tournamentMvp,
+    teamPerformances,
+    runBonusSummaries,
+    runSummaryLine,
+    campaignSaved,
+  ]);
+
+  useEffect(() => {
     if (!currentMap || revealedEventsCount === 0) return;
+    if (skipNextRoundSoundRef.current) {
+      skipNextRoundSoundRef.current = false;
+      return;
+    }
     const latestEvent = currentMap.events[revealedEventsCount - 1];
     if (latestEvent) {
       if (latestEvent.type === 'win') {
@@ -291,6 +447,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           setIsChampionshipWon(true);
           saveCampaignRecord(true, currentStage, mvp, playerWins, opponentWins, summaries, summaryLine);
         } else {
+          const currentSeriesMvp = calculateTournamentMvp(lineup, updatedMaps);
+          setSeriesMvp(currentSeriesMvp);
           setShowQualifiedScreen(true);
         }
       } else {
@@ -323,12 +481,18 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     bonuses?: BonusUsageSummary[],
     runSummary?: string
   ) => {
+    if (campaignSaved) return;
+    setCampaignSaved(true);
+
     const mvpPlayer = mvpStats?.player;
 
     const record: CampaignHistory = {
       id: `camp_${Date.now()}`,
       date: new Date().toLocaleDateString('pt-BR'),
       difficulty,
+      teamName: teamIdentity.name,
+      teamEmblemId: teamIdentity.emblemId,
+      teamColor: teamIdentity.color,
       lineup: Object.entries(lineup)
         .filter(([_, p]) => p !== null)
         .map(([role, p]) => ({
@@ -366,8 +530,11 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   };
 
   const handleNextStageFromScreen = () => {
+    const nextIdx = currentStageIndex + 1;
     setShowQualifiedScreen(false);
-    setCurrentStageIndex(prev => prev + 1);
+    setSeriesMvp(null);
+    setCurrentStageIndex(nextIdx);
+    initSeriesForStage(STAGES[nextIdx], usedOpponentIds);
   };
 
   if (showQualifiedScreen) {
@@ -375,8 +542,10 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       <StageQualifiedScreen
         stage={currentStage}
         lineup={lineup}
+        teamIdentity={teamIdentity}
         opponentName={series?.opponent.name}
         scoreLabel={series ? `${series.playerWins}–${series.opponentWins}` : undefined}
+        seriesMvp={seriesMvp}
         onNextStage={handleNextStageFromScreen}
       />
     );
@@ -430,20 +599,23 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
 
         {/* SEU ELENCO vs SÉRIE SCORE vs ADVERSÁRIO (Always horizontal 3-col so mobile stays compact) */}
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 md:gap-4">
-          {/* Left: Seu Elenco */}
+          {/* Left: Seu Time */}
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <div className="hidden sm:flex w-10 h-10 md:w-12 md:h-12 rounded-[3px] bg-[#ff4655]/15 border border-[#ff4655]/40 items-center justify-center shrink-0">
-              <Trophy className="w-5 h-5 md:w-6 md:h-6 text-[#ff4655]" />
-            </div>
+            <TeamCrest
+              emblemId={teamIdentity.emblemId}
+              color={teamIdentity.color}
+              size="lg"
+              className="hidden sm:inline-flex"
+            />
             <div className="min-w-0">
               <span className="hidden md:block font-mono-vct text-xs font-bold uppercase tracking-wider text-[#38bdf8]">
                 Sua Equipe
               </span>
               <h2 className="font-display text-xl sm:text-2xl md:text-3xl leading-none text-white uppercase tracking-wide truncate">
-                SEU ELENCO
+                {teamIdentity.name}
               </h2>
               <span className="hidden md:block font-mono-vct text-xs text-slate-300 mt-0.5">
-                Força Geral: <strong className="text-slate-400">Oculta na Run</strong>
+                Força Geral: <strong className="text-slate-300">Oculta na Run</strong>
               </span>
             </div>
           </div>
@@ -678,6 +850,78 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               </div>
             </div>
 
+            {/* Visual Round Score Progression Track */}
+            {(() => {
+              const trackSteps = buildRoundProgressionSteps(
+                currentMap.events,
+                revealedEventsCount,
+                currentMap.playerScore,
+                currentMap.opponentScore,
+                isCurrentMapEnded
+              );
+              const totalNodes = 1 + currentMap.events.length;
+              return (
+                <div
+                  id="round-progression-track"
+                  className="mb-3.5 p-2.5 sm:p-3 rounded-[3px] bg-[#090c11] border border-white/10"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="font-mono-vct text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                      Evolução do Placar · {currentMap.mapName}
+                    </span>
+                    <span className="font-mono-vct text-xs font-bold text-white">
+                      {trackSteps[trackSteps.length - 1].pScore}–{trackSteps[trackSteps.length - 1].oScore}
+                      {isCurrentMapEnded ? ' Final' : ' Parcial'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+                    {Array.from({ length: totalNodes }).map((_, idx) => {
+                      const step = trackSteps[idx];
+                      const isLast = idx === totalNodes - 1;
+                      const isCurrentHead = idx === trackSteps.length - 1;
+                      const chipCls = !step
+                        ? 'bg-[#0d1118] border-white/10 text-slate-500 border-dashed'
+                        : step.type === 'start'
+                        ? 'bg-[#11151d] border-white/20 text-slate-200'
+                        : step.type === 'win'
+                        ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-300'
+                        : 'bg-rose-500/15 border-rose-500/50 text-rose-300';
+
+                      return (
+                        <React.Fragment key={idx}>
+                          <div
+                            className={`px-2 py-1 rounded-[3px] border font-mono-vct text-xs flex flex-col items-center min-w-[50px] shrink-0 transition-all ${chipCls} ${
+                              isCurrentHead ? 'ring-1 ring-white/40' : ''
+                            }`}
+                          >
+                            <span className="text-[10px] opacity-80 leading-none">
+                              {step ? step.label : `#${idx}`}
+                            </span>
+                            <span className="font-bold leading-tight mt-0.5 tabular-nums">
+                              {step ? `${step.pScore}–${step.oScore}` : '--'}
+                            </span>
+                          </div>
+                          {!isLast && (
+                            <div
+                              className={`h-[2px] flex-1 min-w-[10px] rounded-full ${
+                                trackSteps[idx + 1]
+                                  ? trackSteps[idx + 1].type === 'win'
+                                    ? 'bg-emerald-400/70'
+                                    : 'bg-rose-400/70'
+                                  : 'bg-white/10'
+                              }`}
+                              aria-hidden
+                            />
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Event Cards Timeline (3px left accent bar + subtle ~8% tinted background) */}
             <div className="flex flex-col gap-3">
               {revealedEvents.map((event, eIdx) => {
@@ -846,9 +1090,9 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           <Card variant="modal" padding="lg" cutCorner className="border-[#e2b714]/50 w-full max-w-2xl text-center text-white my-auto animate-popIn relative overflow-hidden">
             <div className="absolute inset-x-0 top-0 h-1 bg-[#e2b714]" aria-hidden />
 
-            <div className="flex items-center justify-center gap-2 text-xs font-mono-vct font-bold text-[#e2b714] uppercase tracking-widest mb-1">
-              <Trophy className="w-4 h-4" />
-              <span>VALORANT Champions · Título Mundial</span>
+            <div className="flex items-center justify-center gap-2 text-xs font-mono-vct font-bold text-[#e2b714] uppercase tracking-widest mb-1.5">
+              <TeamCrest emblemId={teamIdentity.emblemId} color={teamIdentity.color} size="xs" />
+              <span>{teamIdentity.name} · Título Mundial</span>
             </div>
 
             <h2 className="text-4xl sm:text-5xl font-display font-bold text-white tracking-wide uppercase leading-none">
