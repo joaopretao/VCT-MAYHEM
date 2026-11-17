@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Check, X, ArrowUp, ArrowDown, HelpCircle, Trophy, RotateCcw, Lightbulb } from 'lucide-react';
+import { Search, Check, X, ArrowUp, ArrowDown, HelpCircle, Trophy, RotateCcw, MapPin } from 'lucide-react';
 import { Player, TriviaGuess } from '../types';
 import { PLAYERS_DATABASE, TEAMS_DATABASE } from '../data/teamsAndPlayers';
 import { getTeamLogoData } from '../data/teamLogos';
@@ -18,7 +18,6 @@ export const TriviaMode: React.FC = () => {
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [mode, setMode] = useState<'daily' | 'practice'>('daily');
   const [streak, setStreak] = useState<number>(0);
-  const [showHint, setShowHint] = useState<boolean>(false);
 
   // Load target player on mount or mode switch
   useEffect(() => {
@@ -50,7 +49,6 @@ export const TriviaMode: React.FC = () => {
     setGuesses([]);
     setIsGameOver(false);
     setSearchTerm('');
-    setShowHint(false);
   };
 
   const getRegionForTeam = (teamName: string): string => {
@@ -163,20 +161,7 @@ export const TriviaMode: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          {guesses.length >= 3 && !isGameOver && targetPlayer && (
-            <SecondaryButton
-              size="sm"
-              onClick={() => {
-                playSelectSound();
-                setShowHint(true);
-              }}
-            >
-              <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
-              <span>Dica</span>
-            </SecondaryButton>
-          )}
-
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-xl border border-white/10">
             <button
               onClick={() => {
@@ -207,18 +192,6 @@ export const TriviaMode: React.FC = () => {
           </div>
         </div>
       </Card>
-
-      {/* Optional Hint Banner */}
-      {showHint && targetPlayer && !isGameOver && (
-        <div className="p-3 rounded bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center justify-center gap-2">
-          <Lightbulb className="w-4 h-4 text-amber-400 shrink-0" />
-          <span>
-            <strong>Dica Tática:</strong> O atleta misterioso é natural de{' '}
-            <strong className="text-white">{targetPlayer.country} ({targetPlayer.countryCode})</strong> e seu nick começa com a letra{' '}
-            <strong className="text-white">"{targetPlayer.ign[0].toUpperCase()}"</strong>.
-          </span>
-        </div>
-      )}
 
       {/* Input Search Box */}
       {!isGameOver && (
@@ -297,15 +270,56 @@ export const TriviaMode: React.FC = () => {
                 <X className="w-6 h-6" />
               </div>
               <h3 className="text-3xl font-display font-bold uppercase tracking-wider text-rose-400">
-                Não foi dessa vez.
+                Sem vidas restantes.
               </h3>
-              <div className="text-sm text-slate-300 mt-2 mb-5 flex items-center justify-center gap-1.5 flex-wrap">
-                <span>A resposta era</span>
-                <strong className="text-white font-bold">{targetPlayer.ign}</strong>
-                <span className="inline-flex items-center gap-1">
-                  (<TeamLogo teamName={targetPlayer.team} size="xs" />
-                  {targetPlayer.team} {targetPlayer.year}).
-                </span>
+              <p className="text-xs text-slate-400 mt-1 mb-4">
+                Você usou todas as 8 tentativas. O pro player secreto era:
+              </p>
+
+              {/* Full Reveal Card only on Game Over */}
+              <div className="max-w-md mx-auto mb-5 p-3.5 rounded-[4px] bg-[#0b0e14] border border-white/10 text-left space-y-3">
+                <div className="flex items-center gap-3">
+                  <PlayerAvatar player={targetPlayer} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-lg font-display font-bold text-white tracking-wide leading-tight truncate">
+                      {targetPlayer.ign}
+                    </div>
+                    <div className="text-xs text-slate-400 truncate">
+                      {targetPlayer.name}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-[2px] bg-[#161b24] border border-white/10 text-xs font-mono-vct text-slate-200 shrink-0">
+                    <MapPin className="w-3.5 h-3.5 text-[#ff4655]" />
+                    <span>{targetPlayer.countryCode || targetPlayer.country}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono-vct">
+                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Equipe</span>
+                    <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5 truncate max-w-full">
+                      <TeamLogo teamName={targetPlayer.team} size="xs" />
+                      <span className="truncate">{targetPlayer.team}</span>
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Região</span>
+                    <span className="text-white font-semibold mt-0.5 block">{getRegionForTeam(targetPlayer.team)}</span>
+                  </div>
+                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Função</span>
+                    <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5">
+                      <RoleEmblem role={targetPlayer.primaryRole} size="xs" showBackground={false} />
+                      <span>{ROLE_NAMES_PT[targetPlayer.primaryRole] || targetPlayer.primaryRole}</span>
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Agente / Ano</span>
+                    <span className="text-white font-semibold mt-0.5 block truncate">
+                      {targetPlayer.signatureAgent} ({targetPlayer.year})
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}

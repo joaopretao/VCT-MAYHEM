@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, X, Share2, ArrowRight } from 'lucide-react';
+import { Trophy, X, Share2, ArrowRight, Eye, ShieldAlert } from 'lucide-react';
 import { GridCellState } from '../types';
 import { GridPuzzle } from '../data/gridPuzzles';
 import { Card, PrimaryButton, SecondaryButton } from './ui';
@@ -11,6 +11,10 @@ interface GridResultModalProps {
   cells: GridCellState[][];
   totalScore: number;
   solvedCount: number;
+  attemptsLeft?: number;
+  maxAttempts?: number;
+  hasSurrendered?: boolean;
+  onViewSolutions?: () => void;
   onNextPuzzle: () => void;
   hasNextPuzzle: boolean;
   isInfiniteMode?: boolean;
@@ -24,6 +28,10 @@ export const GridResultModal: React.FC<GridResultModalProps> = ({
   cells,
   totalScore,
   solvedCount,
+  attemptsLeft = 0,
+  maxAttempts = 9,
+  hasSurrendered = false,
+  onViewSolutions,
   onNextPuzzle,
   hasNextPuzzle,
   isInfiniteMode = false,
@@ -34,17 +42,23 @@ export const GridResultModal: React.FC<GridResultModalProps> = ({
   if (!isOpen) return null;
 
   const maxPossible = 540;
-  const isPerfect = solvedCount === 9 && totalScore === maxPossible;
+  const isCompleted = solvedCount === 9;
+  const isPerfect = isCompleted && totalScore === maxPossible;
 
   const getRankBadge = () => {
     if (isPerfect) return { title: 'Radiante', color: '#f59e0b', desc: '9/9 de primeira. Gabarito limpo.' };
-    if (totalScore >= 450) return { title: 'Imortal', color: '#ff4655', desc: 'Quase perfeito nas janelas e elencos.' };
+    if (isCompleted && totalScore >= 450) return { title: 'Imortal', color: '#ff4655', desc: 'Quase perfeito nas janelas e elencos.' };
     if (totalScore >= 300) return { title: 'Ascendente / Diamante', color: '#38bdf8', desc: 'Boa leitura das conexões.' };
     if (solvedCount >= 5) return { title: 'Ouro / Platina', color: '#10b981', desc: 'Mandou bem nos principais cruzamentos.' };
-    return { title: 'Ferro / Prata', color: '#94a3b8', desc: 'Bora pro próximo tabuleiro.' };
+    return { title: 'Ferro / Prata', color: '#94a3b8', desc: 'Confira o gabarito para ver as conexões possíveis.' };
   };
 
   const rank = getRankBadge();
+  const modalHeadline = isCompleted
+    ? 'Grid fechado'
+    : hasSurrendered
+      ? 'Partida encerrada'
+      : 'Sem vidas restantes';
 
   const handleShare = () => {
     const text = `VCT GRID #${puzzle.number} (${puzzle.title})
@@ -73,8 +87,14 @@ Jogue também no VALORANT Champions Mayhem.`;
             <X className="w-5 h-5" />
           </button>
 
-          <div className="w-11 h-11 mx-auto rounded-[3px] bg-amber-500/15 border border-amber-500/35 mb-3 flex items-center justify-center text-amber-400">
-            <Trophy className="w-5 h-5" />
+          <div
+            className={`w-11 h-11 mx-auto rounded-[3px] border mb-3 flex items-center justify-center ${
+              isCompleted
+                ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
+                : 'bg-rose-500/15 border-rose-500/35 text-rose-400'
+            }`}
+          >
+            {isCompleted ? <Trophy className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
           </div>
 
           <span
@@ -85,13 +105,13 @@ Jogue também no VALORANT Champions Mayhem.`;
           </span>
 
           <h3 className="text-2xl font-display font-bold uppercase text-white tracking-wide">
-            Grid fechado
+            {modalHeadline}
           </h3>
           <p className="text-xs sm:text-sm text-slate-300 mt-1">{rank.desc}</p>
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-4 bg-[#11151d] border-b border-white/[0.08] text-center">
+        <div className="grid grid-cols-3 gap-2.5 p-4 bg-[#11151d] border-b border-white/[0.08] text-center">
           <div className="surface-sub p-3">
             <div className="text-2xl font-bold text-amber-400 font-mono-vct tabular-nums">
               {totalScore} <span className="text-xs text-slate-400 font-normal">/ {maxPossible}</span>
@@ -107,6 +127,15 @@ Jogue também no VALORANT Champions Mayhem.`;
             </div>
             <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
               Células
+            </div>
+          </div>
+
+          <div className="surface-sub p-3">
+            <div className={`text-2xl font-bold font-mono-vct tabular-nums ${attemptsLeft > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {attemptsLeft} <span className="text-xs text-slate-400 font-normal">/ {maxAttempts}</span>
+            </div>
+            <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
+              Vidas rest.
             </div>
           </div>
 
@@ -159,6 +188,18 @@ Jogue também no VALORANT Champions Mayhem.`;
 
         {/* Actions */}
         <div className="p-4 bg-[#0d1118] border-t border-white/10 space-y-2">
+          {onViewSolutions && (
+            <SecondaryButton
+              id="grid-result-view-solutions-btn"
+              onClick={onViewSolutions}
+              size="md"
+              className="w-full"
+            >
+              <Eye className="w-4 h-4 text-[#e2b714]" />
+              <span>Ver Gabarito Completo</span>
+            </SecondaryButton>
+          )}
+
           <SecondaryButton
             onClick={handleShare}
             size="md"

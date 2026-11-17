@@ -12,6 +12,7 @@ interface GridPlayerSearchModalProps {
   rowCriterion: GridCriterion;
   colCriterion: GridCriterion;
   currentPoints: number;
+  attemptsLeft: number;
   usedPlayerIds: string[];
   onSelectCorrectPlayer: (player: Player, pointsEarned: number) => void;
   onWrongGuess: () => void;
@@ -23,6 +24,7 @@ export const GridPlayerSearchModal: React.FC<GridPlayerSearchModalProps> = ({
   rowCriterion,
   colCriterion,
   currentPoints,
+  attemptsLeft,
   usedPlayerIds,
   onSelectCorrectPlayer,
   onWrongGuess,
@@ -95,17 +97,9 @@ export const GridPlayerSearchModal: React.FC<GridPlayerSearchModalProps> = ({
       }, 450);
     } else {
       onWrongGuess();
-      let hint = '';
-      if (!matchesRow && !matchesCol) {
-        hint = `${player.ign} não cumpre nenhum dos dois critérios.`;
-      } else if (!matchesRow) {
-        hint = `${player.ign} não cumpre o critério "${rowCriterion.label}".`;
-      } else {
-        hint = `${player.ign} não cumpre o critério "${colCriterion.label}".`;
-      }
       setFeedback({
         type: 'error',
-        message: `Incorreto! ${hint} (-15 pts)`,
+        message: `Palpite incorreto! ${player.ign} não preenche esta interseção. (-1 vida)`,
       });
     }
   };
@@ -122,6 +116,15 @@ export const GridPlayerSearchModal: React.FC<GridPlayerSearchModalProps> = ({
               </span>
               <span className="px-2 py-0.5 rounded-[2px] bg-[#e2b714]/15 text-[#e2b714] text-xs font-mono-vct font-bold border border-[#e2b714]/35">
                 {currentPoints} pts
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded-[2px] text-xs font-mono-vct font-bold border ${
+                  attemptsLeft <= 2
+                    ? 'bg-rose-500/15 text-rose-400 border-rose-500/35'
+                    : 'bg-white/[0.06] text-slate-200 border-white/15'
+                }`}
+              >
+                {attemptsLeft} {attemptsLeft === 1 ? 'vida' : 'vidas'}
               </span>
             </div>
             <h3 className="text-2xl font-display text-white tracking-wide uppercase mt-1">
@@ -260,7 +263,7 @@ export const GridPlayerSearchModal: React.FC<GridPlayerSearchModalProps> = ({
 
         {/* Footer info */}
         <div className="p-3 bg-black/30 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
-          <span>Palpites incorretos descontam 15 pts nesta célula.</span>
+          <span>Cada palpite errado consome 1 vida e reduz a pontuação da célula.</span>
           <span className="font-mono-vct font-semibold">{allUniquePlayers.length} atletas no banco</span>
         </div>
       </div>

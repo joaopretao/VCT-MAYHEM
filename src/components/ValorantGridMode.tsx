@@ -7,6 +7,7 @@ import {
   Eye,
   Layers,
   AlertTriangle,
+  Flag,
 } from 'lucide-react';
 import { GridCellState, Player } from '../types';
 import { GRID_PUZZLES, GridPuzzle, playerMatchesCriterion, GRID_PLAYERS_DATABASE } from '../data/gridPuzzles';
@@ -15,8 +16,10 @@ import { GridResultModal } from './GridResultModal';
 import { GridVisualBadge } from './GridVisualBadge';
 import { PlayerAvatar } from './PlayerAvatar';
 import { TeamLogo } from './TeamLogo';
-import { playSelectSound } from '../utils/audio';
+import { playSelectSound, playRoundLossSound, playRoundWinSound } from '../utils/audio';
 import { Card, PrimaryButton, SecondaryButton, StatPill } from './ui';
+
+const MAX_GRID_ATTEMPTS = 9;
 
 export const ValorantGridMode: React.FC = () => {
   const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0);
@@ -40,6 +43,8 @@ export const ValorantGridMode: React.FC = () => {
       );
 
   const [cells, setCells] = useState<GridCellState[][]>(createEmptyCells);
+  const [attemptsLeft, setAttemptsLeft] = useState(MAX_GRID_ATTEMPTS);
+  const [hasSurrendered, setHasSurrendered] = useState(false);
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [showRulesInfo, setShowRulesInfo] = useState(false);
@@ -91,47 +96,62 @@ export const ValorantGridMode: React.FC = () => {
     return sol;
   }, [puzzle]);
 
+  const isGameOver = solvedCount === 9 || attemptsLeft <= 0 || hasSurrendered;
+
   useEffect(() => {
     if (solvedCount === 9) {
+      playRoundWinSound();
       const timer = setTimeout(() => {
         setIsResultModalOpen(true);
       }, 600);
       return () => clearTimeout(timer);
     }
-  }, [solvedCount]);
+    if (attemptsLeft <= 0 && !hasSurrendered) {
+      playRoundLossSound();
+      const timer = setTimeout(() => {
+        setIsResultModalOpen(true);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [solvedCount, attemptsLeft, hasSurrendered]);
+
+  const resetBoardState = (nextIndex: number) => {
+    setCurrentPuzzleIndex(nextIndex);
+    setCells(createEmptyCells());
+    setAttemptsLeft(MAX_GRID_ATTEMPTS);
+    setHasSurrendered(false);
+    setActiveCell(null);
+    setIsResultModalOpen(false);
+    setShowSolutionsWarning(false);
+    setShowSolutionsModal(false);
+  };
 
   const handlePrevPuzzle = () => {
     playSelectSound();
     const prev = (currentPuzzleIndex - 1 + GRID_PUZZLES.length) % GRID_PUZZLES.length;
-    setCurrentPuzzleIndex(prev);
-    setCells(createEmptyCells());
-    setIsResultModalOpen(false);
+    resetBoardState(prev);
   };
 
   const handleNextPuzzle = () => {
     playSelectSound();
     const next = (currentPuzzleIndex + 1) % GRID_PUZZLES.length;
-    setCurrentPuzzleIndex(next);
-    setCells(createEmptyCells());
-    setIsResultModalOpen(false);
+    resetBoardState(next);
   };
 
   const selectPuzzle = (index: number) => {
     playSelectSound();
-    setCurrentPuzzleIndex(index);
-    setCells(createEmptyCells());
+    resetBoardState(index);
     setShowGridPicker(false);
-    setIsResultModalOpen(false);
   };
 
   const handleCellClick = (row: number, col: number) => {
+    if (isGameOver || cells[row][col].isSolved) return;
     playSelectSound();
-    if (cells[row][col].isSolved) return;
     setActiveCell({ row, col });
   };
 
   const handleSelectCorrectPlayer = (player: Player) => {
-    if (!activeCell) return;
+    if (!activeCell || isGameOver) return;
     const { row, col } = activeCell;
     setCells(prev => {
       const copy = prev.map(r => [...r]);
@@ -142,11 +162,12 @@ export const ValorantGridMode: React.FC = () => {
       };
       return copy;
     });
+    setAttemptsLeft(prev => Math.max(0, prev - 1));
     setActiveCell(null);
   };
 
   const handleWrongGuess = () => {
-    if (!activeCell) return;
+    if (!activeCell || isGameOver) return;
     const { row, col } = activeCell;
     setCells(prev => {
       const copy = prev.map(r => [...r]);
@@ -159,6 +180,13 @@ export const ValorantGridMode: React.FC = () => {
         points: newPts,
       };
       return copy;
+    });
+    setAttemptsLeft(prev => {
+      const next = Math.max(0, prev - 1);
+      if (next <= 0) {
+        setActiveCell(null);
+      }
+      return next;
     });
   };
 
@@ -186,6 +214,11 @@ export const ValorantGridMode: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <StatPill
+            label="VIDAS"
+            value={`${attemptsLeft}/${MAX_GRID_ATTEMPTS}`}
+            color={attemptsLeft <= 2 ? '#ff4655' : '#38bdf8'}
+          />
           <StatPill label="PTS" value={totalScore} color="#e2b714" />
 
           <SecondaryButton
@@ -315,11 +348,13 @@ export const ValorantGridMode: React.FC = () => {
                     key={`${rIdx}-${cIdx}`}
                     id={`grid-cell-${rIdx}-${cIdx}`}
                     onClick={() => handleCellClick(rIdx, cIdx)}
-                    disabled={isSolved}
+                    disabled={isSolved || isGameOver}
                     className={`relative rounded-[3px] border transition-colors flex flex-col items-center justify-center p-1 sm:p-2 text-center select-none ${
                       isSolved
                         ? 'bg-emerald-500/10 border-emerald-500/45 cursor-default'
-                        : 'surface-sub hover:border-[#ff4655] hover:bg-[#1a151c] cursor-pointer group'
+                        : isGameOver
+                          ? 'bg-[#0b0e14]/70 border-white/[0.06] cursor-default opacity-60'
+                          : 'surface-sub hover:border-[#ff4655] hover:bg-[#1a151c] cursor-pointer group'
                     }`}
                   >
                     {isSolved && player ? (
@@ -344,7 +379,7 @@ export const ValorantGridMode: React.FC = () => {
                     ) : (
                       <div className="flex flex-col items-center justify-center">
                         <span className="text-xs sm:text-sm font-mono-vct font-bold text-slate-300 group-hover:text-white transition-colors uppercase">
-                          Escolher
+                          {isGameOver ? '—' : 'Escolher'}
                         </span>
                         {cell.wrongGuessesCount > 0 && (
                           <span className="text-xs font-mono-vct text-rose-400 mt-1">
@@ -373,17 +408,31 @@ export const ValorantGridMode: React.FC = () => {
             <span>Como Jogar</span>
           </SecondaryButton>
 
-          <SecondaryButton
-            id="grid-show-solutions-btn"
-            size="sm"
-            onClick={() => {
-              playSelectSound();
-              setShowSolutionsWarning(true);
-            }}
-          >
-            <Eye className="w-4 h-4 text-[#e2b714]" />
-            <span>Ver Gabarito</span>
-          </SecondaryButton>
+          {!isGameOver ? (
+            <SecondaryButton
+              id="grid-surrender-btn"
+              size="sm"
+              onClick={() => {
+                playSelectSound();
+                setShowSolutionsWarning(true);
+              }}
+            >
+              <Flag className="w-4 h-4 text-rose-400" />
+              <span>Desistir</span>
+            </SecondaryButton>
+          ) : (
+            <SecondaryButton
+              id="grid-show-solutions-btn"
+              size="sm"
+              onClick={() => {
+                playSelectSound();
+                setShowSolutionsModal(true);
+              }}
+            >
+              <Eye className="w-4 h-4 text-[#e2b714]" />
+              <span>Ver Gabarito</span>
+            </SecondaryButton>
+          )}
         </div>
       </div>
 
@@ -395,9 +444,10 @@ export const ValorantGridMode: React.FC = () => {
             <span>Regras do Grid VCT (Transferências &amp; Nacionalidades)</span>
           </div>
           <p>
-            1. Cada uma das 9 células exige um pro player que cumpra{' '}
+            1. Você tem <strong className="text-white">{MAX_GRID_ATTEMPTS} vidas (tentativas)</strong>{' '}
+            para preencher as 9 células. Cada célula exige um pro player que cumpra{' '}
             <strong className="text-[#e2b714]">simultaneamente</strong> o critério da linha e o da
-            coluna.
+            coluna. O gabarito só é liberado após o fim da partida.
           </p>
           <p>
             2. <strong>Janelas de Transferência (Times × Times):</strong> Quando a linha e a coluna
@@ -421,14 +471,14 @@ export const ValorantGridMode: React.FC = () => {
             </div>
 
             <div>
-              <span className="text-xs font-mono-vct uppercase tracking-widest text-amber-400 font-bold block">
-                Tem certeza?
+              <span className="text-xs font-mono-vct uppercase tracking-widest text-rose-400 font-bold block">
+                Encerrar tabuleiro?
               </span>
               <h3 className="text-2xl font-display text-white tracking-wide uppercase mt-1">
-                Abrir o gabarito?
+                Desistir da partida?
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                Isso vai mostrar todas as respostas desse tabuleiro e entregar a solução do desafio.
+                Isso vai finalizar sua tentativa atual e liberar o gabarito completo deste tabuleiro.
               </p>
             </div>
 
@@ -449,22 +499,23 @@ export const ValorantGridMode: React.FC = () => {
                 id="confirm-solutions-warning-btn"
                 size="md"
                 onClick={() => {
-                  playSelectSound();
+                  playRoundLossSound();
                   setShowSolutionsWarning(false);
+                  setHasSurrendered(true);
                   setShowSolutionsModal(true);
                 }}
                 className="flex-1"
               >
                 <Eye className="w-4 h-4" />
-                <span>Ver gabarito</span>
+                <span>Desistir e ver gabarito</span>
               </PrimaryButton>
             </div>
           </Card>
         </div>
       )}
 
-      {/* Solutions / Answers Modal */}
-      {showSolutionsModal && (
+      {/* Solutions / Answers Modal (Only accessible after Game Over) */}
+      {showSolutionsModal && isGameOver && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
           <Card
             variant="modal"
@@ -527,13 +578,14 @@ export const ValorantGridMode: React.FC = () => {
       )}
 
       {/* Player Search Modal */}
-      {activeCell && (
+      {activeCell && !isGameOver && (
         <GridPlayerSearchModal
           isOpen={true}
           onClose={() => setActiveCell(null)}
           rowCriterion={puzzle.rows[activeCell.row]}
           colCriterion={puzzle.cols[activeCell.col]}
           currentPoints={cells[activeCell.row][activeCell.col].points}
+          attemptsLeft={attemptsLeft}
           onSelectCorrectPlayer={handleSelectCorrectPlayer}
           onWrongGuess={handleWrongGuess}
           usedPlayerIds={usedPlayerIds}
@@ -548,6 +600,14 @@ export const ValorantGridMode: React.FC = () => {
         cells={cells}
         totalScore={totalScore}
         solvedCount={solvedCount}
+        attemptsLeft={attemptsLeft}
+        maxAttempts={MAX_GRID_ATTEMPTS}
+        hasSurrendered={hasSurrendered}
+        onViewSolutions={() => {
+          playSelectSound();
+          setIsResultModalOpen(false);
+          setShowSolutionsModal(true);
+        }}
         onNextPuzzle={handleNextPuzzle}
         hasNextPuzzle={true}
         isInfiniteMode={false}
