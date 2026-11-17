@@ -491,6 +491,31 @@ export function playVictoryFanfare() {
 }
 
 /**
+ * 9. Revelação dos Bônus Mayhem:
+ * Acorde suave com brilho cristalino ascendente, no mesmo estilo calmo da UI.
+ */
+export function playBonusRevealSound() {
+  if (!isAudioEnabled()) return;
+  const graph = getAudioGraph();
+  if (!graph) return;
+  pruneVoices(graph.ctx, 'bonus');
+
+  const notes = [NOTE.E5, NOTE.G5, NOTE.B5, NOTE.D6];
+  notes.forEach((freq, i) => {
+    playCrystalNote({
+      freq,
+      startOffset: i * 0.055,
+      attack: 0.01,
+      decay: 0.55,
+      volume: 0.24,
+      triangleBlend: 0.12,
+      cutoff: 3200,
+      tag: 'bonus',
+    });
+  });
+}
+
+/**
  * 8. Derrota / Eliminação:
  * Nota grave suave, longa e resolvida, nada triste demais.
  */

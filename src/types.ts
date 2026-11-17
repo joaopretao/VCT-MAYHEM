@@ -121,6 +121,7 @@ export interface MapGame {
   playerWon: boolean;
   events: MatchEvent[];
   playerPerformances?: PlayerPerformance[];
+  bonusTriggers?: Record<string, number>;
 }
 
 export interface SeriesMatch {
@@ -173,6 +174,78 @@ export interface CampaignHistory {
     clutchesWon: number;
     signatureAgent: string;
   };
+  bonuses?: BonusUsageSummary[];
+  runSummary?: string;
+}
+
+export type MayhemBonusRarity = 'common' | 'rare' | 'epic';
+
+export type MayhemBonusIcon =
+  | 'Crosshair'
+  | 'Coins'
+  | 'Award'
+  | 'Flame'
+  | 'RotateCcw'
+  | 'Shield'
+  | 'Zap'
+  | 'Flag'
+  | 'HeartPulse'
+  | 'RefreshCw'
+  | 'Layers'
+  | 'Swords'
+  | 'Crown'
+  | 'TrendingUp'
+  | 'BookOpen';
+
+export interface MayhemBonusModifiers {
+  ratingFlat?: number;
+  allPlayersRatingFlat?: number;
+  synergyFlat?: number;
+  synergyMultiplier?: number;
+  clutchFlat?: number;
+  clutchPerChampWinner?: number;
+  consistencyFlat?: number;
+  pistolWinBonus?: number;
+  ecoWinBonus?: number;
+  fullBuyBonus?: number;
+  retakeClutchBonus?: number;
+  deciderMapPointBonus?: number;
+  comebackMapBonus?: number;
+  extraRerolls?: number;
+  zeroRerolls?: boolean;
+  sameNationThreshold?: number;
+  sameNationSynergy?: number;
+  flexCountsAsMissingRole?: boolean;
+  underdogStrongBonus?: number;
+  underdogWeakPenalty?: number;
+  onceSecondChance?: boolean;
+}
+
+export interface MayhemBonus {
+  id: string;
+  name: string;
+  description: string;
+  shortEffect: string;
+  rarity: MayhemBonusRarity;
+  icon: MayhemBonusIcon;
+  modifiers: MayhemBonusModifiers;
+}
+
+export interface BonusUsageSummary {
+  id: string;
+  name: string;
+  rarity: MayhemBonusRarity;
+  usageCount: number;
+  usageText: string;
+}
+
+export interface PlayerRecords {
+  runsPlayed: number;
+  titles: number;
+  currentStreak: number;
+  bestStreak: number;
+  bestOverallRating: number;
+  bonusPickCounts: Record<string, number>;
 }
 
 export interface TriviaGuess {

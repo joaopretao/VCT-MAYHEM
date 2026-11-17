@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Team, Player, Lineup, Role } from '../types';
+import { Team, Player, Lineup, Role, MayhemBonus } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
@@ -15,6 +15,7 @@ interface ValorantDraftBoardProps {
   availableTeams: Team[];
   lineup: Lineup;
   rerollsLeft: number;
+  selectedBonuses?: MayhemBonus[];
   bannedPlayers?: Player[];
   onOpenBansModal?: () => void;
   onReroll: () => void;
@@ -30,6 +31,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
   availableTeams,
   lineup,
   rerollsLeft,
+  selectedBonuses = [],
   bannedPlayers = [],
   onOpenBansModal,
   onReroll,
@@ -111,6 +113,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
       <LineupBar
         lineup={lineup}
         hoveredPlayer={hoveredPlayer}
+        selectedBonuses={selectedBonuses}
         onRemovePlayer={onRemovePlayer}
         onInspectPlayer={onInspectPlayer}
         onClearLineup={onClearLineup}

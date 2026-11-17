@@ -16,15 +16,18 @@ import {
   Lock,
   Medal,
 } from 'lucide-react';
-import { CampaignHistory, Achievement } from '../types';
+import { CampaignHistory, Achievement, PlayerRecords } from '../types';
 import { evaluateAchievements } from '../data/achievements';
 import { ROLE_NAMES_PT } from '../data/roleIcons';
 import { playSelectSound } from '../utils/audio';
+import { buildRecordsFromCampaigns, getMostUsedBonus } from '../utils/records';
 import { TeamLogo } from './TeamLogo';
+import { MayhemBonusChip } from './MayhemBonusChip';
 import { Card } from './ui';
 
 interface TrophyRoomModalProps {
   history: CampaignHistory[];
+  records?: PlayerRecords;
   onClearHistory: () => void;
   onClose: () => void;
 }
@@ -44,10 +47,14 @@ const DIFFICULTY_NAMES_PT: Record<string, string> = {
 
 export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
   history,
+  records,
   onClearHistory,
 }) => {
   const [activeTab, setActiveTab] = useState<'campaigns' | 'achievements'>('campaigns');
   const [achievementFilter, setAchievementFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
+
+  const resolvedRecords = records && records.runsPlayed > 0 ? records : buildRecordsFromCampaigns(history);
+  const mostUsedBonus = getMostUsedBonus(resolvedRecords);
 
   const championshipsWon = history.filter(h => h.wonChampionship).length;
   const totalCampaigns = history.length;
@@ -159,6 +166,50 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
             <span className="text-2xl sm:text-3xl font-extrabold text-amber-300 font-mono-vct tabular-nums">
               {unlockedCount}/{achievements.length}
             </span>
+          </div>
+        </div>
+
+        {/* Personal Records Section ("Seu histórico") */}
+        <div
+          id="player-records-section"
+          className="mt-4 pt-4 border-t border-white/[0.08]"
+        >
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <span className="text-xs font-mono-vct font-bold uppercase tracking-wider text-[#e2b714]">
+              Seu histórico · Recordes Salvos
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="surface-sub px-3 py-2 text-center">
+              <span className="text-xs text-slate-400 block">Runs jogadas</span>
+              <strong className="text-sm sm:text-base font-mono-vct text-white">
+                {resolvedRecords.runsPlayed}
+              </strong>
+            </div>
+            <div className="surface-sub px-3 py-2 text-center">
+              <span className="text-xs text-slate-400 block">Títulos</span>
+              <strong className="text-sm sm:text-base font-mono-vct text-amber-400">
+                {resolvedRecords.titles}
+              </strong>
+            </div>
+            <div className="surface-sub px-3 py-2 text-center">
+              <span className="text-xs text-slate-400 block">Melhor sequência</span>
+              <strong className="text-sm sm:text-base font-mono-vct text-emerald-400">
+                {resolvedRecords.bestStreak}
+              </strong>
+            </div>
+            <div className="surface-sub px-3 py-2 text-center">
+              <span className="text-xs text-slate-400 block">Melhor OVR</span>
+              <strong className="text-sm sm:text-base font-mono-vct text-sky-400">
+                {resolvedRecords.bestOverallRating > 0 ? `${resolvedRecords.bestOverallRating} OVR` : '--'}
+              </strong>
+            </div>
+            <div className="col-span-2 sm:col-span-1 surface-sub px-3 py-2 text-center">
+              <span className="text-xs text-slate-400 block">Bônus mais usado</span>
+              <strong className="text-xs sm:text-sm font-mono-vct text-white truncate block">
+                {mostUsedBonus ? `${mostUsedBonus.name} (${mostUsedBonus.count}x)` : '--'}
+              </strong>
+            </div>
           </div>
         </div>
       </Card>
@@ -309,6 +360,34 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
                       );
                     })}
                   </div>
+
+                  {/* Optional Roguelike Bonuses & Run Summary (backward compatible with legacy saves) */}
+                  {(camp.bonuses?.length || camp.runSummary) && (
+                    <div className="mt-3 pt-2.5 border-t border-white/[0.07] space-y-2">
+                      {camp.bonuses && camp.bonuses.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono-vct text-xs text-slate-400 uppercase font-bold mr-1">
+                            Bônus:
+                          </span>
+                          {camp.bonuses.map(b => (
+                            <MayhemBonusChip
+                              key={b.id}
+                              id={b.id}
+                              name={b.name}
+                              rarity={b.rarity}
+                              subtitle={b.usageText}
+                              compact
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {camp.runSummary && (
+                        <p className="text-xs text-slate-300 leading-snug">
+                          {camp.runSummary}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>

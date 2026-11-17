@@ -1,4 +1,16 @@
-import { Lineup, MatchEvent, MapGame, SeriesMatch, TournamentStage, Difficulty, Player, PlayerPerformance, TournamentMvpStats } from '../types';
+import {
+  Lineup,
+  MatchEvent,
+  MapGame,
+  SeriesMatch,
+  TournamentStage,
+  Difficulty,
+  Player,
+  PlayerPerformance,
+  TournamentMvpStats,
+  MayhemBonus,
+  BonusUsageSummary,
+} from '../types';
 import { TEAMS_DATABASE } from '../data/teamsAndPlayers';
 
 const MAPS_POOL = [
@@ -19,9 +31,16 @@ export interface TeamStatsCalculation {
   synergy: number;
   flexibility: number;
   synergyBonuses: string[];
+  hasSameNationBonus?: boolean;
+  sameNationCode?: string;
+  sameNationCount?: number;
+  mestreFlexCoveredRole?: boolean;
 }
 
-export function calculateTeamStats(lineup: Lineup): TeamStatsCalculation {
+export function calculateTeamStats(
+  lineup: Lineup,
+  bonuses: MayhemBonus[] = []
+): TeamStatsCalculation {
   const players = Object.values(lineup).filter((p): p is Player => p !== null);
   if (players.length === 0) {
     return {
@@ -34,16 +53,55 @@ export function calculateTeamStats(lineup: Lineup): TeamStatsCalculation {
     };
   }
 
+  // Sum declarative modifiers when Mayhem Bonuses are active
+  let extraPlayerRating = 0;
+  let bonusRatingFlat = 0;
+  let bonusConsistencyFlat = 0;
+  let bonusClutchFlat = 0;
+  let bonusClutchPerChamp = 0;
+  let bonusPositiveSynergyFlat = 0;
+  let bonusNegativeSynergyFlat = 0;
+  let synergyMult = 1;
+  let nationThreshold = 0;
+  let nationSynergyValue = 0;
+  let flexCoversMissing = false;
+
+  for (const b of bonuses) {
+    const m = b.modifiers;
+    if (m.allPlayersRatingFlat) extraPlayerRating += m.allPlayersRatingFlat;
+    if (m.ratingFlat) bonusRatingFlat += m.ratingFlat;
+    if (m.consistencyFlat) bonusConsistencyFlat += m.consistencyFlat;
+    if (m.clutchFlat) bonusClutchFlat += m.clutchFlat;
+    if (m.clutchPerChampWinner) bonusClutchPerChamp += m.clutchPerChampWinner;
+    if (m.synergyFlat) {
+      if (m.synergyFlat >= 0) bonusPositiveSynergyFlat += m.synergyFlat;
+      else bonusNegativeSynergyFlat += m.synergyFlat;
+    }
+    if (m.synergyMultiplier && m.synergyMultiplier > synergyMult) {
+      synergyMult = m.synergyMultiplier;
+    }
+    if (m.sameNationThreshold && m.sameNationSynergy) {
+      nationThreshold = m.sameNationThreshold;
+      nationSynergyValue += m.sameNationSynergy;
+    }
+    if (m.flexCountsAsMissingRole) {
+      flexCoversMissing = true;
+    }
+  }
+
   const avg = (fn: (p: Player) => number) =>
     Math.round(players.reduce((acc, p) => acc + fn(p), 0) / players.length);
 
-  let overallRating = avg(p => p.rating);
+  let overallRating = avg(p =>
+    extraPlayerRating > 0 ? Math.min(99, p.rating + extraPlayerRating) : p.rating
+  );
   let consistency = avg(p => p.consistency);
   let clutch = avg(p => p.clutch);
   let synergy = avg(p => p.synergy);
-  let flexibility = avg(p => p.flexibility);
+  const flexibility = avg(p => p.flexibility);
 
   const synergyBonuses: string[] = [];
+  let synergyGain = 0;
 
   // Team pairing synergy (players from same team)
   const teamCounts: Record<string, number> = {};
@@ -54,7 +112,7 @@ export function calculateTeamStats(lineup: Lineup): TeamStatsCalculation {
   Object.entries(teamCounts).forEach(([teamName, count]) => {
     if (count >= 2) {
       const bonus = (count - 1) * 2;
-      synergy += bonus;
+      synergyGain += bonus;
       overallRating += Math.round(bonus / 2);
       synergyBonuses.push(`Química de Elenco (${count}x ${teamName}): +${bonus} Sinergia`);
     }
@@ -67,24 +125,66 @@ export function calculateTeamStats(lineup: Lineup): TeamStatsCalculation {
   const hasSentinel = !!lineup.Sentinel;
   const hasFlex = !!lineup.Flex;
 
+  const coreMissingSlots = [!hasDuelist, !hasController, !hasInitiator, !hasSentinel].filter(Boolean).length;
+  const corePrimaryRoles = new Set(players.map(p => p.primaryRole));
+  const missingCorePrimary = (['Duelist', 'Controller', 'Initiator', 'Sentinel'] as const).some(
+    r => !corePrimaryRoles.has(r)
+  );
+
+  let mestreFlexCoveredRole = false;
   if (hasDuelist && hasController && hasInitiator && hasSentinel && hasFlex) {
-    synergy += 4;
+    synergyGain += 4;
     overallRating += 2;
     synergyBonuses.push('Composição Balanceada (5 Funções Ativas): +4 Sinergia');
+    if (flexCoversMissing && missingCorePrimary) {
+      synergyGain += 2;
+      mestreFlexCoveredRole = true;
+      synergyBonuses.push('Mestre Flex (Função coberta): +2 Sinergia extra');
+    }
+  } else if (flexCoversMissing && hasFlex && coreMissingSlots <= 1) {
+    synergyGain += 4;
+    overallRating += 2;
+    mestreFlexCoveredRole = true;
+    synergyBonuses.push('Mestre Flex (Composição Fechada): +4 Sinergia');
+  }
+
+  // Bandeira Unida (same nationality bonus)
+  let hasSameNationBonus = false;
+  let sameNationCode = '';
+  let sameNationCount = 0;
+  if (nationThreshold > 0 && nationSynergyValue > 0) {
+    const nationCounts: Record<string, number> = {};
+    players.forEach(p => {
+      const code = (p.countryCode || '').toUpperCase();
+      if (code) nationCounts[code] = (nationCounts[code] || 0) + 1;
+    });
+    for (const [code, cnt] of Object.entries(nationCounts)) {
+      if (cnt > sameNationCount) {
+        sameNationCount = cnt;
+        sameNationCode = code;
+      }
+    }
+    if (sameNationCount >= nationThreshold) {
+      hasSameNationBonus = true;
+      synergyGain += nationSynergyValue;
+      synergyBonuses.push(`Bandeira Unida (${sameNationCount}x ${sameNationCode}): +${nationSynergyValue} Sinergia`);
+    }
   }
 
   // Champions Winners Aura bonus
   const championsWinners = players.filter(p => p.isChampionsWinner);
   if (championsWinners.length > 0) {
-    const clutchBonus = championsWinners.length * 2;
-    clutch += clutchBonus;
-    synergyBonuses.push(`Pedigree de Campeão (${championsWinners.length}x): +${clutchBonus} Clutch`);
+    const baseChampClutch = championsWinners.length * 2;
+    const bonusVeteranClutch = championsWinners.length * bonusClutchPerChamp;
+    const totalChampClutch = baseChampClutch + bonusVeteranClutch;
+    clutch += totalChampClutch;
+    synergyBonuses.push(`Pedigree de Campeão (${championsWinners.length}x): +${totalChampClutch} Clutch`);
   }
 
   // Trait impacts on team stat sheet (balanced & tactical)
   players.forEach(p => {
     if (p.trait?.id === 'natural_synergy') {
-      synergy += 3;
+      synergyGain += 3;
       synergyBonuses.push(`Química Natural (${p.ign}): +3 Sinergia`);
     } else if (p.trait?.id === 'ice_in_the_veins') {
       clutch += 2;
@@ -99,6 +199,22 @@ export function calculateTeamStats(lineup: Lineup): TeamStatsCalculation {
     }
   });
 
+  if (bonusPositiveSynergyFlat > 0) {
+    synergyGain += bonusPositiveSynergyFlat;
+  }
+
+  const finalSynergyGain =
+    synergyMult > 1 ? Math.round(synergyGain * synergyMult) : synergyGain;
+
+  synergy += finalSynergyGain + bonusNegativeSynergyFlat;
+  overallRating += bonusRatingFlat;
+  consistency += bonusConsistencyFlat;
+  clutch += bonusClutchFlat;
+
+  if (synergyMult > 1 && synergyGain > 0) {
+    synergyBonuses.push(`Química Instantânea (×${synergyMult}): +${finalSynergyGain - synergyGain} Sinergia`);
+  }
+
   return {
     overallRating: Math.min(99, Math.max(60, overallRating)),
     consistency: Math.min(99, Math.max(60, consistency)),
@@ -106,6 +222,10 @@ export function calculateTeamStats(lineup: Lineup): TeamStatsCalculation {
     synergy: Math.min(99, Math.max(60, synergy)),
     flexibility: Math.min(99, Math.max(60, flexibility)),
     synergyBonuses,
+    hasSameNationBonus,
+    sameNationCode,
+    sameNationCount,
+    mestreFlexCoveredRole,
   };
 }
 
@@ -182,13 +302,20 @@ export function generateTournamentSeries(
   };
 }
 
+export interface SimulateMapOptions {
+  bonuses?: MayhemBonus[];
+  lostPreviousMap?: boolean;
+}
+
 export function simulateSingleMap(
   lineup: Lineup,
   opponentRating: number,
   mapIndex: number,
-  usedMaps: string[] = []
+  usedMaps: string[] = [],
+  options?: SimulateMapOptions
 ): MapGame {
-  const stats = calculateTeamStats(lineup);
+  const bonuses = options?.bonuses || [];
+  const stats = calculateTeamStats(lineup, bonuses);
   const players = Object.values(lineup).filter((p): p is Player => p !== null);
 
   // Pick map
@@ -197,14 +324,69 @@ export function simulateSingleMap(
     ? availableMaps[Math.floor(Math.random() * availableMaps.length)] 
     : MAPS_POOL[mapIndex % MAPS_POOL.length];
 
+  const bonusTriggers: Record<string, number> = {};
+  const addTrigger = (bonusId: string, amount: number = 1) => {
+    bonusTriggers[bonusId] = (bonusTriggers[bonusId] || 0) + amount;
+  };
+
+  let allPlayersExtraRating = 0;
+  let dynamicRatingDelta = 0;
+  let dynamicConsistencyDelta = 0;
+  let pistolBonus = 0;
+  let ecoBonus = 0;
+  let fullBuyBonus = 0;
+  let retakeBonus = 0;
+  let deciderBonus = 0;
+
+  for (const b of bonuses) {
+    const m = b.modifiers;
+    if (m.allPlayersRatingFlat) allPlayersExtraRating += m.allPlayersRatingFlat;
+    if (m.pistolWinBonus) pistolBonus += m.pistolWinBonus;
+    if (m.ecoWinBonus) ecoBonus += m.ecoWinBonus;
+    if (m.fullBuyBonus) fullBuyBonus += m.fullBuyBonus;
+    if (m.retakeClutchBonus) retakeBonus += m.retakeClutchBonus;
+    if (m.deciderMapPointBonus) deciderBonus += m.deciderMapPointBonus;
+
+    if (m.comebackMapBonus && options?.lostPreviousMap) {
+      dynamicRatingDelta += m.comebackMapBonus;
+      addTrigger(b.id, 1);
+    }
+    if (m.underdogStrongBonus && stats.overallRating < opponentRating) {
+      dynamicRatingDelta += m.underdogStrongBonus;
+      addTrigger(b.id, 1);
+    } else if (m.underdogWeakPenalty && stats.overallRating > opponentRating) {
+      dynamicConsistencyDelta += m.underdogWeakPenalty;
+    }
+
+    if (m.ratingFlat || m.allPlayersRatingFlat || m.consistencyFlat) {
+      addTrigger(b.id, 1);
+    }
+    if (m.synergyMultiplier) {
+      addTrigger(b.id, 1);
+    }
+    if (m.flexCountsAsMissingRole && lineup.Flex) {
+      addTrigger(b.id, 1);
+    }
+    if (m.sameNationThreshold && stats.hasSameNationBonus) {
+      addTrigger(b.id, 1);
+    }
+    if (m.clutchPerChampWinner && players.some(p => p.isChampionsWinner)) {
+      addTrigger(b.id, 1);
+    }
+  }
+
   // Base probability of winning a round situation - calibrated for harder authentic VCT tier competition
-  const ratingDiff = stats.overallRating - opponentRating;
+  const effectiveOverallRating = Math.max(60, stats.overallRating + dynamicRatingDelta);
+  const ratingDiff = effectiveOverallRating - opponentRating;
   const synergyMod = (stats.synergy - 78) * 0.0022;
-  const consistencyMod = (stats.consistency - 78) * 0.0015;
+  const consistencyMod = (Math.max(60, stats.consistency + dynamicConsistencyDelta) - 78) * 0.0015;
   const clutchMod = (stats.clutch - 78) * 0.0020;
 
   // Composition balance check
-  const isFullComp = !!lineup.Duelist && !!lineup.Controller && !!lineup.Initiator && !!lineup.Sentinel && !!lineup.Flex;
+  const hasMestreFlex = bonuses.some(b => b.modifiers.flexCountsAsMissingRole);
+  const isFullComp =
+    (!!lineup.Duelist && !!lineup.Controller && !!lineup.Initiator && !!lineup.Sentinel && !!lineup.Flex) ||
+    (hasMestreFlex && !!lineup.Flex && players.length >= 4);
   const compModifier = isFullComp ? 0.015 : -0.065;
 
   // Champions winners aura
@@ -218,11 +400,15 @@ export function simulateSingleMap(
   const clutchMasterPlayer = players.find(p => p.trait?.id === 'clutch_master');
   const chokePlayer = players.find(p => p.trait?.id === 'choke_artist');
   const tiltedPlayer = players.find(p => p.trait?.id === 'tilted');
-  const inconsistentPlayer = players.find(p => p.trait?.id === 'inconsistent');
+
+  // Preserve exact historical clamps when no bonuses are active; allow only modest headroom for round-specific bonuses
+  const baseUpperCap = 0.59;
+  const hasSitRoundBonus = pistolBonus > 0 || ecoBonus > 0 || fullBuyBonus > 0 || retakeBonus > 0 || deciderBonus > 0;
+  const sitUpperCap = hasSitRoundBonus ? 0.625 : 0.605;
 
   // Calibrated base probability (+0.5% round edge -> ~2% softer tournament run)
   let baseRoundProb = 0.425 + (ratingDiff * 0.009) + synergyMod + consistencyMod + compModifier + champModifier;
-  baseRoundProb = Math.min(0.59, Math.max(0.225, baseRoundProb));
+  baseRoundProb = Math.min(baseUpperCap, Math.max(0.225, baseRoundProb));
 
   const events: MatchEvent[] = [];
 
@@ -321,6 +507,13 @@ export function simulateSingleMap(
     const situation = SITUATIONS[i];
     let sitProb = baseRoundProb;
 
+    // Mayhem Bonuses per situation
+    if (i === 0 && pistolBonus !== 0) sitProb += pistolBonus;
+    if (i === 1 && ecoBonus !== 0) sitProb += ecoBonus;
+    if (i === 2 && fullBuyBonus !== 0) sitProb += fullBuyBonus;
+    if (i === 3 && retakeBonus !== 0) sitProb += retakeBonus;
+    if (i === 4 && deciderBonus !== 0) sitProb += deciderBonus;
+
     // TRAIT: First Blood King boost in Pistol Round (Situation 1) - balanced
     if (i === 0 && fbKingPlayer) {
       sitProb += 0.07;
@@ -357,7 +550,7 @@ export function simulateSingleMap(
 
     // Dynamic round variance (+/- 3%)
     sitProb += (Math.random() - 0.50) * 0.06;
-    sitProb = Math.min(0.605, Math.max(0.265, sitProb));
+    sitProb = Math.min(sitUpperCap, Math.max(0.265, sitProb));
 
     let wonSituation = Math.random() < sitProb;
 
@@ -377,6 +570,16 @@ export function simulateSingleMap(
     if (wonSituation) {
       playerSituationsWon++;
       consecutiveLosses = 0;
+
+      // Track situational Mayhem Bonus successes
+      for (const b of bonuses) {
+        const m = b.modifiers;
+        if (i === 0 && m.pistolWinBonus) addTrigger(b.id, 1);
+        if (i === 1 && m.ecoWinBonus) addTrigger(b.id, 1);
+        if (i === 2 && m.fullBuyBonus) addTrigger(b.id, 1);
+        if (i === 3 && m.retakeClutchBonus) addTrigger(b.id, 1);
+        if (i === 4 && m.deciderMapPointBonus) addTrigger(b.id, 1);
+      }
 
       let eventText = '';
 
@@ -482,9 +685,12 @@ export function simulateSingleMap(
   // Build authentic per-map player performance stats with trait bonuses
   const playerPerformances: PlayerPerformance[] = players.map(p => {
     const raw = playerStatsMap[p.id];
+    const effectivePlayerRating = allPlayersExtraRating > 0
+      ? Math.min(99, p.rating + allPlayersExtraRating)
+      : p.rating;
     const roleBaseMultiplier = p.primaryRole === 'Duelist' ? 1.15 : p.primaryRole === 'Flex' ? 1.05 : 0.95;
-    const ratingBonus = (p.rating - 75) * 0.14;
-    let baseKills = Math.max(7, Math.round((totalRounds * 0.72 * roleBaseMultiplier * (p.rating / 85)) + raw.kills * 0.8 + (Math.random() * 3 - 1)));
+    const ratingBonus = (effectivePlayerRating - 75) * 0.14;
+    let baseKills = Math.max(7, Math.round((totalRounds * 0.72 * roleBaseMultiplier * (effectivePlayerRating / 85)) + raw.kills * 0.8 + (Math.random() * 3 - 1)));
     let baseDeaths = Math.max(6, Math.round((totalRounds * (playerWon ? 0.62 : 0.78)) + raw.deaths + (Math.random() * 3 - 1)));
     let baseAssists = Math.max(3, Math.round(totalRounds * (p.primaryRole === 'Initiator' || p.primaryRole === 'Controller' ? 0.36 : 0.22) + raw.assists));
     let clutchesWon = raw.clutches;
@@ -523,7 +729,7 @@ export function simulateSingleMap(
       role: p.primaryRole,
       team: p.team,
       year: p.year,
-      rating: p.rating,
+      rating: effectivePlayerRating,
       kills: baseKills,
       deaths: baseDeaths,
       assists: baseAssists,
@@ -542,6 +748,7 @@ export function simulateSingleMap(
     playerWon,
     events,
     playerPerformances,
+    bonusTriggers: bonuses.length > 0 ? bonusTriggers : undefined,
   };
 }
 
@@ -642,4 +849,139 @@ export function aggregateTournamentPerformances(
     };
   });
 }
+
+function plural(n: number, singular: string, pluralWord: string): string {
+  return `${n} ${n === 1 ? singular : pluralWord}`;
+}
+
+const BONUS_USAGE_LABELS: Record<string, (count: number, bonus: MayhemBonus) => string> = {
+  pistol_specialist: count =>
+    count > 0 ? `Ajudou em ${plural(count, 'pistol round', 'pistol rounds')}` : 'Atuou nos pistols da run',
+  economia_afiada: count =>
+    count > 0
+      ? `Ajudou em ${plural(count, 'round econômico', 'rounds econômicos')}`
+      : 'Atuou em forçados/anti-eco',
+  leitura_de_demo: count =>
+    count > 0 ? `Ajudou em ${plural(count, 'full buy', 'full buys')}` : 'Atuou nos rounds armados',
+  gene_clutch: count =>
+    count > 0
+      ? `Ajudou em ${plural(count, 'situação de clutch', 'situações de clutch')}`
+      : 'Atuou nos retakes do torneio',
+  folego: count =>
+    count > 0
+      ? `Ativou em ${plural(count, 'mapa', 'mapas')} após derrota`
+      : 'Sem derrota prévia nas séries',
+  reforco_reroll: (_count, bonus) =>
+    `Concedeu +${bonus.modifiers.extraRerolls ?? 2} rerolls no draft`,
+  segunda_chance: count =>
+    count > 0 ? `Salvou sua eliminação ${count}x na run` : 'Não precisou ser ativada',
+  veteranos: count =>
+    count > 0
+      ? `Deu Clutch extra em ${plural(count, 'mapa', 'mapas')}`
+      : 'Nenhum campeão mundial no time',
+  bandeira_unida: (count, bonus) =>
+    count > 0
+      ? `Ativou +${bonus.modifiers.sameNationSynergy ?? 6} sinergia em ${plural(count, 'mapa', 'mapas')}`
+      : 'Menos de 3 jogadores do mesmo país',
+  underdog: count =>
+    count > 0
+      ? `Bônus ativo em ${plural(count, 'mapa', 'mapas')} contra favoritos`
+      : 'Enfrentou times de nível igual ou menor',
+};
+
+export function buildBonusUsageSummaries(
+  bonuses: MayhemBonus[],
+  maps: MapGame[],
+  secondChanceUsedCount: number = 0
+): BonusUsageSummary[] {
+  const counts: Record<string, number> = {};
+  for (const map of maps) {
+    if (!map.bonusTriggers) continue;
+    for (const [id, val] of Object.entries(map.bonusTriggers)) {
+      counts[id] = (counts[id] || 0) + val;
+    }
+  }
+
+  return bonuses.map(bonus => {
+    let usageCount = counts[bonus.id] || 0;
+    if (bonus.id === 'segunda_chance') {
+      usageCount = secondChanceUsedCount;
+    } else if (bonus.id === 'reforco_reroll') {
+      usageCount = bonus.modifiers.extraRerolls ?? 2;
+    }
+
+    const formatter = BONUS_USAGE_LABELS[bonus.id];
+    const usageText = formatter
+      ? formatter(usageCount, bonus)
+      : `Aplicado em ${plural(usageCount, 'mapa', 'mapas')}`;
+
+    return {
+      id: bonus.id,
+      name: bonus.name,
+      rarity: bonus.rarity,
+      usageCount,
+      usageText,
+    };
+  });
+}
+
+export function generateRunSummaryLine(params: {
+  wonChampionship: boolean;
+  stageReached: TournamentStage;
+  stats: TeamStatsCalculation;
+  bonusSummaries: BonusUsageSummary[];
+  secondChanceUsedCount: number;
+  mvpIgn?: string;
+  playerWins?: number;
+  opponentWins?: number;
+}): string {
+  const {
+    wonChampionship,
+    stageReached,
+    stats,
+    bonusSummaries,
+    secondChanceUsedCount,
+    mvpIgn,
+    playerWins = 0,
+    opponentWins = 0,
+  } = params;
+
+  const underdogCount = bonusSummaries.find(b => b.id === 'underdog')?.usageCount ?? 0;
+
+  if (wonChampionship) {
+    if (secondChanceUsedCount > 0) {
+      return 'Depois de escapar da eliminação com a Segunda Chance, o elenco cresceu e levantou a taça.';
+    }
+    if (underdogCount >= 3) {
+      return `Entrando como zebra contra favoritos, o time superou elencos mais fortes e levou o Champions.`;
+    }
+    if (stats.synergy >= 88) {
+      return `Sinergia alta (${stats.synergy}) deu ritmo constante ao elenco em todas as séries até o título.`;
+    }
+    if (mvpIgn) {
+      return `Poder de fogo sólido e decisões precisas de ${mvpIgn} fecharam a Grande Final.`;
+    }
+    return 'Consistência coletiva e bônus bem aproveitados carregaram a campanha até o troféu.';
+  }
+
+  const closeSeries = Math.abs(playerWins - opponentWins) <= 1 && playerWins >= 1;
+  if (stageReached === 'finals') {
+    return closeSeries
+      ? 'Bateu na trave na Grande Final: decisão foi equilibrada até os rounds finais.'
+      : 'Chegou à Grande Final, mas o adversário impôs mais ritmo na série decisiva.';
+  }
+  if (stageReached === 'semis') {
+    return closeSeries
+      ? 'Campanha sólida até a semifinal, decidida nos últimos mapas por detalhes.'
+      : 'Avançou bem até os playoffs, mas faltou resposta no confronto de semifinal.';
+  }
+  if (stats.synergy < 78) {
+    return 'Sinergia baixa pesou nas trocas de meio de mapa e faltou encaixe nas séries iniciais.';
+  }
+  if (stats.clutch < 80) {
+    return 'Os momentos de retake e ponto decisivo escaparam quando o confronto apertou.';
+  }
+  return 'Confronto duro desde o início e pouco fôlego econômico para virar a série.';
+}
+
 

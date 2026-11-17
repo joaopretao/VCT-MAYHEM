@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Trophy, RotateCcw, Check } from 'lucide-react';
-import { Lineup, Role, Player } from '../types';
+import { Lineup, Role, Player, MayhemBonus } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { AGENT_FULL_PORTRAITS, AGENT_ICONS, ROLE_SILHOUETTES } from '../data/agentIcons';
 import { getPlayerPhotoUrl } from '../data/playerPhotos';
@@ -10,6 +10,7 @@ import { playSelectSound, playRosterCompleteSound } from '../utils/audio';
 import { RoleEmblem } from './RoleEmblem';
 import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
+import { MayhemBonusChip } from './MayhemBonusChip';
 import { Confetti } from './Confetti';
 import { ROLE_ORDER, getNextOpenRole } from './roleOrder';
 import { Card, StatPill, PrimaryButton, SecondaryButton } from './ui';
@@ -17,6 +18,7 @@ import { Card, StatPill, PrimaryButton, SecondaryButton } from './ui';
 interface LineupBarProps {
   lineup: Lineup;
   hoveredPlayer?: Player | null;
+  selectedBonuses?: MayhemBonus[];
   onRemovePlayer: (role: Role) => void;
   onInspectPlayer: (player: Player) => void;
   onClearLineup: () => void;
@@ -95,6 +97,7 @@ export function computePreviewAssignment(
 export const LineupBar: React.FC<LineupBarProps> = ({
   lineup,
   hoveredPlayer = null,
+  selectedBonuses = [],
   onRemovePlayer,
   onInspectPlayer,
   onClearLineup,
@@ -104,7 +107,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   const filledCount = ROLE_ORDER.filter(r => lineup[r]).length;
   const isComplete = filledCount === 5;
   const nextOpenRole = getNextOpenRole(lineup);
-  const stats = calculateTeamStats(lineup);
+  const stats = calculateTeamStats(lineup, selectedBonuses);
   const prevCompleteRef = React.useRef(false);
 
   React.useEffect(() => {
@@ -197,6 +200,28 @@ export const LineupBar: React.FC<LineupBarProps> = ({
           )}
         </div>
       </div>
+
+      {/* Active Mayhem Bonuses Strip */}
+      {selectedBonuses.length > 0 && (
+        <div
+          id="lineup-bonuses-strip"
+          className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-2.5 md:mb-3 pb-2 md:pb-2.5 border-b border-white/[0.07]"
+        >
+          <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714]">
+            Bônus:
+          </span>
+          {selectedBonuses.map(bonus => (
+            <MayhemBonusChip
+              key={bonus.id}
+              id={bonus.id}
+              name={bonus.name}
+              rarity={bonus.rarity}
+              subtitle={bonus.shortEffect}
+              compact
+            />
+          ))}
+        </div>
+      )}
 
       {/* 5 Album-Sticker Slots (Always 5 in 1 horizontal row so mobile matches PC without vertical scroll) */}
       <div className="grid grid-cols-5 gap-1.5 md:gap-3">

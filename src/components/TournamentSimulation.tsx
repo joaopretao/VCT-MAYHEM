@@ -23,6 +23,8 @@ import {
   MapGame,
   TournamentMvpStats,
   PlayerPerformance,
+  MayhemBonus,
+  BonusUsageSummary,
 } from '../types';
 import {
   generateTournamentSeries,
@@ -30,6 +32,8 @@ import {
   calculateTeamStats,
   calculateTournamentMvp,
   aggregateTournamentPerformances,
+  buildBonusUsageSummaries,
+  generateRunSummaryLine,
 } from '../utils/simulation';
 import {
   playRoundWinSound,
@@ -37,6 +41,7 @@ import {
   playVictoryFanfare,
   playEliminationSound,
   playSelectSound,
+  playBonusRevealSound,
 } from '../utils/audio';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
 import { StageQualifiedScreen } from './StageQualifiedScreen';
@@ -44,13 +49,56 @@ import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
 import { RoleEmblem } from './RoleEmblem';
 import { PlayerAvatar } from './PlayerAvatar';
+import { MayhemBonusChip } from './MayhemBonusChip';
 import { ROLE_ORDER } from './roleOrder';
 import { Confetti } from './Confetti';
 import { Card, Badge, PrimaryButton, SecondaryButton } from './ui';
 
+interface RunSummaryPanelProps {
+  bonusSummaries: BonusUsageSummary[];
+  summaryLine: string;
+}
+
+const RunSummaryPanel: React.FC<RunSummaryPanelProps> = ({ bonusSummaries, summaryLine }) => (
+  <div
+    id="run-summary-panel"
+    className="rounded-[3px] bg-[#090c11] border border-white/10 p-3.5 mb-4 text-left space-y-2.5"
+  >
+    <div className="flex items-center justify-between gap-2">
+      <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714]">
+        RESUMO DA RUN
+      </span>
+      {bonusSummaries.length > 0 && (
+        <span className="font-mono-vct text-xs text-slate-400">
+          {bonusSummaries.length} {bonusSummaries.length === 1 ? 'bônus usado' : 'bônus usados'}
+        </span>
+      )}
+    </div>
+
+    {summaryLine && (
+      <p className="text-xs sm:text-sm text-slate-200 leading-snug">{summaryLine}</p>
+    )}
+
+    {bonusSummaries.length > 0 && (
+      <div className="space-y-1.5 pt-2 border-t border-white/[0.07]">
+        {bonusSummaries.map(b => (
+          <div
+            key={b.id}
+            className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono-vct"
+          >
+            <MayhemBonusChip id={b.id} name={b.name} rarity={b.rarity} compact />
+            <span className="text-slate-300">{b.usageText}</span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 interface TournamentSimulationProps {
   lineup: Lineup;
   difficulty: Difficulty;
+  selectedBonuses?: MayhemBonus[];
   onResetTournament: () => void;
   onSaveCampaign: (history: CampaignHistory) => void;
 }
@@ -60,6 +108,7 @@ const STAGES: TournamentStage[] = ['group', 'quarters', 'semis', 'finals'];
 export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   lineup,
   difficulty,
+  selectedBonuses = [],
   onResetTournament,
   onSaveCampaign,
 }) => {
@@ -77,8 +126,13 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   const [showCurrentMapStats, setShowCurrentMapStats] = useState<boolean>(false);
   const [tournamentMvp, setTournamentMvp] = useState<TournamentMvpStats | null>(null);
   const [teamPerformances, setTeamPerformances] = useState<PlayerPerformance[]>([]);
+  const [lostPreviousMapInSeries, setLostPreviousMapInSeries] = useState<boolean>(false);
+  const [secondChanceUsedCount, setSecondChanceUsedCount] = useState<number>(0);
+  const [secondChanceNotice, setSecondChanceNotice] = useState<string | null>(null);
+  const [runBonusSummaries, setRunBonusSummaries] = useState<BonusUsageSummary[]>([]);
+  const [runSummaryLine, setRunSummaryLine] = useState<string>('');
 
-  const teamStats = calculateTeamStats(lineup);
+  const teamStats = calculateTeamStats(lineup, selectedBonuses);
   const currentStage = STAGES[currentStageIndex];
 
   useEffect(() => {
@@ -93,8 +147,13 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     setSeries(newSeries);
     setIsSeriesDecided(false);
     setShowCurrentMapStats(false);
+    setLostPreviousMapInSeries(false);
+    setSecondChanceNotice(null);
 
-    const firstMap = simulateSingleMap(lineup, newSeries.opponent.rating, 0);
+    const firstMap = simulateSingleMap(lineup, newSeries.opponent.rating, 0, [], {
+      bonuses: selectedBonuses,
+      lostPreviousMap: false,
+    });
     setCurrentMap(firstMap);
     setRevealedEventsCount(1);
   };
@@ -149,13 +208,37 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   const finishCurrentMap = () => {
     if (!currentMap || !series) return;
 
+    const targetWins = Math.ceil(series.bestOf / 2);
+    const hasSecondChance = selectedBonuses.some(b => b.modifiers.onceSecondChance);
+    const wouldLoseSeries = !currentMap.playerWon && series.opponentWins + 1 >= targetWins;
+
+    if (wouldLoseSeries && hasSecondChance && secondChanceUsedCount === 0) {
+      setSecondChanceUsedCount(1);
+      setLostPreviousMapInSeries(true);
+      setSecondChanceNotice(
+        'SEGUNDA CHANCE ATIVADA! Eliminação evitada — o último mapa desta série será jogado novamente.'
+      );
+      playBonusRevealSound();
+
+      const replayedMap = simulateSingleMap(
+        lineup,
+        series.opponent.rating,
+        series.currentMapIndex,
+        series.maps.map(m => m.mapName),
+        { bonuses: selectedBonuses, lostPreviousMap: true }
+      );
+      setCurrentMap(replayedMap);
+      setRevealedEventsCount(1);
+      setShowCurrentMapStats(false);
+      return;
+    }
+
     const updatedMaps = [...series.maps, currentMap];
     const newAllTournamentMaps = [...allTournamentMaps, currentMap];
     setAllTournamentMaps(newAllTournamentMaps);
 
     const playerWins = updatedMaps.filter(m => m.playerWon).length;
     const opponentWins = updatedMaps.filter(m => !m.playerWon).length;
-    const targetWins = Math.ceil(series.bestOf / 2);
 
     const isSeriesWon = playerWins >= targetWins;
     const isSeriesLost = opponentWins >= targetWins;
@@ -172,6 +255,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     };
 
     setSeries(updatedSeries);
+    setSecondChanceNotice(null);
 
     if (seriesOver) {
       setIsSeriesDecided(true);
@@ -182,25 +266,47 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       const mvp = calculateTournamentMvp(lineup, newAllTournamentMaps);
       setTournamentMvp(mvp);
 
+      const wonCamp = isSeriesWon && currentStageIndex === STAGES.length - 1;
+      const summaries = buildBonusUsageSummaries(
+        selectedBonuses,
+        newAllTournamentMaps,
+        secondChanceUsedCount
+      );
+      const summaryLine = generateRunSummaryLine({
+        wonChampionship: wonCamp,
+        stageReached: currentStage,
+        stats: teamStats,
+        bonusSummaries: summaries,
+        secondChanceUsedCount,
+        mvpIgn: mvp?.player.ign,
+        playerWins,
+        opponentWins,
+      });
+      setRunBonusSummaries(summaries);
+      setRunSummaryLine(summaryLine);
+
       if (isSeriesWon) {
         if (currentStageIndex === STAGES.length - 1) {
           playVictoryFanfare();
           setIsChampionshipWon(true);
-          saveCampaignRecord(true, currentStage, mvp, performances, playerWins, opponentWins);
+          saveCampaignRecord(true, currentStage, mvp, playerWins, opponentWins, summaries, summaryLine);
         } else {
           setShowQualifiedScreen(true);
         }
       } else {
         playEliminationSound();
         setIsEliminated(true);
-        saveCampaignRecord(false, currentStage, mvp, performances, playerWins, opponentWins);
+        saveCampaignRecord(false, currentStage, mvp, playerWins, opponentWins, summaries, summaryLine);
       }
     } else {
+      const lostCurrent = !currentMap.playerWon;
+      setLostPreviousMapInSeries(lostCurrent);
       const nextMap = simulateSingleMap(
         lineup,
         series.opponent.rating,
         updatedSeries.currentMapIndex,
-        updatedMaps.map(m => m.mapName)
+        updatedMaps.map(m => m.mapName),
+        { bonuses: selectedBonuses, lostPreviousMap: lostCurrent }
       );
       setCurrentMap(nextMap);
       setRevealedEventsCount(1);
@@ -212,9 +318,10 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     wonChampionship: boolean,
     finalStage: TournamentStage,
     mvpStats: TournamentMvpStats | null,
-    performances: PlayerPerformance[],
     finalPlayerWins?: number,
-    finalOpponentWins?: number
+    finalOpponentWins?: number,
+    bonuses?: BonusUsageSummary[],
+    runSummary?: string
   ) => {
     const mvpPlayer = mvpStats?.player;
 
@@ -251,6 +358,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               signatureAgent: mvpPlayer.signatureAgent,
             }
           : undefined,
+      bonuses: bonuses && bonuses.length > 0 ? bonuses : undefined,
+      runSummary: runSummary || undefined,
     };
 
     onSaveCampaign(record);
@@ -314,6 +423,9 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         <div className="flex items-center justify-center gap-2 mb-2 md:mb-3 flex-wrap">
           <Badge tone="red">{series.stageTitle}</Badge>
           <Badge tone="neutral">MD{series.bestOf}</Badge>
+          {lostPreviousMapInSeries && selectedBonuses.some(b => b.id === 'folego') && (
+            <Badge tone="gold">Fôlego ativo (+3)</Badge>
+          )}
         </div>
 
         {/* SEU ELENCO vs SÉRIE SCORE vs ADVERSÁRIO (Always horizontal 3-col so mobile stays compact) */}
@@ -380,7 +492,39 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Active Mayhem Bonuses in Tournament Header */}
+        {selectedBonuses.length > 0 && (
+          <div
+            id="tournament-bonuses-header"
+            className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 flex-wrap mt-2.5 pt-2 border-t border-white/[0.07]"
+          >
+            <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714]">
+              Bônus ativos:
+            </span>
+            {selectedBonuses.map(bonus => (
+              <MayhemBonusChip
+                key={bonus.id}
+                id={bonus.id}
+                name={bonus.name}
+                rarity={bonus.rarity}
+                subtitle={bonus.shortEffect}
+                compact
+              />
+            ))}
+          </div>
+        )}
       </Card>
+
+      {secondChanceNotice && (
+        <div
+          id="second-chance-banner"
+          className="rounded-[3px] bg-[#0d1118] border border-[#38bdf8]/50 px-3.5 py-2.5 flex items-center gap-2.5 text-xs sm:text-sm font-mono-vct text-sky-200 animate-popIn"
+        >
+          <ShieldAlert className="w-4 h-4 text-[#38bdf8] shrink-0" />
+          <span>{secondChanceNotice}</span>
+        </div>
+      )}
 
       {/* BELOW: TWO TOP-ALIGNED COLUMNS (On mobile: compact Maps strip + Live Timeline) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 md:gap-4 items-start">
@@ -865,6 +1009,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               )}
             </div>
 
+            <RunSummaryPanel bonusSummaries={runBonusSummaries} summaryLine={runSummaryLine} />
+
             <PrimaryButton
               id="victory-new-draft-btn"
               size="lg"
@@ -977,6 +1123,8 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                 </div>
               )}
             </div>
+
+            <RunSummaryPanel bonusSummaries={runBonusSummaries} summaryLine={runSummaryLine} />
 
             <PrimaryButton
               id="eliminated-retry-btn"
