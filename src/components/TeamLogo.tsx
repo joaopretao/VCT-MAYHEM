@@ -484,6 +484,7 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
               key.includes('karmine') ||
               key === 'kc' ||
               key.includes('optic') ||
+              key.includes('drx') ||
               key.includes('xset')
                 ? 'drop-shadow(0 0 2.5px rgba(255,255,255,0.75))'
                 : undefined,
