@@ -259,7 +259,8 @@ export interface TriviaGuess {
   player: Player;
   debutYear: number;
   trophies: number;
-  isIgl: boolean;
+  age: number;
+  status: 'Ativo' | 'Reserva / FA' | 'Aposentado';
   isCorrect: boolean;
   matches: {
     country: 'correct' | 'wrong';
@@ -267,7 +268,9 @@ export interface TriviaGuess {
     team: 'correct' | 'wrong';
     debut: 'correct' | 'higher' | 'lower';
     trophies: 'correct' | 'higher' | 'lower';
-    igl: 'correct' | 'wrong';
+    age: 'correct' | 'higher' | 'lower';
+    ageClose: boolean;
+    status: 'correct' | 'partial' | 'wrong';
     role: 'correct' | 'wrong';
     agent: 'correct' | 'wrong';
   };

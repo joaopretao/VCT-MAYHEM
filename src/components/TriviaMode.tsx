@@ -5,7 +5,7 @@ import { PLAYERS_DATABASE, TEAMS_DATABASE } from '../data/teamsAndPlayers';
 import { getTeamLogoData } from '../data/teamLogos';
 import { ROLE_NAMES_PT } from '../data/roleIcons';
 import { getLocalDateKey, getPreviousDateKey, formatDateKeyPtBr } from '../data/infiniteGridGenerator';
-import { getTriviaPlayerMeta } from '../data/triviaMetadata';
+import { getTriviaPlayerMeta, TriviaPlayerStatus } from '../data/triviaMetadata';
 import { playRoundWinSound, playRoundLossSound, playSelectSound } from '../utils/audio';
 import { TeamLogo } from './TeamLogo';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -17,7 +17,9 @@ interface CanonicalTriviaPlayer {
   player: Player;
   debutYear: number;
   trophies: number;
-  isIgl: boolean;
+  birthDate: string;
+  age: number;
+  status: TriviaPlayerStatus;
 }
 
 const MAX_TRIVIA_ATTEMPTS = 8;
@@ -142,6 +144,22 @@ export const TriviaMode: React.FC = () => {
       trophiesComparison = 'lower';
     }
 
+    let ageComparison: 'correct' | 'higher' | 'lower' = 'correct';
+    if (guessEntry.age < target.age) {
+      ageComparison = 'higher';
+    } else if (guessEntry.age > target.age) {
+      ageComparison = 'lower';
+    }
+    const ageDiff = Math.abs(guessEntry.age - target.age);
+    const ageClose = ageDiff > 0 && ageDiff <= 2;
+
+    let statusMatch: 'correct' | 'partial' | 'wrong' = 'wrong';
+    if (guessEntry.status === target.status) {
+      statusMatch = 'correct';
+    } else if (guessEntry.status !== 'Ativo' && target.status !== 'Ativo') {
+      statusMatch = 'partial';
+    }
+
     const countryMatch =
       (selected.countryCode || selected.country || '').toLowerCase() ===
       (targetPlayer.countryCode || targetPlayer.country || '').toLowerCase();
@@ -150,7 +168,8 @@ export const TriviaMode: React.FC = () => {
       player: selected,
       debutYear: guessEntry.debutYear,
       trophies: guessEntry.trophies,
-      isIgl: guessEntry.isIgl,
+      age: guessEntry.age,
+      status: guessEntry.status,
       isCorrect: isMatch,
       matches: {
         country: countryMatch ? 'correct' : 'wrong',
@@ -158,7 +177,9 @@ export const TriviaMode: React.FC = () => {
         team: selected.team.toLowerCase() === targetPlayer.team.toLowerCase() ? 'correct' : 'wrong',
         debut: debutComparison,
         trophies: trophiesComparison,
-        igl: guessEntry.isIgl === target.isIgl ? 'correct' : 'wrong',
+        age: ageComparison,
+        ageClose,
+        status: statusMatch,
         role: selected.primaryRole === targetPlayer.primaryRole ? 'correct' : 'wrong',
         agent: selected.signatureAgent === targetPlayer.signatureAgent ? 'correct' : 'wrong',
       },
@@ -305,7 +326,7 @@ export const TriviaMode: React.FC = () => {
   }, [searchTerm, guessedIgns]);
 
   return (
-    <div className="max-w-5xl mx-auto my-1 sm:my-4 space-y-3 sm:space-y-4">
+    <div className="max-w-6xl mx-auto my-1 sm:my-4 space-y-3 sm:space-y-4">
       {/* Confetti on fresh victory */}
       <Confetti fire={practiceFireConfettiRef.current && isGameOver && Boolean(guesses[0]?.isCorrect)} />
 
@@ -318,7 +339,7 @@ export const TriviaMode: React.FC = () => {
           Descubra o Pro Player
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-          8 tentativas usando país, equipe, região, estreia Tier 1, títulos internacionais, IGL, função e agente.
+          8 tentativas usando país, equipe, região, idade, estreia, títulos internacionais, status, função e agente.
         </p>
       </div>
 
@@ -483,12 +504,18 @@ export const TriviaMode: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono-vct">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono-vct">
                   <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
                     <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Equipe / Região</span>
                     <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5 truncate max-w-full">
                       <TeamLogo teamName={targetPlayer.team} size="xs" />
                       <span className="truncate">{targetPlayer.team} ({getRegionForTeam(targetPlayer.team)})</span>
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Idade / Status</span>
+                    <span className="text-white font-semibold mt-0.5 block truncate">
+                      {targetEntry.age} anos · {targetEntry.status}
                     </span>
                   </div>
                   <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
@@ -501,7 +528,7 @@ export const TriviaMode: React.FC = () => {
                     <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Função / Agente</span>
                     <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5 truncate max-w-full">
                       <RoleEmblem role={targetPlayer.primaryRole} size="xs" showBackground={false} />
-                      <span className="truncate">{targetPlayer.signatureAgent}{targetEntry.isIgl ? ' · IGL' : ''}</span>
+                      <span className="truncate">{targetPlayer.signatureAgent}</span>
                     </span>
                   </div>
                 </div>
@@ -533,14 +560,14 @@ export const TriviaMode: React.FC = () => {
         </Card>
       )}
 
-      {/* Pre-First-Guess Guide Panel (7 Clue Columns Explanation) */}
+      {/* Pre-First-Guess Guide Panel (10 Clue Columns Explanation) */}
       {guesses.length === 0 && !isGameOver && (
         <Card padding="none" className="p-3 sm:p-4 animate-fadeIn">
           <div className="flex items-center justify-between gap-2 mb-2.5 sm:mb-4 flex-wrap">
             <div className="flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-[#38bdf8]" />
               <h3 className="text-xs sm:text-sm font-mono-vct font-bold uppercase tracking-wider text-white">
-                Guia das 9 Colunas de Pistas
+                Guia das 10 Colunas de Pistas
               </h3>
             </div>
             <span className="text-xs font-mono-vct text-slate-300">
@@ -548,15 +575,16 @@ export const TriviaMode: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-3 md:grid-cols-9 gap-1.5 sm:gap-2 text-center mb-3 sm:mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 text-center mb-3 sm:mb-4">
             {[
               { col: 'Jogador', desc: 'Foto e Nick do pro' },
               { col: 'País', desc: 'Nacionalidade' },
-              { col: 'Equipe', desc: 'Time mais recente' },
+              { col: 'Equipe', desc: 'Time no banco VCT' },
               { col: 'Região', desc: 'Americas, EMEA, Pacific ou CN' },
+              { col: 'Idade', desc: 'Anos (âmbar = ±2 anos)' },
               { col: 'Estreia', desc: 'Ano no Tier 1 (2021–2026)' },
               { col: 'Títulos', desc: 'Troféus LAN VCT (2021–2025)' },
-              { col: 'IGL', desc: 'É ou foi capitão? (Sim/Não)' },
+              { col: 'Status', desc: 'Ativo, Reserva/FA ou Aposentado' },
               { col: 'Função', desc: 'Duelista, Controlador...' },
               { col: 'Agente', desc: 'Agente assinatura' },
             ].map(item => (
@@ -580,12 +608,12 @@ export const TriviaMode: React.FC = () => {
               <span className="text-slate-300">Verde = Pista Exata</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-rose-500/40 border border-rose-400 inline-block" />
-              <span className="text-slate-300">Vermelho = Incorreto</span>
+              <span className="w-3 h-3 rounded-sm bg-amber-500/40 border border-amber-400 inline-block" />
+              <span className="text-slate-300">Âmbar = Próximo (±2 anos / Inativo) / ↑↓</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-amber-500/40 border border-amber-400 inline-block" />
-              <span className="text-slate-300">Âmbar (↑ / ↓) = Temporada mais recente ou antiga</span>
+              <span className="w-3 h-3 rounded-sm bg-rose-500/40 border border-rose-400 inline-block" />
+              <span className="text-slate-300">Vermelho = Incorreto</span>
             </div>
           </div>
         </Card>
@@ -598,16 +626,17 @@ export const TriviaMode: React.FC = () => {
             Deslize a tabela lateralmente →
           </span>
           <div className="overflow-x-auto">
-          <div className="min-w-[840px] bg-[#11151d] border border-white/10 rounded-[3px] p-3.5">
+          <div className="min-w-[940px] bg-[#11151d] border border-white/10 rounded-[3px] p-3.5">
             {/* Table Header */}
-            <div className="grid grid-cols-9 gap-1.5 text-center text-xs font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-white/[0.08]">
+            <div className="grid grid-cols-10 gap-1.5 text-center text-xs font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-white/[0.08]">
               <div>Jogador</div>
               <div>País</div>
               <div>Equipe</div>
               <div>Região</div>
+              <div>Idade</div>
               <div>Estreia</div>
               <div>Títulos</div>
-              <div>IGL</div>
+              <div>Status</div>
               <div>Função</div>
               <div>Agente</div>
             </div>
@@ -620,7 +649,7 @@ export const TriviaMode: React.FC = () => {
                 return (
                   <div
                     key={idx}
-                    className="grid grid-cols-9 gap-1.5 text-center text-xs font-mono-vct font-semibold animate-fadeIn"
+                    className="grid grid-cols-10 gap-1.5 text-center text-xs font-mono-vct font-semibold animate-fadeIn"
                   >
                     {/* Player Name */}
                     <div
@@ -669,6 +698,25 @@ export const TriviaMode: React.FC = () => {
                       <span>{guessReg}</span>
                     </div>
 
+                    {/* Age */}
+                    <div
+                      className={`p-2 rounded flex items-center justify-center gap-1 border ${
+                        guess.matches.age === 'correct'
+                          ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
+                          : guess.matches.ageClose
+                            ? 'bg-amber-950/40 border-amber-600 text-amber-300'
+                            : 'bg-rose-950/30 border-rose-800 text-rose-300'
+                      }`}
+                    >
+                      <span>{guess.age}</span>
+                      {guess.matches.age === 'higher' && (
+                        <ArrowUp className={`w-3.5 h-3.5 ${guess.matches.ageClose ? 'text-amber-400' : 'text-rose-400'}`} />
+                      )}
+                      {guess.matches.age === 'lower' && (
+                        <ArrowDown className={`w-3.5 h-3.5 ${guess.matches.ageClose ? 'text-amber-400' : 'text-rose-400'}`} />
+                      )}
+                    </div>
+
                     {/* Tier 1 Debut Year */}
                     <div
                       className={`p-2 rounded flex items-center justify-center gap-1 border ${
@@ -695,15 +743,17 @@ export const TriviaMode: React.FC = () => {
                       {guess.matches.trophies === 'lower' && <ArrowDown className="w-3.5 h-3.5 text-amber-400" />}
                     </div>
 
-                    {/* IGL */}
+                    {/* Competitive Status */}
                     <div
                       className={`p-2 rounded flex items-center justify-center border ${
-                        guess.matches.igl === 'correct'
+                        guess.matches.status === 'correct'
                           ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
-                          : 'bg-rose-950/30 border-rose-800 text-rose-300'
+                          : guess.matches.status === 'partial'
+                            ? 'bg-amber-950/40 border-amber-600 text-amber-300'
+                            : 'bg-rose-950/30 border-rose-800 text-rose-300'
                       }`}
                     >
-                      <span>{guess.isIgl ? 'Sim' : 'Não'}</span>
+                      <span className="truncate">{guess.status}</span>
                     </div>
 
                     {/* Role */}
