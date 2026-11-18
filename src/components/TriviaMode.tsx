@@ -5,6 +5,7 @@ import { PLAYERS_DATABASE, TEAMS_DATABASE } from '../data/teamsAndPlayers';
 import { getTeamLogoData } from '../data/teamLogos';
 import { ROLE_NAMES_PT } from '../data/roleIcons';
 import { getLocalDateKey, getPreviousDateKey, formatDateKeyPtBr } from '../data/infiniteGridGenerator';
+import { getTriviaPlayerMeta } from '../data/triviaMetadata';
 import { playRoundWinSound, playRoundLossSound, playSelectSound } from '../utils/audio';
 import { TeamLogo } from './TeamLogo';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -14,7 +15,9 @@ import { Card, PrimaryButton } from './ui';
 
 interface CanonicalTriviaPlayer {
   player: Player;
-  championsCount: number;
+  debutYear: number;
+  trophies: number;
+  isIgl: boolean;
 }
 
 const MAX_TRIVIA_ATTEMPTS = 8;
@@ -42,10 +45,12 @@ const buildCanonicalTriviaRoster = (): CanonicalTriviaPlayer[] => {
   return Array.from(byIgn.values())
     .map(entries => {
       const sorted = [...entries].sort((a, b) => b.year - a.year);
-      const uniqueYears = new Set(entries.map(e => e.year)).size;
+      const earliestDbYear = Math.min(...entries.map(e => e.year));
+      const latestPlayer = sorted[0];
+      const meta = getTriviaPlayerMeta(latestPlayer, earliestDbYear);
       return {
-        player: sorted[0],
-        championsCount: uniqueYears,
+        player: latestPlayer,
+        ...meta,
       };
     })
     .sort((a, b) => a.player.ign.localeCompare(b.player.ign));
@@ -123,11 +128,18 @@ export const TriviaMode: React.FC = () => {
     const targetRegion = getRegionForTeam(targetPlayer.team);
     const guessRegion = getRegionForTeam(selected.team);
 
-    let championsComparison: 'correct' | 'higher' | 'lower' = 'correct';
-    if (guessEntry.championsCount < target.championsCount) {
-      championsComparison = 'higher';
-    } else if (guessEntry.championsCount > target.championsCount) {
-      championsComparison = 'lower';
+    let debutComparison: 'correct' | 'higher' | 'lower' = 'correct';
+    if (guessEntry.debutYear < target.debutYear) {
+      debutComparison = 'higher';
+    } else if (guessEntry.debutYear > target.debutYear) {
+      debutComparison = 'lower';
+    }
+
+    let trophiesComparison: 'correct' | 'higher' | 'lower' = 'correct';
+    if (guessEntry.trophies < target.trophies) {
+      trophiesComparison = 'higher';
+    } else if (guessEntry.trophies > target.trophies) {
+      trophiesComparison = 'lower';
     }
 
     const countryMatch =
@@ -136,14 +148,18 @@ export const TriviaMode: React.FC = () => {
 
     return {
       player: selected,
-      championsCount: guessEntry.championsCount,
+      debutYear: guessEntry.debutYear,
+      trophies: guessEntry.trophies,
+      isIgl: guessEntry.isIgl,
       isCorrect: isMatch,
       matches: {
         country: countryMatch ? 'correct' : 'wrong',
         region: targetRegion === guessRegion ? 'correct' : 'wrong',
         team: selected.team.toLowerCase() === targetPlayer.team.toLowerCase() ? 'correct' : 'wrong',
+        debut: debutComparison,
+        trophies: trophiesComparison,
+        igl: guessEntry.isIgl === target.isIgl ? 'correct' : 'wrong',
         role: selected.primaryRole === targetPlayer.primaryRole ? 'correct' : 'wrong',
-        champions: championsComparison,
         agent: selected.signatureAgent === targetPlayer.signatureAgent ? 'correct' : 'wrong',
       },
     };
@@ -289,7 +305,7 @@ export const TriviaMode: React.FC = () => {
   }, [searchTerm, guessedIgns]);
 
   return (
-    <div className="max-w-4xl mx-auto my-1 sm:my-4 space-y-3 sm:space-y-4">
+    <div className="max-w-5xl mx-auto my-1 sm:my-4 space-y-3 sm:space-y-4">
       {/* Confetti on fresh victory */}
       <Confetti fire={practiceFireConfettiRef.current && isGameOver && Boolean(guesses[0]?.isCorrect)} />
 
@@ -301,8 +317,8 @@ export const TriviaMode: React.FC = () => {
         <h2 className="text-2xl sm:text-4xl font-display font-bold uppercase text-white tracking-wide leading-none">
           Descubra o Pro Player
         </h2>
-        <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto">
-          8 tentativas usando país, equipe atual, região, participações no Champions, função e agente.
+        <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
+          8 tentativas usando país, equipe, região, estreia Tier 1, títulos internacionais, IGL, função e agente.
         </p>
       </div>
 
@@ -433,7 +449,7 @@ export const TriviaMode: React.FC = () => {
                 <strong className="text-white font-bold">{targetPlayer.ign}</strong>
                 <span className="inline-flex items-center gap-1">
                   (<TeamLogo teamName={targetPlayer.team} size="xs" />
-                  {targetPlayer.team} · {targetEntry.championsCount}x Champions).
+                  {targetPlayer.team} · Estreia {targetEntry.debutYear} · {targetEntry.trophies} {targetEntry.trophies === 1 ? 'título' : 'títulos'}).
                 </span>
               </div>
             </div>
@@ -467,29 +483,25 @@ export const TriviaMode: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono-vct">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono-vct">
                   <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Equipe</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Equipe / Região</span>
                     <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5 truncate max-w-full">
                       <TeamLogo teamName={targetPlayer.team} size="xs" />
-                      <span className="truncate">{targetPlayer.team}</span>
+                      <span className="truncate">{targetPlayer.team} ({getRegionForTeam(targetPlayer.team)})</span>
                     </span>
                   </div>
                   <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Região</span>
-                    <span className="text-white font-semibold mt-0.5 block">{getRegionForTeam(targetPlayer.team)}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Estreia / Títulos</span>
+                    <span className="text-white font-semibold mt-0.5 block">
+                      {targetEntry.debutYear} · {targetEntry.trophies} LAN{targetEntry.trophies === 1 ? '' : 's'}
+                    </span>
                   </div>
                   <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Função</span>
-                    <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5">
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Função / Agente</span>
+                    <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5 truncate max-w-full">
                       <RoleEmblem role={targetPlayer.primaryRole} size="xs" showBackground={false} />
-                      <span>{ROLE_NAMES_PT[targetPlayer.primaryRole] || targetPlayer.primaryRole}</span>
-                    </span>
-                  </div>
-                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Agente / Champ</span>
-                    <span className="text-white font-semibold mt-0.5 block truncate">
-                      {targetPlayer.signatureAgent} ({targetEntry.championsCount}x)
+                      <span className="truncate">{targetPlayer.signatureAgent}{targetEntry.isIgl ? ' · IGL' : ''}</span>
                     </span>
                   </div>
                 </div>
@@ -528,7 +540,7 @@ export const TriviaMode: React.FC = () => {
             <div className="flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-[#38bdf8]" />
               <h3 className="text-xs sm:text-sm font-mono-vct font-bold uppercase tracking-wider text-white">
-                Guia das 7 Colunas de Pistas
+                Guia das 9 Colunas de Pistas
               </h3>
             </div>
             <span className="text-xs font-mono-vct text-slate-300">
@@ -536,14 +548,16 @@ export const TriviaMode: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 sm:gap-2 text-center mb-3 sm:mb-4">
+          <div className="grid grid-cols-3 md:grid-cols-9 gap-1.5 sm:gap-2 text-center mb-3 sm:mb-4">
             {[
-              { col: 'Jogador', desc: 'Foto e Nick do atleta' },
-              { col: 'País', desc: 'Nacionalidade do pro' },
+              { col: 'Jogador', desc: 'Foto e Nick do pro' },
+              { col: 'País', desc: 'Nacionalidade' },
               { col: 'Equipe', desc: 'Time mais recente' },
               { col: 'Região', desc: 'Americas, EMEA, Pacific ou CN' },
-              { col: 'Champions', desc: 'Edições jogadas (1x a 5x)' },
-              { col: 'Função', desc: 'Duelista, Controlador, etc.' },
+              { col: 'Estreia', desc: 'Ano no Tier 1 (2021–2026)' },
+              { col: 'Títulos', desc: 'Troféus LAN VCT (2021–2025)' },
+              { col: 'IGL', desc: 'É ou foi capitão? (Sim/Não)' },
+              { col: 'Função', desc: 'Duelista, Controlador...' },
               { col: 'Agente', desc: 'Agente assinatura' },
             ].map(item => (
               <div
@@ -584,14 +598,16 @@ export const TriviaMode: React.FC = () => {
             Deslize a tabela lateralmente →
           </span>
           <div className="overflow-x-auto">
-          <div className="min-w-[720px] bg-[#11151d] border border-white/10 rounded-[3px] p-3.5">
+          <div className="min-w-[840px] bg-[#11151d] border border-white/10 rounded-[3px] p-3.5">
             {/* Table Header */}
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-white/[0.08]">
+            <div className="grid grid-cols-9 gap-1.5 text-center text-xs font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-white/[0.08]">
               <div>Jogador</div>
               <div>País</div>
               <div>Equipe</div>
               <div>Região</div>
-              <div>Champions</div>
+              <div>Estreia</div>
+              <div>Títulos</div>
+              <div>IGL</div>
               <div>Função</div>
               <div>Agente</div>
             </div>
@@ -604,11 +620,11 @@ export const TriviaMode: React.FC = () => {
                 return (
                   <div
                     key={idx}
-                    className="grid grid-cols-7 gap-2 text-center text-xs font-mono-vct font-semibold animate-fadeIn"
+                    className="grid grid-cols-9 gap-1.5 text-center text-xs font-mono-vct font-semibold animate-fadeIn"
                   >
                     {/* Player Name */}
                     <div
-                      className={`p-2.5 rounded flex items-center justify-center gap-2 border ${
+                      className={`p-2 rounded flex items-center justify-center gap-1.5 border ${
                         guess.isCorrect
                           ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
                           : 'bg-[#151f2e] border-slate-700 text-white'
@@ -621,7 +637,7 @@ export const TriviaMode: React.FC = () => {
                     {/* Country */}
                     <div
                       title={guess.player.country}
-                      className={`p-2.5 rounded flex items-center justify-center border ${
+                      className={`p-2 rounded flex items-center justify-center border ${
                         guess.matches.country === 'correct'
                           ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
                           : 'bg-rose-950/30 border-rose-800 text-rose-300'
@@ -632,7 +648,7 @@ export const TriviaMode: React.FC = () => {
 
                     {/* Team */}
                     <div
-                      className={`p-2.5 rounded flex items-center justify-center gap-1.5 border ${
+                      className={`p-2 rounded flex items-center justify-center gap-1 border ${
                         guess.matches.team === 'correct'
                           ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
                           : 'bg-rose-950/30 border-rose-800 text-rose-300'
@@ -644,7 +660,7 @@ export const TriviaMode: React.FC = () => {
 
                     {/* Region */}
                     <div
-                      className={`p-2.5 rounded flex items-center justify-center border ${
+                      className={`p-2 rounded flex items-center justify-center border ${
                         guess.matches.region === 'correct'
                           ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
                           : 'bg-rose-950/30 border-rose-800 text-rose-300'
@@ -653,17 +669,41 @@ export const TriviaMode: React.FC = () => {
                       <span>{guessReg}</span>
                     </div>
 
-                    {/* Champions Participations */}
+                    {/* Tier 1 Debut Year */}
                     <div
-                      className={`p-2.5 rounded flex items-center justify-center gap-1 border ${
-                        guess.matches.champions === 'correct'
+                      className={`p-2 rounded flex items-center justify-center gap-1 border ${
+                        guess.matches.debut === 'correct'
                           ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
                           : 'bg-amber-950/40 border-amber-600 text-amber-300'
                       }`}
                     >
-                      <span>{guess.championsCount}x</span>
-                      {guess.matches.champions === 'higher' && <ArrowUp className="w-3.5 h-3.5 text-amber-400" />}
-                      {guess.matches.champions === 'lower' && <ArrowDown className="w-3.5 h-3.5 text-amber-400" />}
+                      <span>{guess.debutYear}</span>
+                      {guess.matches.debut === 'higher' && <ArrowUp className="w-3.5 h-3.5 text-amber-400" />}
+                      {guess.matches.debut === 'lower' && <ArrowDown className="w-3.5 h-3.5 text-amber-400" />}
+                    </div>
+
+                    {/* International Trophies */}
+                    <div
+                      className={`p-2 rounded flex items-center justify-center gap-1 border ${
+                        guess.matches.trophies === 'correct'
+                          ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
+                          : 'bg-amber-950/40 border-amber-600 text-amber-300'
+                      }`}
+                    >
+                      <span>{guess.trophies}</span>
+                      {guess.matches.trophies === 'higher' && <ArrowUp className="w-3.5 h-3.5 text-amber-400" />}
+                      {guess.matches.trophies === 'lower' && <ArrowDown className="w-3.5 h-3.5 text-amber-400" />}
+                    </div>
+
+                    {/* IGL */}
+                    <div
+                      className={`p-2 rounded flex items-center justify-center border ${
+                        guess.matches.igl === 'correct'
+                          ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
+                          : 'bg-rose-950/30 border-rose-800 text-rose-300'
+                      }`}
+                    >
+                      <span>{guess.isIgl ? 'Sim' : 'Não'}</span>
                     </div>
 
                     {/* Role */}
