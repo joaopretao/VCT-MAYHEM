@@ -33,6 +33,7 @@ import {
   SeriesTacticBuff,
   IntermissionShopOffer,
   RunRuleId,
+  CompletedSeriesSummary,
 } from '../types';
 import {
   generateTournamentSeries,
@@ -299,6 +300,9 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   const [usedOpponentIds, setUsedOpponentIds] = useState<string[]>(
     initialSavedState?.usedOpponentIds ?? []
   );
+  const [completedSeries, setCompletedSeries] = useState<CompletedSeriesSummary[]>(
+    initialSavedState?.completedSeries ?? []
+  );
   const [revealedEventsCount, setRevealedEventsCount] = useState<number>(
     initialSavedState?.revealedEventsCount ?? 0
   );
@@ -369,6 +373,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       difficulty,
       stance,
       seriesBuff: buff,
+      forcedMapName: newSeries.mapQueue?.[0],
     });
     setCurrentMap(firstMap);
     setRevealedEventsCount(1);
@@ -382,6 +387,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       difficulty,
       stance: selectedStance,
       seriesBuff: activeSeriesBuff,
+      forcedMapName: series.mapQueue?.[0],
     });
     skipNextRoundSoundRef.current = false;
     setCurrentMap(firstMap);
@@ -424,6 +430,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       runBonusSummaries,
       runSummaryLine,
       campaignSaved,
+      completedSeries,
     });
   }, [
     onTournamentStateChange,
@@ -452,6 +459,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     runBonusSummaries,
     runSummaryLine,
     campaignSaved,
+    completedSeries,
   ]);
 
   useEffect(() => {
@@ -532,6 +540,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           difficulty,
           stance: selectedStance,
           seriesBuff: activeSeriesBuff,
+          forcedMapName: currentMap.mapName,
         }
       );
       setCurrentMap(replayedMap);
@@ -593,6 +602,20 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       setRunSummaryLine(summaryLine);
 
       if (isSeriesWon) {
+        const seriesRecord: CompletedSeriesSummary = {
+          stage: currentStage,
+          opponentName: series.opponent.name,
+          opponentTag: series.opponent.tag,
+          opponentLogoUrl: series.opponent.logoUrl,
+          opponentColor: series.opponent.logoColor,
+          playerWins,
+          opponentWins,
+        };
+        setCompletedSeries(prev => [
+          ...prev.filter(item => item.stage !== currentStage),
+          seriesRecord,
+        ]);
+
         if (currentStageIndex === STAGES.length - 1) {
           playVictoryFanfare();
           setIsChampionshipWon(true);
@@ -626,6 +649,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           difficulty,
           stance: selectedStance,
           seriesBuff: activeSeriesBuff,
+          forcedMapName: series.mapQueue?.[updatedSeries.currentMapIndex],
         }
       );
       setCurrentMap(nextMap);
@@ -814,22 +838,24 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     displayedPlayerWins >= targetWinsToCloseSeries ||
     displayedOpponentWins >= targetWinsToCloseSeries;
 
+  const runLeader =
+    allTournamentMaps.length > 0 ? calculateTournamentMvp(lineup, allTournamentMaps) : null;
+
   return (
     <div className="flex flex-col gap-2.5 md:gap-4 pb-4">
       <Confetti fire={isChampionshipWon} />
 
-      {/* TOP FULL-WIDTH SCOREBOARD */}
+      {/* TOP FULL-WIDTH SCOREBOARD (Shown during Live Series; Pre-Series uses unified Broadcast Header) */}
+      {!isPreSeriesPrep && (
       <Card padding="none" className="p-2.5 md:p-4 w-full">
         {/* Small Stage & Format Labels */}
         <div className="flex items-center justify-center gap-2 mb-2 md:mb-3 flex-wrap">
-          <Badge tone="red">{series.stageTitle}</Badge>
+          <Badge tone={series.stage === 'finals' ? 'gold' : 'red'}>{series.stageTitle}</Badge>
           <Badge tone="neutral">MD{series.bestOf}</Badge>
-          {!isPreSeriesPrep && (
-            <Badge tone="cyan">
-              Postura: {TACTICAL_STANCES.find(s => s.id === selectedStance)?.label || 'Equilibrada'}
-            </Badge>
-          )}
-          {!isPreSeriesPrep && activeSeriesBuff !== 'none' && (
+          <Badge tone="cyan">
+            Postura: {TACTICAL_STANCES.find(s => s.id === selectedStance)?.label || 'Equilibrada'}
+          </Badge>
+          {activeSeriesBuff !== 'none' && (
             <Badge tone="gold">Preparo ativo</Badge>
           )}
           {lostPreviousMapInSeries && selectedBonuses.some(b => b.id === 'folego') && (
@@ -929,6 +955,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           </div>
         )}
       </Card>
+      )}
 
       {secondChanceNotice && (
         <div
@@ -940,14 +967,19 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
         </div>
       )}
 
-      {/* BELOW: PRE-SERIES SCOUTING & TACTIC SELECTION OR LIVE SERIES COLUMNS */}
+      {/* BELOW: PRE-SERIES OFFICIAL BROADCAST PRESENTATION OR LIVE SERIES COLUMNS */}
       {isPreSeriesPrep ? (
         <TacticalPrepCard
           series={series}
+          lineup={lineup}
+          teamIdentity={teamIdentity}
           difficulty={difficulty}
           selectedStance={selectedStance}
           onSelectStance={setSelectedStance}
           activeSeriesBuff={activeSeriesBuff}
+          selectedBonuses={selectedBonuses}
+          completedSeries={completedSeries}
+          runLeader={runLeader}
           teamSynergy={teamStats.synergy}
           onStartSeries={handleConfirmSeriesPrep}
         />
@@ -973,6 +1005,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                 const liveFinishedMap =
                   isCurrentSlot && isCurrentMapEnded && !committedMap ? currentMap : null;
                 const mapData = committedMap || liveFinishedMap;
+                const scheduledMapName = series.mapQueue?.[idx];
 
                 let boxCls = 'bg-[#0b0e14]/70 border-white/10 text-slate-300';
                 let scoreLabel = isCurrentSlot ? currentMap.mapName : 'A jogar';
@@ -990,13 +1023,19 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                   scoreLabel = 'Em jogo';
                 }
 
+                const slotMapName = mapData
+                  ? mapData.mapName
+                  : isCurrentSlot
+                  ? currentMap.mapName
+                  : scheduledMapName || '';
+
                 return (
                   <div
                     key={idx}
                     className={`p-1.5 md:p-2.5 rounded-[3px] border flex flex-col items-center justify-center text-center ${boxCls}`}
                   >
                     <span className="font-mono-vct text-xs font-bold uppercase truncate max-w-full">
-                      M{idx + 1} {mapData ? `· ${mapData.mapName}` : isCurrentSlot ? `· ${currentMap.mapName}` : ''}
+                      M{idx + 1} {slotMapName ? `· ${slotMapName}` : ''}
                     </span>
                     <span className="font-mono-vct text-xs md:text-sm font-bold mt-0.5 md:mt-1 text-white">
                       {scoreLabel}

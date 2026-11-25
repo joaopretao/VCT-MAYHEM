@@ -138,12 +138,24 @@ export interface SeriesMatch {
     rosterNames: string[];
   };
   bestOf: 1 | 3 | 5;
+  mapQueue?: string[];
+  bannedMaps?: { mapName: string; bannedBy: 'player' | 'opponent' }[];
   playerWins: number;
   opponentWins: number;
   currentMapIndex: number;
   maps: MapGame[];
   isFinished: boolean;
   playerWonSeries: boolean | null;
+}
+
+export interface CompletedSeriesSummary {
+  stage: TournamentStage;
+  opponentName: string;
+  opponentTag: string;
+  opponentLogoUrl?: string;
+  opponentColor: string;
+  playerWins: number;
+  opponentWins: number;
 }
 
 export interface CampaignHistory {
@@ -361,6 +373,7 @@ export interface SavedTournamentState {
   lastSeriesCreditsEarned?: number;
   activeSeriesBuff?: SeriesTacticBuff;
   shopOffer?: IntermissionShopOffer | null;
+  completedSeries?: CompletedSeriesSummary[];
 }
 
 export interface ActiveRunSave {

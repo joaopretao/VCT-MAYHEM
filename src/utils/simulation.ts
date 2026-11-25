@@ -289,6 +289,20 @@ export function generateTournamentSeries(
   }
   finalOpponentRating = Math.min(99, Math.max(87, finalOpponentRating));
 
+  // Pre-draw official broadcast map order (and 2 bans for Grand Finals MD5)
+  const shuffledMaps = [...MAPS_POOL].sort(() => Math.random() - 0.5);
+  const bannedMaps: { mapName: string; bannedBy: 'player' | 'opponent' }[] =
+    stage === 'finals' && bestOf === 5
+      ? [
+          { mapName: shuffledMaps[0], bannedBy: 'player' },
+          { mapName: shuffledMaps[1], bannedBy: 'opponent' },
+        ]
+      : [];
+  const mapQueue =
+    stage === 'finals' && bestOf === 5
+      ? shuffledMaps.slice(2, 2 + bestOf)
+      : shuffledMaps.slice(0, bestOf);
+
   return {
     stage,
     stageTitle,
@@ -303,6 +317,8 @@ export function generateTournamentSeries(
       rosterNames: opponentTeam.roster.map(p => p.ign),
     },
     bestOf,
+    mapQueue,
+    bannedMaps,
     playerWins: 0,
     opponentWins: 0,
     currentMapIndex: 0,
@@ -319,6 +335,7 @@ export interface SimulateMapOptions {
   difficulty?: Difficulty;
   stance?: TacticalStance;
   seriesBuff?: SeriesTacticBuff;
+  forcedMapName?: string;
 }
 
 export function simulateSingleMap(
@@ -332,11 +349,13 @@ export function simulateSingleMap(
   const stats = calculateTeamStats(lineup, bonuses);
   const players = Object.values(lineup).filter((p): p is Player => p !== null);
 
-  // Pick map
+  // Pick map (honor pre-announced broadcast mapQueue when provided)
   const availableMaps = MAPS_POOL.filter(m => !usedMaps.includes(m));
-  const mapName = availableMaps.length > 0 
-    ? availableMaps[Math.floor(Math.random() * availableMaps.length)] 
-    : MAPS_POOL[mapIndex % MAPS_POOL.length];
+  const mapName =
+    options?.forcedMapName ||
+    (availableMaps.length > 0
+      ? availableMaps[Math.floor(Math.random() * availableMaps.length)]
+      : MAPS_POOL[mapIndex % MAPS_POOL.length]);
 
   const bonusTriggers: Record<string, number> = {};
   const addTrigger = (bonusId: string, amount: number = 1) => {

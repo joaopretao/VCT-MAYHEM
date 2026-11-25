@@ -1,5 +1,103 @@
-import { Difficulty, SeriesMatch, TacticalStance } from '../types';
+import { Difficulty, Player, Role, SeriesMatch, TacticalStance, Team } from '../types';
 import { TEAMS_DATABASE } from '../data/teamsAndPlayers';
+
+const SLOT_ORDER: Role[] = ['Duelist', 'Controller', 'Initiator', 'Sentinel', 'Flex'];
+
+export function getOpponentTeam(opponent: SeriesMatch['opponent']): Team | null {
+  if (opponent.id) {
+    const exact = TEAMS_DATABASE.find(t => t.id === opponent.id);
+    if (exact) return exact;
+  }
+  const normalizedName = opponent.name.toLowerCase();
+  return (
+    TEAMS_DATABASE.find(
+      t =>
+        normalizedName.includes(t.name.toLowerCase()) &&
+        normalizedName.includes(String(t.year))
+    ) ?? null
+  );
+}
+
+/**
+ * Aligns the 5 real opponent players onto the 5 mirrored tactical roles
+ * (Duelist, Controller, Initiator, Sentinel, Flex) for a broadcast 5v5 face-off.
+ */
+export function alignOpponentRosterToSlots(
+  opponent: SeriesMatch['opponent']
+): Record<Role, Player | null> {
+  const result: Record<Role, Player | null> = {
+    Duelist: null,
+    Controller: null,
+    Initiator: null,
+    Sentinel: null,
+    Flex: null,
+  };
+
+  const realTeam = getOpponentTeam(opponent);
+  const pool: Player[] = realTeam
+    ? [...realTeam.roster]
+    : opponent.rosterNames.slice(0, 5).map((ign, idx) => ({
+        id: `opp_${idx}_${ign}`,
+        name: ign,
+        ign,
+        country: opponent.region,
+        countryCode: '',
+        team: opponent.tag,
+        year: 2024,
+        championsYears: [],
+        primaryRole: SLOT_ORDER[idx] || 'Flex',
+        secondaryRoles: [],
+        signatureAgent: '',
+        rating: opponent.rating,
+        consistency: opponent.rating - 2,
+        clutch: opponent.rating - 2,
+        synergy: opponent.rating - 2,
+        flexibility: opponent.rating - 4,
+      }));
+
+  const used = new Set<string>();
+
+  // Pass 1: exact primaryRole match
+  for (const role of SLOT_ORDER) {
+    const match = pool.find(p => !used.has(p.id) && p.primaryRole === role);
+    if (match) {
+      result[role] = match;
+      used.add(match.id);
+    }
+  }
+
+  // Pass 2: secondaryRoles match for remaining open slots
+  for (const role of SLOT_ORDER) {
+    if (result[role]) continue;
+    const match = pool.find(p => !used.has(p.id) && p.secondaryRoles.includes(role));
+    if (match) {
+      result[role] = match;
+      used.add(match.id);
+    }
+  }
+
+  // Pass 3: fill any remaining open slots cleanly
+  for (const role of SLOT_ORDER) {
+    if (result[role]) continue;
+    const match = pool.find(p => !used.has(p.id));
+    if (match) {
+      result[role] = match;
+      used.add(match.id);
+    }
+  }
+
+  return result;
+}
+
+export function getOpponentStarPlayer(opponent: SeriesMatch['opponent']): Player | null {
+  const realTeam = getOpponentTeam(opponent);
+  if (!realTeam || realTeam.roster.length === 0) return null;
+  return [...realTeam.roster].sort((a, b) => {
+    if (b.rating !== a.rating) return b.rating - a.rating;
+    if (b.clutch !== a.clutch) return b.clutch - a.clutch;
+    return b.consistency - a.consistency;
+  })[0];
+}
 
 export interface TacticalStanceMeta {
   id: TacticalStance;
