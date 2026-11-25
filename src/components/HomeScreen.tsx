@@ -111,6 +111,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           className="p-3.5 md:p-6 relative overflow-hidden border-[#ff4655]/35"
         >
           <div className="absolute inset-y-0 left-0 w-1 bg-[#ff4655]" aria-hidden />
+          <img
+            src="/brand/mark.png"
+            alt=""
+            aria-hidden
+            className="pointer-events-none hidden md:block absolute right-6 top-1/2 -translate-y-1/2 w-56 h-auto opacity-[0.06] select-none"
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-center pl-1.5 md:pl-1">
             {/* Left Content */}

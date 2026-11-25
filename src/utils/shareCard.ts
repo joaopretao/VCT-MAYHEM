@@ -160,13 +160,14 @@ export async function generateShareResultPngDataUrl(params: ShareCardParams): Pr
     160
   );
 
-  // 3. Load and draw the 5 Player Cards
-  const photos = await Promise.all(
-    ROLE_ORDER.map(role => {
+  // 3. Load brand mark and the 5 Player Card photos in parallel
+  const [brandLogo, ...photos] = await Promise.all([
+    loadImageSafe('/brand/logo-color.png'),
+    ...ROLE_ORDER.map(role => {
       const p = params.lineup[role];
       return loadImageSafe(p ? getPlayerPhotoUrl(p.ign) : null);
-    })
-  );
+    }),
+  ]);
 
   const cardStartX = 54;
   const cardGap = 18;
@@ -268,6 +269,16 @@ export async function generateShareResultPngDataUrl(params: ShareCardParams): Pr
   ctx.fillStyle = '#38bdf8';
   ctx.font = '700 15px monospace';
   ctx.fillText(`Jogue a mesma seed: ?seed=${params.seed}`, 600, footerY + 60);
+
+  // Subtle brand mark watermark in footer corner
+  if (brandLogo) {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    const logoH = 38;
+    const logoW = (brandLogo.width / Math.max(1, brandLogo.height)) * logoH;
+    ctx.drawImage(brandLogo, width - 54 - logoW - 14, footerY + 27, logoW, logoH);
+    ctx.restore();
+  }
 
   return canvas.toDataURL('image/png');
 }

@@ -581,11 +581,17 @@ export const ValorantGridMode: React.FC = () => {
       <Card padding="none" className="p-2 sm:p-4 overflow-x-auto">
         <div className="w-full sm:min-w-[340px] max-w-xl mx-auto grid grid-cols-4 gap-1.5 sm:gap-3 aspect-square">
           {/* Top-Left Corner: GRID Brand */}
-          <div className="surface-sub flex flex-col items-center justify-center p-1 sm:p-2 text-center select-none">
-            <span className="font-display text-lg sm:text-2xl leading-none text-white tracking-wider">
+          <div className="surface-sub relative overflow-hidden flex flex-col items-center justify-center p-1 sm:p-2 text-center select-none">
+            <img
+              src="/brand/mark.png"
+              alt=""
+              aria-hidden="true"
+              className="w-7 h-7 sm:w-9 sm:h-9 object-contain opacity-85 mb-0.5 pointer-events-none"
+            />
+            <span className="font-display text-sm sm:text-lg leading-none text-white tracking-wider">
               GRID
             </span>
-            <span className="text-xs font-mono-vct text-[#ff4655] font-bold uppercase tracking-wider mt-0.5">
+            <span className="text-[10px] font-mono-vct text-[#ff4655] font-bold uppercase tracking-wider mt-0.5">
               VCT
             </span>
           </div>

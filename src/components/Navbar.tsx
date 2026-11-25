@@ -41,7 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 shrink-0 z-40 bg-[#0b0e14]/95 backdrop-blur-md border-b border-white/[0.08]">
       <div className="max-w-[1400px] mx-auto h-13 md:h-14 px-3 md:px-5 flex items-center justify-between gap-2 md:gap-6">
-        {/* Clean Brand Wordmark */}
+        {/* Brand Lockup */}
         <button
           id="brand-home-btn"
           type="button"
@@ -49,14 +49,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             playSelectSound();
             onTabChange('home');
           }}
-          className="flex items-center gap-2 shrink-0 cursor-pointer group"
-          title="Voltar para o início"
+          className="flex items-center shrink-0 cursor-pointer group py-1"
+          title="VCT Mayhem — Voltar para o início"
         >
-          <span className="w-[3px] h-5 bg-[#ff4655] shrink-0" aria-hidden />
-          <span className="font-display text-2xl leading-none tracking-wider uppercase flex items-baseline gap-1 pt-0.5">
-            <span className="text-white">VCT</span>
-            <span className="text-[#ff4655]">MAYHEM</span>
-          </span>
+          <img
+            src="/brand/logo-color.png"
+            alt="VCT Mayhem"
+            className="h-8 md:h-9 w-auto object-contain select-none"
+          />
         </button>
 
         {/* Single-Row Sober Navigation */}
