@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { Navbar, TabId } from './components/Navbar';
 import { HomeScreen } from './components/HomeScreen';
-import { AppBackground } from './components/AppBackground';
+import { AppBackground, AppBackdropConfig } from './components/AppBackground';
 import { ValorantDraftBoard } from './components/ValorantDraftBoard';
 import { PlayerModal } from './components/PlayerModal';
 import { TournamentSimulation } from './components/TournamentSimulation';
@@ -153,6 +153,7 @@ export default function App() {
     bootFromUrl ? [] : restoredRun?.bannedPlayers ?? []
   );
   const [showBansModal, setShowBansModal] = useState<boolean>(false);
+  const [tournamentBackdrop, setTournamentBackdrop] = useState<AppBackdropConfig | null>(null);
 
   // Load campaign history, player records and unlocked frames from localStorage
   useEffect(() => {
@@ -651,7 +652,9 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen overflow-x-hidden bg-transparent text-slate-100 flex flex-col selection:bg-[#ff4655] selection:text-white relative isolate">
       {/* Ambient Drifting Background */}
-      <AppBackground />
+      <AppBackground
+        backdrop={currentTab === 'draft' && isTournamentActive ? tournamentBackdrop : null}
+      />
 
       {/* Top Navbar */}
       <Navbar
@@ -737,6 +740,7 @@ export default function App() {
                         prev.some(b => b.id === bonus.id) ? prev : [...prev, bonus]
                       )
                     }
+                    onBackdropChange={setTournamentBackdrop}
                     onResetTournament={handleResetTournament}
                     onSaveCampaign={handleSaveCampaign}
                   />

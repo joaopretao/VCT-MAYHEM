@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair,
   Shield,
@@ -21,6 +21,7 @@ import {
   Lineup,
   MayhemBonus,
   Player,
+  Role,
   SeriesMatch,
   SeriesTacticBuff,
   TacticalStance,
@@ -36,17 +37,18 @@ import {
   TACTICAL_STANCES,
 } from '../utils/scouting';
 import { AGENT_FULL_PORTRAITS, AGENT_ICONS } from '../data/agentIcons';
+import { getPlayerPhotoUrl } from '../data/playerPhotos';
+import { getMapArt } from '../data/mapArt';
 import { ROLE_COLORS, ROLE_NAMES_PT } from '../data/roleIcons';
 import { playSelectSound } from '../utils/audio';
 import { ROLE_ORDER } from './roleOrder';
-import { PlayerAvatar } from './PlayerAvatar';
 import { CountryFlag } from './CountryFlag';
 import { RoleEmblem } from './RoleEmblem';
 import { TeamLogo } from './TeamLogo';
 import { TeamCrest } from './TeamCrest';
 import { TraitBadge } from './TraitBadge';
 import { MayhemBonusChip } from './MayhemBonusChip';
-import { Badge, Card, PrimaryButton } from './ui';
+import { Badge, PrimaryButton } from './ui';
 
 interface TacticalPrepCardProps {
   series: SeriesMatch;
@@ -60,6 +62,7 @@ interface TacticalPrepCardProps {
   completedSeries: CompletedSeriesSummary[];
   runLeader: TournamentMvpStats | null;
   teamSynergy: number;
+  onPreviewMapChange?: (mapName: string) => void;
   onStartSeries: () => void;
 }
 
@@ -92,33 +95,295 @@ function formatOpponentShort(opponent: SeriesMatch['opponent']): string {
   return yrMatch ? `${tag} '${yrMatch[1].slice(2)}` : tag;
 }
 
-const AgentMiniBadge: React.FC<{ agent: string; size?: 'sm' | 'md' }> = ({
-  agent,
-  size = 'sm',
-}) => {
-  const iconUrl = agent ? AGENT_ICONS[agent] : null;
-  const boxCls = size === 'md' ? 'w-8 h-8' : 'w-7 h-7';
-  if (!iconUrl) {
-    return (
-      <div
-        className={`${boxCls} rounded-[2px] bg-[#0b0e14] border border-white/10 flex items-center justify-center text-[10px] font-mono-vct text-slate-400 shrink-0`}
-        title={agent || 'Agente'}
-      >
-        {agent ? agent.slice(0, 2).toUpperCase() : '—'}
-      </div>
-    );
-  }
+/** Flush square headshot tile for the outer edge of each 5v5 banner */
+const PlayerSquarePortrait: React.FC<{
+  player: Player | null;
+  role: Role;
+  accentColor: string;
+  side: 'left' | 'right';
+  sizeClass?: string;
+}> = ({ player, role, accentColor, side, sizeClass = 'w-[72px] xl:w-[82px]' }) => {
+  const [photoError, setPhotoError] = useState(false);
+  const photoUrl = player ? getPlayerPhotoUrl(player.ign) : null;
+  const agentIcon = player?.signatureAgent ? AGENT_ICONS[player.signatureAgent] : null;
+
+  useEffect(() => {
+    setPhotoError(false);
+  }, [player?.id, photoUrl]);
+
   return (
     <div
-      className={`${boxCls} rounded-[2px] bg-[#0b0e14] border border-white/15 overflow-hidden shrink-0 flex items-center justify-center`}
-      title={agent}
+      className={`relative shrink-0 h-full overflow-hidden flex items-center justify-center ${sizeClass} ${
+        side === 'left' ? 'border-r border-white/15' : 'border-l border-white/15'
+      }`}
+      style={{
+        background: `radial-gradient(circle at 50% 25%, ${accentColor}44 0%, #090d14 88%)`,
+      }}
     >
-      <img
-        src={iconUrl}
-        alt={agent}
-        className="w-full h-full object-cover"
-        referrerPolicy="no-referrer"
+      {photoUrl && !photoError ? (
+        <img
+          src={photoUrl}
+          alt={player?.ign || ''}
+          className="w-full h-full object-cover object-top select-none"
+          loading="lazy"
+          onError={() => setPhotoError(true)}
+        />
+      ) : agentIcon ? (
+        <img
+          src={agentIcon}
+          alt={player?.signatureAgent || ''}
+          className="w-full h-full object-cover p-1.5 select-none"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <RoleEmblem role={role} size="md" showBackground={false} />
+      )}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#06090f]/80 to-transparent"
+        aria-hidden
       />
+    </div>
+  );
+};
+
+interface MirroredPlayerCardProps {
+  player: Player | null;
+  role: Role;
+  side: 'left' | 'right';
+  teamColor: string;
+  teamShortLabel: string;
+  isFinals: boolean;
+  isFocused: boolean;
+  isDimmed: boolean;
+  spotlightBadge?: string | null;
+  onHoverChange: (role: Role | null) => void;
+}
+
+const MirroredPlayerCard: React.FC<MirroredPlayerCardProps> = ({
+  player,
+  role,
+  side,
+  teamColor,
+  teamShortLabel,
+  isFinals,
+  isFocused,
+  isDimmed,
+  spotlightBadge,
+  onHoverChange,
+}) => {
+  const roleColor = ROLE_COLORS[role];
+  const agentPortrait = player?.signatureAgent
+    ? AGENT_FULL_PORTRAITS[player.signatureAgent]
+    : null;
+  const isLeft = side === 'left';
+
+  const borderColor = isFocused
+    ? isFinals
+      ? 'rgba(226, 183, 20, 0.75)'
+      : `${teamColor}cc`
+    : spotlightBadge
+    ? 'rgba(226, 183, 20, 0.50)'
+    : 'rgba(255, 255, 255, 0.13)';
+
+  return (
+    <div
+      onMouseEnter={() => onHoverChange(role)}
+      onMouseLeave={() => onHoverChange(null)}
+      className={`group relative flex items-stretch rounded-[4px] overflow-hidden border transition-all duration-200 ${
+        isFinals ? 'h-[82px] xl:h-[90px]' : 'h-[74px] xl:h-[82px]'
+      } ${isDimmed ? 'opacity-70' : 'opacity-100'} ${
+        isFocused ? 'scale-[1.012] z-10 shadow-xl' : 'shadow-md'
+      }`}
+      style={{
+        borderColor,
+        backgroundColor: 'rgba(9, 13, 21, 0.58)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        boxShadow: isFocused
+          ? `0 12px 30px -10px ${isFinals ? '#e2b71455' : `${teamColor}66`}`
+          : undefined,
+      }}
+    >
+      {/* Accent edge bar */}
+      <div
+        className={`absolute inset-y-0 w-[3px] z-20 ${isLeft ? 'left-0' : 'right-0'}`}
+        style={{ backgroundColor: spotlightBadge ? '#e2b714' : teamColor }}
+        aria-hidden
+      />
+
+      {/* LEFT SIDE: [FOTO] | [BONECO NO FUNDO] */}
+      {isLeft && (
+        <PlayerSquarePortrait
+          player={player}
+          role={role}
+          accentColor={teamColor}
+          side="left"
+          sizeClass={isFinals ? 'w-[78px] xl:w-[88px]' : 'w-[72px] xl:w-[80px]'}
+        />
+      )}
+
+      {/* BANNER WITH AGENT IN THE BACKGROUND ("BONECO NO FUNDO") */}
+      <div
+        className={`relative flex-1 min-w-0 overflow-hidden flex flex-col justify-center px-3 xl:px-3.5 ${
+          isLeft ? 'text-left' : 'text-right'
+        }`}
+      >
+        {/* Blurred Agent Artwork in Background ("Boneco no fundo") */}
+        {agentPortrait && (
+          <img
+            src={agentPortrait}
+            alt=""
+            aria-hidden="true"
+            referrerPolicy="no-referrer"
+            className={`pointer-events-none select-none absolute top-[-18%] h-[185%] w-auto max-w-none object-contain transition-all duration-200 will-change-transform ${
+              isLeft ? 'right-[-10%]' : 'left-[-10%] -scale-x-100'
+            } ${
+              isFocused
+                ? 'blur-0 opacity-65 brightness-100'
+                : 'blur-[2.5px] opacity-45 brightness-90'
+            }`}
+          />
+        )}
+
+        {/* Directional dark readability veil + subtle team tint */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: isLeft
+              ? `linear-gradient(90deg, rgba(7,10,16,0.90) 0%, rgba(7,10,16,0.62) 55%, ${teamColor}22 100%)`
+              : `linear-gradient(270deg, rgba(7,10,16,0.90) 0%, rgba(7,10,16,0.62) 55%, ${teamColor}22 100%)`,
+          }}
+          aria-hidden
+        />
+
+        {/* CRISP FOREGROUND INFO (ZERO BLUR) */}
+        <div className="relative z-10 flex flex-col justify-center gap-0.5 min-w-0">
+          {/* Top line: Role + Agent + Spotlight Badge */}
+          <div
+            className={`flex items-center gap-1.5 flex-wrap ${
+              isLeft ? 'justify-start' : 'justify-end'
+            }`}
+          >
+            {isLeft ? (
+              <>
+                <RoleEmblem role={role} size="xs" showBackground={false} />
+                <span
+                  className="font-mono-vct text-[10px] font-bold uppercase tracking-wider"
+                  style={{ color: roleColor }}
+                >
+                  {ROLE_NAMES_PT[role]}
+                </span>
+                {player?.signatureAgent && (
+                  <span className="font-mono-vct text-[10px] text-slate-300/90 uppercase">
+                    · {player.signatureAgent}
+                  </span>
+                )}
+                {spotlightBadge && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] bg-[#e2b714]/20 border border-[#e2b714]/50 font-mono-vct text-[9px] font-bold uppercase text-[#fde047]">
+                    <Award className="w-2.5 h-2.5 shrink-0" />
+                    {spotlightBadge}
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                {spotlightBadge && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] bg-[#e2b714]/20 border border-[#e2b714]/50 font-mono-vct text-[9px] font-bold uppercase text-[#fde047]">
+                    <Award className="w-2.5 h-2.5 shrink-0" />
+                    {spotlightBadge}
+                  </span>
+                )}
+                {player?.signatureAgent && (
+                  <span className="font-mono-vct text-[10px] text-slate-300/90 uppercase">
+                    {player.signatureAgent} ·
+                  </span>
+                )}
+                <span
+                  className="font-mono-vct text-[10px] font-bold uppercase tracking-wider"
+                  style={{ color: roleColor }}
+                >
+                  {ROLE_NAMES_PT[role]}
+                </span>
+                <RoleEmblem role={role} size="xs" showBackground={false} />
+              </>
+            )}
+          </div>
+
+          {/* Main line: Nick + Country Flag + Trait + Champions seal */}
+          <div
+            className={`flex items-center gap-1.5 ${
+              isLeft ? 'justify-start' : 'justify-end'
+            }`}
+          >
+            {!isLeft && player?.isChampionsWinner && (
+              <span
+                title={
+                  player.championsYears.length > 0
+                    ? `Campeão Champions (${player.championsYears.join(', ')})`
+                    : 'Campeão Mundial'
+                }
+                className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-[2px] bg-[#e2b714]/20 border border-[#e2b714]/45 text-[9px] font-mono-vct font-bold text-[#fde047] shrink-0"
+              >
+                <Trophy className="w-2.5 h-2.5" />
+                {isFinals && player.championsYears.length > 0
+                  ? player.championsYears[0]
+                  : null}
+              </span>
+            )}
+            {!isLeft && player?.countryCode && (
+              <CountryFlag code={player.countryCode} size="xs" />
+            )}
+
+            <span
+              className={`font-display leading-none text-white uppercase tracking-wide truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] ${
+                isFinals ? 'text-2xl xl:text-[30px]' : 'text-2xl xl:text-[26px]'
+              }`}
+            >
+              {player?.ign || '—'}
+            </span>
+
+            {isLeft && player?.countryCode && (
+              <CountryFlag code={player.countryCode} size="xs" />
+            )}
+            {isLeft && player?.trait && (
+              <TraitBadge trait={player.trait} iconOnly size="xs" />
+            )}
+            {isLeft && player?.isChampionsWinner && (
+              <span
+                title={
+                  player.championsYears.length > 0
+                    ? `Campeão Champions (${player.championsYears.join(', ')})`
+                    : 'Campeão Mundial'
+                }
+                className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-[2px] bg-[#e2b714]/20 border border-[#e2b714]/45 text-[9px] font-mono-vct font-bold text-[#fde047] shrink-0"
+              >
+                <Trophy className="w-2.5 h-2.5" />
+                {isFinals && player.championsYears.length > 0
+                  ? player.championsYears[0]
+                  : null}
+              </span>
+            )}
+          </div>
+
+          {/* Bottom micro meta */}
+          <span className="font-mono-vct text-[10px] text-slate-300/80 truncate">
+            {player
+              ? `${isLeft ? player.team : teamShortLabel} '${String(player.year).slice(2)}`
+              : 'Vaga aberta'}
+          </span>
+        </div>
+      </div>
+
+      {/* RIGHT SIDE (MIRRORED): [BONECO NO FUNDO] | [FOTO] */}
+      {!isLeft && (
+        <PlayerSquarePortrait
+          player={player}
+          role={role}
+          accentColor={teamColor}
+          side="right"
+          sizeClass={isFinals ? 'w-[78px] xl:w-[88px]' : 'w-[72px] xl:w-[80px]'}
+        />
+      )}
     </div>
   );
 };
@@ -135,9 +400,34 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
   completedSeries,
   runLeader,
   teamSynergy,
+  onPreviewMapChange,
   onStartSeries,
 }) => {
   const isFinals = series.stage === 'finals';
+  const [selectedMapIdx, setSelectedMapIdx] = useState<number>(0);
+  const [focusedRole, setFocusedRole] = useState<Role | null>(null);
+
+  const mapQueue = useMemo(
+    () =>
+      series.mapQueue && series.mapQueue.length > 0
+        ? series.mapQueue
+        : Array.from({ length: series.bestOf }, () => 'Ascent'),
+    [series.mapQueue, series.bestOf]
+  );
+
+  // Reset map preview when advancing to a new series
+  useEffect(() => {
+    setSelectedMapIdx(0);
+  }, [series.stage, series.opponent.id, series.opponent.name]);
+
+  const activeMapName = mapQueue[selectedMapIdx] || mapQueue[0] || 'Ascent';
+  const activeMapArt = getMapArt(activeMapName);
+
+  // Sync full-viewport backdrop whenever selected map changes
+  useEffect(() => {
+    onPreviewMapChange?.(activeMapName);
+  }, [activeMapName, onPreviewMapChange]);
+
   const report = useMemo(
     () => generateOpponentScoutReport(series.opponent, difficulty),
     [series.opponent, difficulty]
@@ -155,67 +445,100 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
     [series.opponent]
   );
 
-  const fallbackUserLeader: Player | null =
-    runLeader?.player ||
-    lineup.Duelist ||
-    Object.values(lineup).find((p): p is Player => p !== null) ||
-    null;
-
   const lowSynergyMasterPenalty = difficulty === 'master' && teamSynergy < 78;
   const currentStageIdx = STAGE_STEPS.findIndex(s => s.id === series.stage);
-
   const campaignMapWins = completedSeries.reduce((acc, s) => acc + s.playerWins, 0);
   const campaignMapLosses = completedSeries.reduce((acc, s) => acc + s.opponentWins, 0);
-
-  const mapQueue =
-    series.mapQueue && series.mapQueue.length > 0
-      ? series.mapQueue
-      : Array.from({ length: series.bestOf }, (_, i) => `Mapa ${i + 1}`);
   const bannedMaps = series.bannedMaps || [];
   const oppShort = formatOpponentShort(series.opponent);
+  const isSelectedDecider = selectedMapIdx === mapQueue.length - 1;
 
   return (
-    <div id="tactical-prep-card" className="flex flex-col gap-3 md:gap-4">
+    <div
+      id="tactical-prep-card"
+      className={`relative rounded-[6px] overflow-hidden border shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85)] ${
+        isFinals ? 'border-[#e2b714]/45' : 'border-white/15'
+      }`}
+    >
       {/* =====================================================================
-          1. BROADCAST TOURNAMENT MASTHEAD & ROAD TO FINALS / BRACKET STRIP
+          FULL-BLEED STAGE BACKGROUND: ENTIRE MAP + ATMOSPHERIC DEPTH-OF-FIELD BLUR
          ===================================================================== */}
-      <Card
-        padding="none"
-        className={`relative overflow-hidden ${
-          isFinals ? 'border-[#e2b714]/45 bg-[#0e121a]' : 'border-white/10'
-        }`}
-      >
-        {/* Top accent line */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#070a10]" aria-hidden>
+        <AnimatePresence mode="sync">
+          <motion.img
+            key={activeMapArt.splash}
+            src={activeMapArt.splash}
+            alt=""
+            initial={{ opacity: 0, scale: 1.07 }}
+            animate={{ opacity: 1, scale: 1.04 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="absolute inset-0 w-full h-full object-cover blur-[5px] brightness-[0.58] saturate-[1.12] will-change-transform"
+          />
+        </AnimatePresence>
+
+        {/* Soft cinematic vignette keeping the open center window luminous */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(ellipse 52% 60% at 50% 42%, rgba(7,10,16,0.18) 0%, rgba(7,10,16,0.68) 72%, rgba(6,9,15,0.88) 100%)',
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#06090f]/80 via-transparent to-[#06090f]/92" />
+
+        {/* Atmospheric team color glow fog (Left vs Right + Gold center on Finals) */}
+        <div
+          className="absolute -left-24 top-1/4 w-[360px] h-[360px] rounded-full blur-[100px] opacity-30"
+          style={{ backgroundColor: teamIdentity.color }}
+        />
+        <div
+          className="absolute -right-24 top-1/4 w-[360px] h-[360px] rounded-full blur-[100px] opacity-30"
+          style={{ backgroundColor: series.opponent.logoColor }}
+        />
+        {isFinals && (
+          <div
+            className="absolute left-1/2 -translate-x-1/2 top-8 w-[340px] h-[220px] rounded-full blur-[90px] opacity-25"
+            style={{ backgroundColor: '#e2b714' }}
+          />
+        )}
+      </div>
+
+      {/* =====================================================================
+          FOREGROUND CONTENT OVER FULL-BLEED MAP
+         ===================================================================== */}
+      <div className="relative z-10 flex flex-col">
+        {/* Top Accent Line */}
         <div
           className={`h-[2px] w-full ${
             isFinals
               ? 'bg-gradient-to-r from-[#e2b714]/20 via-[#e2b714] to-[#e2b714]/20'
-              : 'bg-gradient-to-r from-transparent via-[#ff4655]/80 to-transparent'
+              : 'bg-gradient-to-r from-transparent via-[#ff4655]/85 to-transparent'
           }`}
           aria-hidden
         />
 
-        {/* Tournament Stage Progress / Road to Final */}
+        {/* 1. FROSTED BROADCAST MASTHEAD & BRACKET PROGRESS */}
         <div
-          className={`px-3 sm:px-5 py-2.5 border-b flex items-center justify-between gap-2 flex-wrap ${
+          className={`px-3.5 sm:px-5 py-2.5 border-b backdrop-blur-md flex items-center justify-between gap-2 flex-wrap ${
             isFinals
-              ? 'bg-[#12151e] border-[#e2b714]/20'
-              : 'bg-[#0b0e14]/80 border-white/[0.07]'
+              ? 'bg-[#0c1018]/75 border-[#e2b714]/25'
+              : 'bg-[#080c14]/70 border-white/[0.10]'
           }`}
         >
           <div className="flex items-center gap-2">
             {isFinals ? (
               <>
                 <Trophy className="w-4 h-4 text-[#e2b714] shrink-0" />
-                <span className="font-mono-vct text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] text-[#e2b714]">
-                  Valorant Champions · Palco Principal
+                <span className="font-mono-vct text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] text-[#fde047]">
+                  Valorant Champions · Grande Final MD5
                 </span>
               </>
             ) : (
               <>
                 <span className="w-1.5 h-1.5 rounded-[1px] bg-[#ff4655] shrink-0" />
-                <span className="font-mono-vct text-[11px] sm:text-xs font-bold uppercase tracking-[0.12em] text-slate-200">
-                  Transmissão Oficial · {series.stageTitle}
+                <span className="font-mono-vct text-[11px] sm:text-xs font-bold uppercase tracking-[0.12em] text-slate-100">
+                  {series.stageTitle} · MD{series.bestOf}
                 </span>
               </>
             )}
@@ -234,23 +557,23 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                     className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] border text-[10px] sm:text-[11px] font-mono-vct uppercase shrink-0 ${
                       isCurrent
                         ? isFinals
-                          ? 'bg-[#e2b714]/15 border-[#e2b714]/60 text-[#fde047] font-bold'
-                          : 'bg-[#ff4655]/15 border-[#ff4655]/60 text-white font-bold'
+                          ? 'bg-[#e2b714]/20 border-[#e2b714]/65 text-[#fde047] font-bold'
+                          : 'bg-[#ff4655]/20 border-[#ff4655]/65 text-white font-bold'
                         : isPast
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                        : 'bg-[#0a0d13] border-white/[0.07] text-slate-500'
+                        ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-300'
+                        : 'bg-[#070a10]/55 border-white/[0.08] text-slate-400'
                     }`}
                   >
                     {isPast && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
                     <span>{step.short}</span>
                     {done && (
-                      <span className="text-[10px] text-emerald-200/90 font-bold">
+                      <span className="text-[10px] text-emerald-200 font-bold">
                         {done.playerWins}–{done.opponentWins}
                       </span>
                     )}
                   </div>
                   {idx < STAGE_STEPS.length - 1 && (
-                    <span className="text-slate-600 text-[10px] select-none">›</span>
+                    <span className="text-slate-500 text-[10px] select-none">›</span>
                   )}
                 </React.Fragment>
               );
@@ -258,17 +581,17 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
           </div>
         </div>
 
-        {/* Road to the Final detailed bar (EXCLUSIVE TO GRAND FINALS) */}
+        {/* Road to the Final detailed strip (EXCLUSIVE TO GRAND FINALS) */}
         {isFinals && completedSeries.length > 0 && (
-          <div className="px-3 sm:px-5 py-2 bg-[#090c11]/90 border-b border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
-            <span className="font-mono-vct text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-400">
+          <div className="px-3.5 sm:px-5 py-2 bg-[#070a10]/70 backdrop-blur-md border-b border-white/[0.08] flex items-center justify-between gap-2 flex-wrap">
+            <span className="font-mono-vct text-[10px] sm:text-[11px] uppercase tracking-wider text-[#fde047]/90">
               Caminho até a Final
             </span>
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
               {completedSeries.map((c, idx) => (
                 <div
                   key={`${c.stage}-${idx}`}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-mono-vct text-slate-200 bg-[#11151d] border border-white/10 px-2 py-0.5 rounded-[2px]"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-mono-vct text-slate-200 bg-[#0d121c]/80 border border-white/10 px-2 py-0.5 rounded-[2px]"
                 >
                   <TeamLogo
                     teamName={c.opponentName}
@@ -277,124 +600,70 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                     primaryColor={c.opponentColor}
                     size="xs"
                   />
-                  <span className="text-slate-300">{c.opponentTag}</span>
+                  <span className="text-slate-200">{c.opponentTag}</span>
                   <span className="text-emerald-400 font-bold">
                     {c.playerWins}–{c.opponentWins}
                   </span>
                 </div>
               ))}
-              <span className="font-mono-vct text-[11px] text-[#e2b714] font-bold">
+              <span className="font-mono-vct text-[11px] text-[#fde047] font-bold">
                 Saldo: {campaignMapWins}V–{campaignMapLosses}D mapas
               </span>
             </div>
           </div>
         )}
 
-        {/* ===================================================================
-            2. MATCHUP HERO BANNER (TEAM A vs TEAM B)
-           =================================================================== */}
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.24, ease: 'easeOut' }}
-          className="relative px-3.5 sm:px-6 py-4 sm:py-6 overflow-hidden"
-          style={{
-            background: isFinals
-              ? `linear-gradient(105deg, ${teamIdentity.color}1c 0%, #0d1118 38%, #0d1118 62%, ${series.opponent.logoColor}1e 100%)`
-              : `linear-gradient(105deg, ${teamIdentity.color}14 0%, #0d1118 40%, #0d1118 60%, ${series.opponent.logoColor}16 100%)`,
-          }}
-        >
-          {/* Subtle centered brand mark watermark */}
-          <img
-            src="/brand/mark.png"
-            alt=""
-            aria-hidden="true"
-            className={`pointer-events-none select-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain ${
-              isFinals ? 'w-36 h-36 opacity-[0.07]' : 'w-28 h-28 opacity-[0.04]'
-            }`}
-          />
-
-          <div className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-5">
-            {/* LEFT: USER TEAM */}
-            <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+        {/* 2. MATCHUP TEAM HEADER (TRANSLUCENT OVER THE MAP) */}
+        <div className="px-3.5 sm:px-6 pt-3.5 pb-2.5 bg-[#070b12]/40 backdrop-blur-[6px] border-b border-white/[0.08]">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
+            {/* Left Team */}
+            <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
               <TeamCrest
                 emblemId={teamIdentity.emblemId}
                 color={teamIdentity.color}
                 size="lg"
-                className="w-10 h-10 sm:w-14 sm:h-14 shrink-0"
+                className="w-10 h-10 sm:w-12 sm:h-12 shrink-0"
               />
               <div className="min-w-0">
-                <span className="block font-mono-vct text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#38bdf8]">
+                <span className="block font-mono-vct text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#38bdf8]">
                   {isFinals ? 'Finalista · Sua Equipe' : 'Sua Equipe'}
                 </span>
-                <h2 className="font-display text-2xl sm:text-4xl md:text-[42px] leading-[0.95] text-white uppercase tracking-wide truncate mt-0.5">
+                <h2 className="font-display text-2xl sm:text-3xl md:text-4xl leading-[0.95] text-white uppercase tracking-wide truncate drop-shadow">
                   {teamIdentity.name}
                 </h2>
-                <div className="hidden sm:flex items-center gap-2 mt-1 text-xs font-mono-vct text-slate-300 flex-wrap">
-                  <span>
-                    {completedSeries.length > 0
-                      ? `${completedSeries.length}–0 séries · ${campaignMapWins}–${campaignMapLosses} mapas`
-                      : 'Estreia na Campanha'}
-                  </span>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-slate-400">Força Oculta na Run</span>
-                </div>
               </div>
             </div>
 
-            {/* CENTER: OFFICIAL STAGE & VS EMBLEM */}
-            <div className="flex flex-col items-center justify-center text-center px-1.5 sm:px-4">
+            {/* Center compact tag */}
+            <div className="flex flex-col items-center justify-center text-center px-2">
               {isFinals ? (
-                <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-[3px] bg-[#e2b714]/15 border border-[#e2b714]/60 flex items-center justify-center mb-1.5">
-                    <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-[#e2b714]" />
-                  </div>
-                  <span className="font-display text-2xl sm:text-3xl leading-none text-[#fde047] tracking-widest uppercase">
-                    FINAL
-                  </span>
-                  <span className="mt-1 px-2 py-0.5 rounded-[2px] bg-[#e2b714]/15 border border-[#e2b714]/45 font-mono-vct text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#fde047]">
-                    MD5 · 3 Vitórias
-                  </span>
-                </div>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] bg-[#e2b714]/20 border border-[#e2b714]/55 font-mono-vct text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#fde047] backdrop-blur-md">
+                  <Trophy className="w-3.5 h-3.5" />
+                  Final MD5
+                </span>
               ) : (
-                <div className="flex flex-col items-center">
-                  <span className="px-2 py-0.5 rounded-[2px] bg-[#ff4655]/15 border border-[#ff4655]/45 font-mono-vct text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#fda4af] mb-1">
-                    MD{series.bestOf}
-                  </span>
-                  <span className="font-display text-3xl sm:text-5xl leading-none text-slate-300/90 tracking-widest select-none">
-                    VS
-                  </span>
-                  <span className="hidden sm:block font-mono-vct text-[10px] uppercase tracking-widest text-slate-400 mt-1">
-                    Pré-Confronto
-                  </span>
-                </div>
+                <span className="font-display text-2xl sm:text-4xl leading-none text-white/80 tracking-widest select-none drop-shadow">
+                  VS
+                </span>
               )}
             </div>
 
-            {/* RIGHT: OPPONENT TEAM */}
-            <div className="flex items-center justify-end gap-2.5 sm:gap-4 text-right min-w-0">
+            {/* Right Team */}
+            <div className="flex items-center justify-end gap-2.5 sm:gap-3.5 text-right min-w-0">
               <div className="min-w-0">
-                <span className="block font-mono-vct text-[10px] sm:text-xs font-bold uppercase tracking-wider text-rose-400">
-                  {isFinals ? `Finalista · ${series.opponent.region}` : `Adversário · ${series.opponent.region}`}
+                <span className="block font-mono-vct text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-rose-400">
+                  {series.opponent.region} · {series.opponent.rating} OVR
                 </span>
-                <h2 className="font-display text-2xl sm:text-4xl md:text-[42px] leading-[0.95] text-white uppercase tracking-wide truncate mt-0.5">
+                <h2 className="font-display text-2xl sm:text-3xl md:text-4xl leading-[0.95] text-white uppercase tracking-wide truncate drop-shadow">
                   <span className="sm:hidden">{oppShort}</span>
                   <span className="hidden sm:inline">{realOpponentTeam?.name || oppShort}</span>
                 </h2>
-                <div className="hidden sm:flex items-center justify-end gap-2 mt-1 text-xs font-mono-vct text-slate-300 flex-wrap">
-                  <span className="text-slate-300 truncate max-w-[230px]">
-                    {realOpponentTeam?.editionLabel || series.opponent.name}
-                  </span>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-white font-bold">{series.opponent.rating} OVR</span>
-                </div>
               </div>
-
               <div
-                className="w-10 h-10 sm:w-14 sm:h-14 rounded-[4px] bg-[#0b0e14] border p-1.5 flex items-center justify-center shrink-0"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-[4px] bg-[#080c14]/80 backdrop-blur-md border p-1.5 flex items-center justify-center shrink-0"
                 style={{
-                  borderColor: `${series.opponent.logoColor}66`,
-                  boxShadow: `0 0 18px -6px ${series.opponent.logoColor}66`,
+                  borderColor: `${series.opponent.logoColor}77`,
+                  boxShadow: `0 0 18px -6px ${series.opponent.logoColor}88`,
                 }}
               >
                 <TeamLogo
@@ -402,20 +671,19 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                   shortName={series.opponent.tag}
                   logoUrl={series.opponent.logoUrl}
                   primaryColor={series.opponent.logoColor}
-                  size="lg"
+                  size="md"
                   className="w-full h-full"
                 />
               </div>
             </div>
           </div>
 
-          {/* Active Mayhem Bonuses Strip */}
           {selectedBonuses.length > 0 && (
             <div
               id="tournament-bonuses-header"
-              className="relative z-10 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 flex-wrap mt-4 pt-3 border-t border-white/[0.08]"
+              className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 flex-wrap mt-2.5 pt-2 border-t border-white/[0.08]"
             >
-              <span className="font-mono-vct text-[11px] font-bold uppercase tracking-wider text-[#e2b714]">
+              <span className="font-mono-vct text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#fde047]">
                 Bônus ativos:
               </span>
               {selectedBonuses.map(bonus => (
@@ -430,589 +698,483 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
               ))}
             </div>
           )}
-        </motion.div>
-      </Card>
-
-      {/* =====================================================================
-          3. EXCLUSIVE TO GRAND FINALS: HEADLINER SPOTLIGHT (PLAYERS TO WATCH)
-         ===================================================================== */}
-      {isFinals && fallbackUserLeader && opponentStar && (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.24, delay: 0.06, ease: 'easeOut' }}
-        >
-          <Card
-            padding="none"
-            className="border-[#e2b714]/35 bg-[#0b0f17] overflow-hidden"
-          >
-            <div className="px-3.5 sm:px-5 py-2 bg-[#131722] border-b border-[#e2b714]/20 flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 font-mono-vct text-[11px] font-bold uppercase tracking-[0.14em] text-[#fde047]">
-                <Award className="w-3.5 h-3.5 text-[#e2b714]" />
-                Duelo Principal da Final · Players to Watch
-              </span>
-              <span className="hidden sm:inline font-mono-vct text-[11px] text-slate-400">
-                Líder da sua campanha vs Referência do rival
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-3 p-3.5 sm:p-5">
-              {/* Left: Your Campaign Leader */}
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <PlayerAvatar
-                  player={fallbackUserLeader}
-                  size="xl"
-                  teamColor={teamIdentity.color}
-                />
-                <div className="min-w-0 flex-1">
-                  <span className="font-mono-vct text-[10px] font-bold uppercase tracking-wider text-[#38bdf8]">
-                    Destaque da Sua Run
-                  </span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <h3 className="font-display text-2xl sm:text-3xl leading-none text-white uppercase tracking-wide truncate">
-                      {fallbackUserLeader.ign}
-                    </h3>
-                    {fallbackUserLeader.countryCode && (
-                      <CountryFlag code={fallbackUserLeader.countryCode} size="xs" />
-                    )}
-                    <AgentMiniBadge agent={fallbackUserLeader.signatureAgent} size="sm" />
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap font-mono-vct text-[11px]">
-                    {runLeader ? (
-                      <>
-                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#141a25] border border-white/10 text-white font-bold">
-                          {runLeader.acs} ACS
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#141a25] border border-white/10 text-emerald-300 font-bold">
-                          {runLeader.kdRatio.toFixed(2)} K/D
-                        </span>
-                        {runLeader.clutchesWon > 0 && (
-                          <span className="px-1.5 py-0.5 rounded-[2px] bg-[#e2b714]/15 border border-[#e2b714]/35 text-[#fde047] font-bold">
-                            {runLeader.clutchesWon}{' '}
-                            {runLeader.clutchesWon === 1 ? 'Clutch' : 'Clutches'}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-slate-300">
-                        {ROLE_NAMES_PT[fallbackUserLeader.primaryRole]} ·{' '}
-                        {fallbackUserLeader.signatureAgent}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Center divider */}
-              <div className="hidden md:flex flex-col items-center justify-center px-3">
-                <span className="font-display text-3xl leading-none text-[#e2b714]/80 tracking-widest">
-                  VS
-                </span>
-              </div>
-
-              {/* Right: Opponent Star */}
-              <div className="flex items-center justify-between md:justify-end gap-3 sm:gap-4 md:text-right min-w-0 pt-2.5 md:pt-0 border-t md:border-t-0 border-white/[0.06]">
-                <div className="min-w-0 flex-1 order-2 md:order-1">
-                  <span className="font-mono-vct text-[10px] font-bold uppercase tracking-wider text-rose-400">
-                    Estrela do Adversário
-                  </span>
-                  <div className="flex items-center md:justify-end gap-2 mt-0.5">
-                    <AgentMiniBadge agent={opponentStar.signatureAgent} size="sm" />
-                    {opponentStar.countryCode && (
-                      <CountryFlag code={opponentStar.countryCode} size="xs" />
-                    )}
-                    <h3 className="font-display text-2xl sm:text-3xl leading-none text-white uppercase tracking-wide truncate">
-                      {opponentStar.ign}
-                    </h3>
-                  </div>
-                  <div className="flex items-center md:justify-end gap-2 mt-1.5 flex-wrap font-mono-vct text-[11px]">
-                    <span className="px-1.5 py-0.5 rounded-[2px] bg-[#141a25] border border-white/10 text-slate-200">
-                      {ROLE_NAMES_PT[opponentStar.primaryRole]} · {opponentStar.signatureAgent}
-                    </span>
-                    {opponentStar.isChampionsWinner && (
-                      <span className="px-1.5 py-0.5 rounded-[2px] bg-[#e2b714]/15 border border-[#e2b714]/35 text-[#fde047] font-bold">
-                        Campeão Mundial
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="order-1 md:order-2">
-                  <PlayerAvatar
-                    player={opponentStar}
-                    size="xl"
-                    teamColor={series.opponent.logoColor}
-                  />
-                </div>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* =====================================================================
-          4. OFFICIAL 5v5 HEAD-TO-HEAD LINEUP PRESENTATION
-         ===================================================================== */}
-      <Card
-        padding="none"
-        className={`overflow-hidden ${
-          isFinals ? 'border-[#e2b714]/30' : 'border-white/10'
-        }`}
-      >
-        <div className="px-3.5 sm:px-5 py-2.5 bg-[#0b0e14] border-b border-white/[0.07] flex items-center justify-between gap-2">
-          <span className="font-mono-vct text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-200">
-            {isFinals
-              ? 'Apresentação Oficial das Equipes · Confronto 5v5'
-              : 'Elencos Titulares · Confronto por Função'}
-          </span>
-          <span className="font-mono-vct text-[11px] text-slate-400 hidden sm:inline">
-            {teamIdentity.name} vs {oppShort}
-          </span>
         </div>
 
-        <div className="divide-y divide-white/[0.06] bg-[#0d1118]">
-          {ROLE_ORDER.map((role, idx) => {
-            const myPlayer = lineup[role];
-            const oppPlayer = opponentSlots[role];
-            const roleColor = ROLE_COLORS[role];
-            const myAgentPortrait =
-              isFinals && myPlayer?.signatureAgent
-                ? AGENT_FULL_PORTRAITS[myPlayer.signatureAgent]
-                : null;
-            const oppAgentPortrait =
-              isFinals && oppPlayer?.signatureAgent
-                ? AGENT_FULL_PORTRAITS[oppPlayer.signatureAgent]
-                : null;
+        {/* ===================================================================
+            3. SIGNATURE 3-COLUMN MIRRORED FACE-OFF OVER FULL-BLEED MAP
+               [5 Cards Left]  |  [Atmospheric Center + MAPA]  |  [5 Cards Right]
+           =================================================================== */}
+        <div className="px-3 sm:px-5 py-4">
+          {/* DESKTOP 3-COLUMN LAYOUT (lg+) */}
+          <div className="hidden lg:grid grid-cols-[minmax(0,1fr)_270px_minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_310px_minmax(0,1fr)] gap-3 xl:gap-4 items-stretch">
+            {/* LEFT WING: 5 STACKED PLAYER BANNERS */}
+            <div className="flex flex-col gap-2">
+              {ROLE_ORDER.map((role, idx) => {
+                const p = lineup[role];
+                const isUserLeader =
+                  isFinals &&
+                  Boolean(p && runLeader && runLeader.player.id === p.id);
+                const spotlightLabel =
+                  isUserLeader && runLeader
+                    ? `Líder · ${runLeader.acs} ACS · ${runLeader.kdRatio.toFixed(2)} K/D`
+                    : null;
 
-            return (
-              <motion.div
-                key={role}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.2,
-                  delay: (isFinals ? 0.1 : 0.04) + idx * 0.035,
-                  ease: 'easeOut',
+                return (
+                  <motion.div
+                    key={`left-${role}`}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.22, delay: idx * 0.035, ease: 'easeOut' }}
+                  >
+                    <MirroredPlayerCard
+                      player={p}
+                      role={role}
+                      side="left"
+                      teamColor={teamIdentity.color}
+                      teamShortLabel={teamIdentity.name}
+                      isFinals={isFinals}
+                      isFocused={focusedRole === role}
+                      isDimmed={focusedRole !== null && focusedRole !== role}
+                      spotlightBadge={spotlightLabel}
+                      onHoverChange={setFocusedRole}
+                    />
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* CENTER CORRIDOR: VERTICAL ATMOSPHERIC DIVIDER + CENTRAL MAP WINDOW */}
+            <div className="relative flex flex-col items-center justify-between py-1">
+              {/* Vertical blurred split beam (matching sketch center texture) */}
+              <div
+                className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-[1px]"
+                style={{
+                  background: isFinals
+                    ? 'linear-gradient(180deg, transparent 0%, rgba(226,183,20,0.65) 20%, rgba(226,183,20,0.85) 50%, rgba(226,183,20,0.65) 80%, transparent 100%)'
+                    : 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.28) 20%, rgba(255,70,85,0.55) 50%, rgba(255,255,255,0.28) 80%, transparent 100%)',
                 }}
-                className="relative"
-              >
-                {/* DESKTOP / TABLET ROW (sm+) */}
-                <div
-                  className={`hidden sm:grid grid-cols-[1fr_132px_1fr] items-stretch ${
-                    isFinals ? 'min-h-[78px]' : 'min-h-[64px]'
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute inset-y-6 left-1/2 -translate-x-1/2 w-24 blur-[38px] opacity-35"
+                style={{
+                  background: isFinals
+                    ? 'linear-gradient(180deg, #e2b714 0%, transparent 50%, #e2b714 100%)'
+                    : `linear-gradient(180deg, ${teamIdentity.color} 0%, transparent 50%, ${series.opponent.logoColor} 100%)`,
+                }}
+                aria-hidden
+              />
+
+              {/* Top Emblem */}
+              <div className="relative z-10 flex flex-col items-center">
+                <img
+                  src="/brand/mark.png"
+                  alt=""
+                  aria-hidden="true"
+                  className={`w-10 h-10 object-contain select-none ${
+                    isFinals ? 'opacity-90 drop-shadow-[0_0_14px_rgba(226,183,20,0.45)]' : 'opacity-75'
                   }`}
-                >
-                  {/* LEFT WING: YOUR PLAYER */}
-                  <div className="relative overflow-hidden flex items-center justify-between gap-3 px-4 py-2.5">
-                    {myAgentPortrait && (
-                      <img
-                        src={myAgentPortrait}
-                        alt=""
-                        aria-hidden="true"
-                        referrerPolicy="no-referrer"
-                        className="pointer-events-none select-none absolute right-2 top-1/2 -translate-y-1/2 h-28 object-contain opacity-[0.09]"
-                      />
-                    )}
-
-                    <div className="relative z-10 flex items-center gap-3 min-w-0">
-                      {myPlayer ? (
-                        <PlayerAvatar
-                          player={myPlayer}
-                          size={isFinals ? 'lg' : 'md'}
-                          teamColor={teamIdentity.color}
-                        />
-                      ) : (
-                        <RoleEmblem role={role} size="md" />
-                      )}
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span
-                            className={`font-display leading-none text-white uppercase tracking-wide truncate ${
-                              isFinals ? 'text-2xl' : 'text-xl'
-                            }`}
-                          >
-                            {myPlayer?.ign || '—'}
-                          </span>
-                          {myPlayer?.countryCode && (
-                            <CountryFlag code={myPlayer.countryCode} size="xs" />
-                          )}
-                          {myPlayer?.trait && (
-                            <TraitBadge trait={myPlayer.trait} iconOnly size="xs" />
-                          )}
-                          {myPlayer?.isChampionsWinner && (
-                            <span
-                              title={
-                                myPlayer.championsYears.length > 0
-                                  ? `Campeão Champions (${myPlayer.championsYears.join(', ')})`
-                                  : 'Campeão Mundial'
-                              }
-                              className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-[2px] bg-[#e2b714]/15 border border-[#e2b714]/35 text-[9px] font-mono-vct font-bold uppercase text-[#fde047]"
-                            >
-                              <Trophy className="w-2.5 h-2.5" />
-                              {isFinals && myPlayer.championsYears.length > 0
-                                ? myPlayer.championsYears[0]
-                                : null}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono-vct text-slate-400 mt-0.5 truncate">
-                          {myPlayer && (
-                            <>
-                              <span>
-                                {myPlayer.team} &apos;{String(myPlayer.year).slice(2)}
-                              </span>
-                              {myPlayer.signatureAgent && (
-                                <>
-                                  <span className="text-slate-600">·</span>
-                                  <span className="text-slate-300">
-                                    {myPlayer.signatureAgent}
-                                  </span>
-                                </>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {myPlayer?.signatureAgent && (
-                      <div className="relative z-10">
-                        <AgentMiniBadge
-                          agent={myPlayer.signatureAgent}
-                          size={isFinals ? 'md' : 'sm'}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* CENTER COLUMN: ROLE MATCHUP DIVIDER */}
-                  <div className="bg-[#090c11]/85 border-x border-white/[0.06] flex flex-col items-center justify-center px-2 py-2 text-center select-none">
-                    <RoleEmblem role={role} size="sm" showBackground={false} />
-                    <span
-                      className="font-mono-vct text-[10px] font-bold uppercase tracking-wider mt-1"
-                      style={{ color: roleColor }}
-                    >
-                      {ROLE_NAMES_PT[role]}
-                    </span>
-                  </div>
-
-                  {/* RIGHT WING: OPPONENT PLAYER (MIRRORED) */}
-                  <div className="relative overflow-hidden flex items-center justify-between gap-3 px-4 py-2.5">
-                    {oppAgentPortrait && (
-                      <img
-                        src={oppAgentPortrait}
-                        alt=""
-                        aria-hidden="true"
-                        referrerPolicy="no-referrer"
-                        className="pointer-events-none select-none absolute left-2 top-1/2 -translate-y-1/2 h-28 object-contain opacity-[0.09]"
-                      />
-                    )}
-
-                    {oppPlayer?.signatureAgent ? (
-                      <div className="relative z-10">
-                        <AgentMiniBadge
-                          agent={oppPlayer.signatureAgent}
-                          size={isFinals ? 'md' : 'sm'}
-                        />
-                      </div>
-                    ) : (
-                      <div />
-                    )}
-
-                    <div className="relative z-10 flex items-center justify-end gap-3 min-w-0 text-right">
-                      <div className="min-w-0">
-                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {oppPlayer?.isChampionsWinner && (
-                            <span
-                              title={
-                                oppPlayer.championsYears.length > 0
-                                  ? `Campeão Champions (${oppPlayer.championsYears.join(', ')})`
-                                  : 'Campeão Mundial'
-                              }
-                              className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-[2px] bg-[#e2b714]/15 border border-[#e2b714]/35 text-[9px] font-mono-vct font-bold uppercase text-[#fde047]"
-                            >
-                              <Trophy className="w-2.5 h-2.5" />
-                              {isFinals && oppPlayer.championsYears.length > 0
-                                ? oppPlayer.championsYears[0]
-                                : null}
-                            </span>
-                          )}
-                          {oppPlayer?.countryCode && (
-                            <CountryFlag code={oppPlayer.countryCode} size="xs" />
-                          )}
-                          <span
-                            className={`font-display leading-none text-white uppercase tracking-wide truncate ${
-                              isFinals ? 'text-2xl' : 'text-xl'
-                            }`}
-                          >
-                            {oppPlayer?.ign || '—'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-end gap-1.5 text-[11px] font-mono-vct text-slate-400 mt-0.5 truncate">
-                          {oppPlayer && (
-                            <>
-                              {oppPlayer.signatureAgent && (
-                                <span className="text-slate-300">
-                                  {oppPlayer.signatureAgent}
-                                </span>
-                              )}
-                              {oppPlayer.signatureAgent && (
-                                <span className="text-slate-600">·</span>
-                              )}
-                              <span>
-                                {realOpponentTeam?.shortName || series.opponent.tag} &apos;
-                                {String(oppPlayer.year).slice(2)}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {oppPlayer ? (
-                        <PlayerAvatar
-                          player={oppPlayer}
-                          size={isFinals ? 'lg' : 'md'}
-                          teamColor={series.opponent.logoColor}
-                        />
-                      ) : (
-                        <RoleEmblem role={role} size="md" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* MOBILE COMPACT ROW (< sm) */}
-                <div className="sm:hidden px-3 py-2.5 space-y-1.5">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <RoleEmblem role={role} size="xs" showBackground={false} />
-                    <span
-                      className="font-mono-vct text-[10px] font-bold uppercase tracking-wider"
-                      style={{ color: roleColor }}
-                    >
-                      {ROLE_NAMES_PT[role]}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 items-center">
-                    {/* Mobile Left: User Player */}
-                    <div className="flex items-center gap-2 min-w-0">
-                      {myPlayer && (
-                        <PlayerAvatar
-                          player={myPlayer}
-                          size="sm"
-                          teamColor={teamIdentity.color}
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1">
-                          <span className="font-display text-lg leading-none text-white truncate">
-                            {myPlayer?.ign || '—'}
-                          </span>
-                          {myPlayer?.countryCode && (
-                            <CountryFlag code={myPlayer.countryCode} size="xs" />
-                          )}
-                        </div>
-                        <span className="block text-[10px] font-mono-vct text-slate-400 truncate">
-                          {myPlayer?.signatureAgent || '—'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Mobile Right: Opponent Player */}
-                    <div className="flex items-center justify-end gap-2 min-w-0 text-right">
-                      <div className="min-w-0">
-                        <div className="flex items-center justify-end gap-1">
-                          {oppPlayer?.countryCode && (
-                            <CountryFlag code={oppPlayer.countryCode} size="xs" />
-                          )}
-                          <span className="font-display text-lg leading-none text-white truncate">
-                            {oppPlayer?.ign || '—'}
-                          </span>
-                        </div>
-                        <span className="block text-[10px] font-mono-vct text-slate-400 truncate">
-                          {oppPlayer?.signatureAgent || '—'}
-                        </span>
-                      </div>
-                      {oppPlayer && (
-                        <PlayerAvatar
-                          player={oppPlayer}
-                          size="sm"
-                          teamColor={series.opponent.logoColor}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* =====================================================================
-          5. OFFICIAL MAP ORDER & VETO STRIP (MD3 / MD5 WITH 2 BANS)
-         ===================================================================== */}
-      <Card
-        padding="none"
-        className={`p-3 sm:p-4 ${
-          isFinals ? 'border-[#e2b714]/30 bg-[#0d1118]' : 'border-white/10'
-        }`}
-      >
-        <div className="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
-          <span className="inline-flex items-center gap-1.5 font-mono-vct text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-200">
-            <MapPin
-              className={`w-3.5 h-3.5 ${
-                isFinals ? 'text-[#e2b714]' : 'text-[#ff4655]'
-              }`}
-            />
-            {isFinals
-              ? 'Veto & Ordem Oficial da Grande Final (MD5)'
-              : `Ordem Oficial dos Mapas (MD${series.bestOf})`}
-          </span>
-          <span className="font-mono-vct text-[11px] text-slate-400">
-            Vence quem conquistar {Math.ceil(series.bestOf / 2)} mapas
-          </span>
-        </div>
-
-        {/* Grand Finals Bans Strip */}
-        {isFinals && bannedMaps.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mb-2.5 pb-2.5 border-b border-white/[0.06]">
-            {bannedMaps.map((b, i) => (
-              <div
-                key={`${b.mapName}-${i}`}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-rose-950/35 border border-rose-500/25 text-[11px] font-mono-vct text-rose-300/90"
-              >
-                <Ban className="w-3 h-3 text-rose-400 shrink-0" />
-                <span className="uppercase text-slate-400">
-                  Ban {b.bannedBy === 'player' ? teamIdentity.name.slice(0, 12) : oppShort}:
-                </span>
-                <span className="line-through font-bold text-rose-200/90">
-                  {b.mapName}
-                </span>
+                />
+                {focusedRole && (
+                  <span
+                    className="mt-1 px-2 py-0.5 rounded-[2px] bg-[#070b12]/80 backdrop-blur-md border border-white/15 font-mono-vct text-[10px] font-bold uppercase tracking-wider"
+                    style={{ color: ROLE_COLORS[focusedRole] }}
+                  >
+                    Duelo · {ROLE_NAMES_PT[focusedRole]}
+                  </span>
+                )}
               </div>
-            ))}
-          </div>
-        )}
 
-        {/* Map Queue Tiles */}
-        <div
-          className={`grid gap-2 ${
-            mapQueue.length >= 5
-              ? 'grid-cols-2 sm:grid-cols-5'
-              : 'grid-cols-3'
-          }`}
-        >
-          {mapQueue.map((mapName, idx) => {
-            const isDecider = idx === mapQueue.length - 1;
-            const isOptional =
-              series.bestOf === 5 && idx >= 3 && idx < mapQueue.length - 1;
-            return (
+              {/* CENTERPIECE: MAP FOCUS WINDOW OVER FULL-BLEED MAP */}
               <div
-                key={`${mapName}-${idx}`}
-                className={`rounded-[3px] border px-2.5 py-2 flex flex-col items-center justify-center text-center ${
-                  isDecider
-                    ? isFinals
-                      ? 'bg-[#e2b714]/10 border-[#e2b714]/45'
-                      : 'bg-[#ff4655]/10 border-[#ff4655]/35'
-                    : 'bg-[#090c11] border-white/10'
+                className={`relative z-10 w-full rounded-[5px] border p-3.5 text-center shadow-[0_20px_50px_-10px_rgba(0,0,0,0.85)] backdrop-blur-md ${
+                  isFinals
+                    ? 'bg-[#090d16]/62 border-[#e2b714]/45'
+                    : 'bg-[#090d16]/55 border-white/20'
                 }`}
               >
-                <span
-                  className={`font-mono-vct text-[10px] font-bold uppercase tracking-wider ${
-                    isDecider
-                      ? isFinals
-                        ? 'text-[#fde047]'
-                        : 'text-[#fda4af]'
-                      : 'text-slate-400'
-                  }`}
-                >
-                  {isDecider
-                    ? `Mapa ${idx + 1} · Decider`
-                    : isOptional
-                    ? `Mapa ${idx + 1} · Se nec.`
-                    : `Mapa ${idx + 1}`}
-                </span>
-                <span className="font-display text-lg sm:text-xl leading-tight text-white uppercase tracking-wide mt-0.5">
-                  {mapName}
+                {/* Top map label */}
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <MapPin
+                    className="w-3.5 h-3.5 shrink-0"
+                    style={{ color: isFinals ? '#e2b714' : activeMapArt.accentColor }}
+                  />
+                  <span className="font-mono-vct text-[10px] font-bold uppercase tracking-[0.14em] text-slate-200">
+                    {isSelectedDecider
+                      ? `Mapa ${selectedMapIdx + 1} · Decider`
+                      : `Mapa ${selectedMapIdx + 1} de ${mapQueue.length}`}
+                  </span>
+                </div>
+
+                {/* Big crisp Map Name */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeMapArt.name}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.16 }}
+                  >
+                    <h3 className="font-display text-4xl xl:text-5xl leading-[0.9] text-white uppercase tracking-wider drop-shadow-[0_3px_12px_rgba(0,0,0,0.9)]">
+                      {activeMapArt.name}
+                    </h3>
+                    <span
+                      className="block font-mono-vct text-[10px] uppercase tracking-widest mt-1"
+                      style={{ color: activeMapArt.accentColor }}
+                    >
+                      {activeMapArt.location}
+                    </span>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Grand Finals Bans inside the center map card */}
+                {isFinals && bannedMaps.length > 0 && (
+                  <div className="mt-2.5 pt-2 border-t border-white/10 flex flex-wrap items-center justify-center gap-1.5">
+                    {bannedMaps.map((b, i) => (
+                      <span
+                        key={`${b.mapName}-${i}`}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] bg-rose-950/60 border border-rose-500/35 font-mono-vct text-[9px] uppercase text-rose-200"
+                        title={`Banido por ${b.bannedBy === 'player' ? teamIdentity.name : oppShort}`}
+                      >
+                        <Ban className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                        <span className="line-through">{b.mapName}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Interactive Map Switcher Pills (swap the full-bleed background map!) */}
+                <div className="mt-3 pt-2.5 border-t border-white/10">
+                  <span className="block font-mono-vct text-[9px] uppercase tracking-widest text-slate-300/80 mb-1.5">
+                    Ordem da Série · Clique para visualizar
+                  </span>
+                  <div
+                    className={`grid gap-1 ${
+                      mapQueue.length >= 5 ? 'grid-cols-5' : 'grid-cols-3'
+                    }`}
+                  >
+                    {mapQueue.map((mName, idx) => {
+                      const active = idx === selectedMapIdx;
+                      const decider = idx === mapQueue.length - 1;
+                      return (
+                        <button
+                          key={`${mName}-${idx}`}
+                          type="button"
+                          onClick={() => {
+                            playSelectSound();
+                            setSelectedMapIdx(idx);
+                          }}
+                          className={`px-1 py-1.5 rounded-[3px] border text-center transition-all cursor-pointer ${
+                            active
+                              ? isFinals
+                                ? 'bg-[#e2b714]/25 border-[#e2b714] text-white shadow-sm'
+                                : 'bg-[#ff4655]/25 border-[#ff4655] text-white shadow-sm'
+                              : 'bg-[#070a10]/65 border-white/10 text-slate-300 hover:border-white/30 hover:text-white'
+                          }`}
+                          title={`Mapa ${idx + 1}: ${mName}`}
+                        >
+                          <span className="block font-mono-vct text-[9px] font-bold uppercase leading-none opacity-80">
+                            {decider ? 'DEC' : `M${idx + 1}`}
+                          </span>
+                          <span className="block font-display text-xs xl:text-sm leading-tight uppercase truncate mt-0.5">
+                            {mName}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom center tag */}
+              <div className="relative z-10 text-center">
+                <span className="inline-block px-2.5 py-1 rounded-[2px] bg-[#070b12]/70 backdrop-blur-md border border-white/10 font-mono-vct text-[10px] uppercase tracking-wider text-slate-200">
+                  Vence em {Math.ceil(series.bestOf / 2)} mapas · MD{series.bestOf}
                 </span>
               </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* =====================================================================
-          6. SCOUTING DESK + TACTICAL STANCE SELECTION + START CTA
-         ===================================================================== */}
-      <Card
-        padding="md"
-        className={`space-y-4 ${
-          isFinals ? 'border-[#e2b714]/35' : 'border-white/10'
-        }`}
-      >
-        {/* Compact Scouting Summary */}
-        <div className="rounded-[3px] bg-[#090c11] border border-white/10 p-3.5 space-y-2">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              {report.visibility === 'blind' ? (
-                <EyeOff className="w-4 h-4 text-rose-400 shrink-0" />
-              ) : (
-                <Eye className="w-4 h-4 text-[#38bdf8] shrink-0" />
-              )}
-              <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-white">
-                Scouting Pré-Série · {series.opponent.name}
-              </span>
             </div>
 
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {activeSeriesBuff !== 'none' && (
-                <Badge tone="gold">
-                  <Sparkles className="w-3 h-3" />
-                  {BUFF_LABEL[activeSeriesBuff]}
-                </Badge>
+            {/* RIGHT WING: 5 MIRRORED OPPONENT BANNERS */}
+            <div className="flex flex-col gap-2">
+              {ROLE_ORDER.map((role, idx) => {
+                const opp = opponentSlots[role];
+                const isOppStar =
+                  isFinals &&
+                  Boolean(opp && opponentStar && opponentStar.id === opp.id);
+
+                return (
+                  <motion.div
+                    key={`right-${role}`}
+                    initial={{ opacity: 0, x: 12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.22, delay: idx * 0.035, ease: 'easeOut' }}
+                  >
+                    <MirroredPlayerCard
+                      player={opp}
+                      role={role}
+                      side="right"
+                      teamColor={series.opponent.logoColor}
+                      teamShortLabel={realOpponentTeam?.shortName || series.opponent.tag}
+                      isFinals={isFinals}
+                      isFocused={focusedRole === role}
+                      isDimmed={focusedRole !== null && focusedRole !== role}
+                      spotlightBadge={isOppStar ? 'Estrela Rival' : null}
+                      onHoverChange={setFocusedRole}
+                    />
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* MOBILE & TABLET LAYOUT (< lg) */}
+          <div className="lg:hidden space-y-3">
+            {/* Compact Map Switcher Card */}
+            <div
+              className={`rounded-[4px] border p-3 text-center backdrop-blur-md ${
+                isFinals
+                  ? 'bg-[#090d16]/65 border-[#e2b714]/45'
+                  : 'bg-[#090d16]/60 border-white/15'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="text-left">
+                  <span className="block font-mono-vct text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                    {isSelectedDecider
+                      ? `Mapa ${selectedMapIdx + 1} · Decider`
+                      : `Mapa ${selectedMapIdx + 1} de ${mapQueue.length}`}
+                  </span>
+                  <span className="font-display text-3xl leading-none text-white uppercase tracking-wide">
+                    {activeMapArt.name}
+                  </span>
+                </div>
+                <span
+                  className="font-mono-vct text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-[#070a10]/70 border border-white/10"
+                  style={{ color: activeMapArt.accentColor }}
+                >
+                  {activeMapArt.location}
+                </span>
+              </div>
+
+              {isFinals && bannedMaps.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                  {bannedMaps.map((b, i) => (
+                    <span
+                      key={`${b.mapName}-${i}`}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] bg-rose-950/60 border border-rose-500/35 font-mono-vct text-[10px] uppercase text-rose-200"
+                    >
+                      <Ban className="w-2.5 h-2.5 text-rose-400" />
+                      <span className="line-through">{b.mapName}</span>
+                    </span>
+                  ))}
+                </div>
               )}
-              <Badge
-                tone={
-                  report.visibility === 'full'
-                    ? 'green'
-                    : report.visibility === 'partial'
-                    ? 'gold'
-                    : 'red'
-                }
+
+              <div
+                className={`grid gap-1.5 ${
+                  mapQueue.length >= 5 ? 'grid-cols-5' : 'grid-cols-3'
+                }`}
               >
-                {report.visibility === 'full'
-                  ? 'Leitura Completa'
-                  : report.visibility === 'partial'
-                  ? 'Leitura Parcial'
-                  : 'Blind · Master'}
-              </Badge>
+                {mapQueue.map((mName, idx) => {
+                  const active = idx === selectedMapIdx;
+                  return (
+                    <button
+                      key={`${mName}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        playSelectSound();
+                        setSelectedMapIdx(idx);
+                      }}
+                      className={`px-1.5 py-1.5 rounded-[3px] border text-center cursor-pointer ${
+                        active
+                          ? isFinals
+                            ? 'bg-[#e2b714]/25 border-[#e2b714] text-white'
+                            : 'bg-[#ff4655]/25 border-[#ff4655] text-white'
+                          : 'bg-[#070a10]/70 border-white/10 text-slate-300'
+                      }`}
+                    >
+                      <span className="block font-mono-vct text-[9px] font-bold opacity-80">
+                        M{idx + 1}
+                      </span>
+                      <span className="block font-display text-sm leading-tight uppercase truncate">
+                        {mName}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 5 Stacked Compact Mirrored Duels on Mobile */}
+            <div className="space-y-2">
+              {ROLE_ORDER.map(role => {
+                const myP = lineup[role];
+                const oppP = opponentSlots[role];
+                const myAgent = myP?.signatureAgent
+                  ? AGENT_FULL_PORTRAITS[myP.signatureAgent]
+                  : null;
+                const oppAgent = oppP?.signatureAgent
+                  ? AGENT_FULL_PORTRAITS[oppP.signatureAgent]
+                  : null;
+
+                return (
+                  <div
+                    key={`mob-${role}`}
+                    className="rounded-[4px] overflow-hidden border border-white/12 bg-[#090d16]/65 backdrop-blur-md"
+                  >
+                    <div className="px-2.5 py-1 bg-[#070a10]/70 border-b border-white/[0.07] flex items-center justify-center gap-1.5">
+                      <RoleEmblem role={role} size="xs" showBackground={false} />
+                      <span
+                        className="font-mono-vct text-[10px] font-bold uppercase tracking-wider"
+                        style={{ color: ROLE_COLORS[role] }}
+                      >
+                        {ROLE_NAMES_PT[role]}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 divide-x divide-white/10 h-[58px]">
+                      {/* Left Player */}
+                      <div className="relative flex items-stretch overflow-hidden">
+                        <PlayerSquarePortrait
+                          player={myP}
+                          role={role}
+                          accentColor={teamIdentity.color}
+                          side="left"
+                          sizeClass="w-[50px]"
+                        />
+                        <div className="relative flex-1 min-w-0 px-2 flex flex-col justify-center overflow-hidden">
+                          {myAgent && (
+                            <img
+                              src={myAgent}
+                              alt=""
+                              aria-hidden
+                              referrerPolicy="no-referrer"
+                              className="pointer-events-none absolute right-[-15%] top-[-15%] h-[170%] w-auto opacity-35 blur-[2px]"
+                            />
+                          )}
+                          <div className="relative z-10 flex items-center gap-1">
+                            <span className="font-display text-lg leading-none text-white truncate">
+                              {myP?.ign || '—'}
+                            </span>
+                            {myP?.countryCode && (
+                              <CountryFlag code={myP.countryCode} size="xs" />
+                            )}
+                          </div>
+                          <span className="relative z-10 font-mono-vct text-[9px] text-slate-300 truncate">
+                            {myP?.signatureAgent || '—'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right Player (Mirrored) */}
+                      <div className="relative flex items-stretch overflow-hidden">
+                        <div className="relative flex-1 min-w-0 px-2 flex flex-col justify-center text-right overflow-hidden">
+                          {oppAgent && (
+                            <img
+                              src={oppAgent}
+                              alt=""
+                              aria-hidden
+                              referrerPolicy="no-referrer"
+                              className="pointer-events-none absolute left-[-15%] top-[-15%] h-[170%] w-auto opacity-35 blur-[2px] -scale-x-100"
+                            />
+                          )}
+                          <div className="relative z-10 flex items-center justify-end gap-1">
+                            {oppP?.countryCode && (
+                              <CountryFlag code={oppP.countryCode} size="xs" />
+                            )}
+                            <span className="font-display text-lg leading-none text-white truncate">
+                              {oppP?.ign || '—'}
+                            </span>
+                          </div>
+                          <span className="relative z-10 font-mono-vct text-[9px] text-slate-300 truncate">
+                            {oppP?.signatureAgent || '—'}
+                          </span>
+                        </div>
+                        <PlayerSquarePortrait
+                          player={oppP}
+                          role={role}
+                          accentColor={series.opponent.logoColor}
+                          side="right"
+                          sizeClass="w-[50px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-
-          <p className="text-sm text-slate-100 leading-snug">{report.headline}</p>
-
-          {report.recommendedReason && (
-            <div className="text-xs font-mono-vct text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1.5 rounded-[2px] flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5 shrink-0" />
-              <span>Sugestão: {report.recommendedReason}</span>
-            </div>
-          )}
-
-          {lowSynergyMasterPenalty && (
-            <div className="text-xs font-mono-vct text-rose-300 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1.5 rounded-[2px]">
-              Alerta Master: Química baixa ({teamSynergy}) gera -2% de coordenação em retakes.
-            </div>
-          )}
         </div>
 
-        {/* 3 One-Click Tactical Stances */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-slate-200">
-              {isFinals ? 'Plano de Jogo da Grande Final' : 'Postura Tática da Série'}
-            </span>
-            <span className="text-xs text-slate-300">Escolha 1 plano para os mapas</span>
+        {/* ===================================================================
+            4. FROSTED GLASS TACTICAL DESK (SCOUTING + 3 STANCES + CTA)
+           =================================================================== */}
+        <div
+          className={`p-3.5 sm:p-5 border-t backdrop-blur-xl space-y-3.5 ${
+            isFinals
+              ? 'bg-[#070b12]/78 border-[#e2b714]/25'
+              : 'bg-[#070b12]/74 border-white/[0.10]'
+          }`}
+        >
+          {/* Compact Scouting Bar */}
+          <div className="rounded-[4px] bg-[#0a0f18]/75 border border-white/10 px-3.5 py-2.5 space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                {report.visibility === 'blind' ? (
+                  <EyeOff className="w-4 h-4 text-rose-400 shrink-0" />
+                ) : (
+                  <Eye className="w-4 h-4 text-[#38bdf8] shrink-0" />
+                )}
+                <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-white">
+                  Scouting · {series.opponent.name}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {activeSeriesBuff !== 'none' && (
+                  <Badge tone="gold">
+                    <Sparkles className="w-3 h-3" />
+                    {BUFF_LABEL[activeSeriesBuff]}
+                  </Badge>
+                )}
+                <Badge
+                  tone={
+                    report.visibility === 'full'
+                      ? 'green'
+                      : report.visibility === 'partial'
+                      ? 'gold'
+                      : 'red'
+                  }
+                >
+                  {report.visibility === 'full'
+                    ? 'Leitura Completa'
+                    : report.visibility === 'partial'
+                    ? 'Leitura Parcial'
+                    : 'Blind · Master'}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
+              <p className="text-xs sm:text-sm text-slate-100 leading-snug">
+                {report.headline}
+              </p>
+              {report.recommendedReason && (
+                <div className="text-[11px] font-mono-vct text-emerald-300 bg-emerald-500/12 border border-emerald-500/30 px-2.5 py-1 rounded-[2px] flex items-center gap-1.5 shrink-0">
+                  <Zap className="w-3.5 h-3.5 shrink-0" />
+                  <span>{report.recommendedReason}</span>
+                </div>
+              )}
+            </div>
+
+            {lowSynergyMasterPenalty && (
+              <div className="text-xs font-mono-vct text-rose-300 bg-rose-500/12 border border-rose-500/30 px-2.5 py-1 rounded-[2px]">
+                Alerta Master: Química baixa ({teamSynergy}) gera -2% de coordenação em retakes.
+              </div>
+            )}
           </div>
 
+          {/* 3 One-Click Tactical Stances */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {TACTICAL_STANCES.map(stance => {
               const active = selectedStance === stance.id;
@@ -1028,16 +1190,16 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                     playSelectSound();
                     onSelectStance(stance.id);
                   }}
-                  className={`text-left rounded-[3px] border p-3 transition-colors cursor-pointer relative ${
+                  className={`text-left rounded-[4px] border p-3 transition-all cursor-pointer relative ${
                     active
-                      ? 'bg-[#171d29]'
-                      : 'bg-[#0b0e14] border-white/10 hover:border-white/25 hover:bg-[#111620]'
+                      ? 'bg-[#141c2b]/85'
+                      : 'bg-[#090e17]/65 border-white/10 hover:border-white/25 hover:bg-[#101724]/75'
                   }`}
                   style={
                     active
                       ? {
                           borderColor: stance.accentColor,
-                          boxShadow: `0 0 18px -6px ${stance.accentColor}66`,
+                          boxShadow: `0 0 22px -6px ${stance.accentColor}77`,
                         }
                       : undefined
                   }
@@ -1063,7 +1225,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                   </div>
 
                   <span
-                    className="font-mono-vct text-[11px] font-bold uppercase block mb-1.5"
+                    className="font-mono-vct text-[10px] font-bold uppercase block mb-1"
                     style={{ color: stance.accentColor }}
                   >
                     {stance.tag}
@@ -1071,41 +1233,41 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                   <p className="text-xs text-slate-100 font-medium leading-snug">
                     {stance.summary}
                   </p>
-                  <p className="text-[11px] text-slate-300 mt-1 leading-tight">
+                  <p className="text-[11px] text-slate-300/90 mt-0.5 leading-tight">
                     {stance.tradeoff}
                   </p>
                 </button>
               );
             })}
           </div>
-        </div>
 
-        {/* Start Series / Enter Grand Finals Stage CTA */}
-        <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10 flex-wrap">
-          <span className="text-xs text-slate-300 font-mono-vct">
-            {isFinals
-              ? `Grande Final MD5 · Primeiro mapa: ${mapQueue[0]}`
-              : `Formato MD${series.bestOf} · Primeiro mapa: ${mapQueue[0]}`}
-          </span>
-          <PrimaryButton
-            id="start-series-prep-btn"
-            size="md"
-            onClick={() => {
-              playSelectSound();
-              onStartSeries();
-            }}
-            className={`w-full sm:w-auto ${
-              isFinals
-                ? '!bg-[#e2b714] hover:!bg-[#f0c729] !text-[#0b0e14] !border-[#fde047]'
-                : ''
-            }`}
-          >
-            {isFinals && <Trophy className="w-4 h-4" />}
-            <span>{isFinals ? 'Entrar no Palco da Final' : 'Começar Série'}</span>
-            <ArrowRight className="w-4 h-4" />
-          </PrimaryButton>
+          {/* Start CTA Bar */}
+          <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
+            <span className="text-xs text-slate-200/90 font-mono-vct">
+              {isFinals
+                ? `Grande Final MD5 · Abertura em ${mapQueue[0]}`
+                : `Formato MD${series.bestOf} · Abertura em ${mapQueue[0]}`}
+            </span>
+            <PrimaryButton
+              id="start-series-prep-btn"
+              size="md"
+              onClick={() => {
+                playSelectSound();
+                onStartSeries();
+              }}
+              className={`w-full sm:w-auto ${
+                isFinals
+                  ? '!bg-[#e2b714] hover:!bg-[#f0c729] !text-[#0b0e14] !border-[#fde047]'
+                  : ''
+              }`}
+            >
+              {isFinals && <Trophy className="w-4 h-4" />}
+              <span>{isFinals ? 'Entrar no Palco da Final' : 'Começar Série'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </PrimaryButton>
+          </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

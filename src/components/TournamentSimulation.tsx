@@ -57,6 +57,7 @@ import { getFrameMeta } from '../data/frames';
 import { downloadShareResultPng } from '../utils/shareCard';
 import { StageQualifiedScreen } from './StageQualifiedScreen';
 import { TacticalPrepCard } from './TacticalPrepCard';
+import { AppBackdropConfig } from './AppBackground';
 import { TACTICAL_STANCES } from '../utils/scouting';
 import {
   PLAYER_SWAP_COST,
@@ -238,6 +239,7 @@ interface TournamentSimulationProps {
   onTournamentStateChange?: (state: SavedTournamentState) => void;
   onUpdateLineup?: (nextLineup: Lineup) => void;
   onAddShopBonus?: (bonus: MayhemBonus) => void;
+  onBackdropChange?: (backdrop: AppBackdropConfig | null) => void;
   onResetTournament: () => void;
   onSaveCampaign: (history: CampaignHistory) => void;
 }
@@ -261,10 +263,12 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
   onTournamentStateChange,
   onUpdateLineup,
   onAddShopBonus,
+  onBackdropChange,
   onResetTournament,
   onSaveCampaign,
 }) => {
   const [isDownloadingPng, setIsDownloadingPng] = useState<boolean>(false);
+  const [previewMapName, setPreviewMapName] = useState<string | null>(null);
   const frameMeta = getFrameMeta(frameId);
   const [currentStageIndex, setCurrentStageIndex] = useState<number>(
     initialSavedState?.currentStageIndex ?? 0
@@ -395,6 +399,41 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
     setShowCurrentMapStats(false);
     setIsPreSeriesPrep(false);
   };
+
+  useEffect(() => {
+    if (!onBackdropChange) return;
+    const activeMap = isPreSeriesPrep
+      ? previewMapName || series?.mapQueue?.[0] || currentMap?.mapName || null
+      : currentMap?.mapName || series?.mapQueue?.[series?.currentMapIndex ?? 0] || null;
+
+    if (activeMap && !showQualifiedScreen) {
+      onBackdropChange({
+        mapName: activeMap,
+        leftGlowColor: teamIdentity.color,
+        rightGlowColor: series?.opponent.logoColor || null,
+        isFinals: series?.stage === 'finals',
+      });
+    } else {
+      onBackdropChange(null);
+    }
+  }, [
+    onBackdropChange,
+    isPreSeriesPrep,
+    previewMapName,
+    currentMap?.mapName,
+    series?.mapQueue,
+    series?.currentMapIndex,
+    series?.opponent.logoColor,
+    series?.stage,
+    teamIdentity.color,
+    showQualifiedScreen,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      onBackdropChange?.(null);
+    };
+  }, [onBackdropChange]);
 
   useEffect(() => {
     if (!series || !currentMap) {
@@ -981,6 +1020,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
           completedSeries={completedSeries}
           runLeader={runLeader}
           teamSynergy={teamStats.synergy}
+          onPreviewMapChange={setPreviewMapName}
           onStartSeries={handleConfirmSeriesPrep}
         />
       ) : (

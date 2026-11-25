@@ -25,6 +25,10 @@ const MAPS_POOL = [
   'Sunset',
   'Abyss',
   'Pearl',
+  'Icebox',
+  'Breeze',
+  'Fracture',
+  'Corrode',
 ];
 
 export interface TeamStatsCalculation {
