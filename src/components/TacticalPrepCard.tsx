@@ -12,7 +12,6 @@ import {
   Check,
   Trophy,
   Ban,
-  MapPin,
   Award,
 } from 'lucide-react';
 import {
@@ -196,9 +195,7 @@ const MirroredPlayerCard: React.FC<MirroredPlayerCardProps> = ({
       }`}
       style={{
         borderColor,
-        backgroundColor: 'rgba(9, 13, 21, 0.58)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        backgroundColor: 'rgba(9, 13, 21, 0.82)',
         boxShadow: isFocused
           ? `0 12px 30px -10px ${isFinals ? '#e2b71455' : `${teamColor}66`}`
           : undefined,
@@ -228,19 +225,19 @@ const MirroredPlayerCard: React.FC<MirroredPlayerCardProps> = ({
           isLeft ? 'text-left' : 'text-right'
         }`}
       >
-        {/* Blurred Agent Artwork in Background ("Boneco no fundo") */}
+        {/* Crisp Agent Artwork in Background ("Boneco no fundo", no blur) */}
         {agentPortrait && (
           <img
             src={agentPortrait}
             alt=""
             aria-hidden="true"
             referrerPolicy="no-referrer"
-            className={`pointer-events-none select-none absolute top-[-18%] h-[185%] w-auto max-w-none object-contain transition-all duration-200 will-change-transform ${
+            className={`pointer-events-none select-none absolute top-[-18%] h-[185%] w-auto max-w-none object-contain transition-opacity duration-200 ${
               isLeft ? 'right-[-10%]' : 'left-[-10%] -scale-x-100'
             } ${
               isFocused
-                ? 'blur-0 opacity-65 brightness-100'
-                : 'blur-[2.5px] opacity-45 brightness-90'
+                ? 'opacity-75 brightness-100'
+                : 'opacity-55 brightness-95'
             }`}
           />
         )}
@@ -451,7 +448,6 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
   const campaignMapLosses = completedSeries.reduce((acc, s) => acc + s.opponentWins, 0);
   const bannedMaps = series.bannedMaps || [];
   const oppShort = formatOpponentShort(series.opponent);
-  const isSelectedDecider = selectedMapIdx === mapQueue.length - 1;
 
   return (
     <div
@@ -461,7 +457,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
       }`}
     >
       {/* =====================================================================
-          FULL-BLEED STAGE BACKGROUND: ENTIRE MAP + ATMOSPHERIC DEPTH-OF-FIELD BLUR
+          FULL-BLEED STAGE BACKGROUND: CRISP FULL MAP (NO BLUR)
          ===================================================================== */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#070a10]" aria-hidden>
         <AnimatePresence mode="sync">
@@ -469,39 +465,23 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
             key={activeMapArt.splash}
             src={activeMapArt.splash}
             alt=""
-            initial={{ opacity: 0, scale: 1.07 }}
-            animate={{ opacity: 1, scale: 1.04 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="absolute inset-0 w-full h-full object-cover blur-[5px] brightness-[0.58] saturate-[1.12] will-change-transform"
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+            className="absolute inset-0 w-full h-full object-cover brightness-[0.68] saturate-[1.08]"
           />
         </AnimatePresence>
 
-        {/* Soft cinematic vignette keeping the open center window luminous */}
+        {/* Clean dark vignette on outer edges keeping the center map crystal clear */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              'radial-gradient(ellipse 52% 60% at 50% 42%, rgba(7,10,16,0.18) 0%, rgba(7,10,16,0.68) 72%, rgba(6,9,15,0.88) 100%)',
+              'radial-gradient(ellipse 58% 65% at 50% 42%, rgba(7,10,16,0.12) 0%, rgba(7,10,16,0.62) 74%, rgba(6,9,15,0.86) 100%)',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#06090f]/80 via-transparent to-[#06090f]/92" />
-
-        {/* Atmospheric team color glow fog (Left vs Right + Gold center on Finals) */}
-        <div
-          className="absolute -left-24 top-1/4 w-[360px] h-[360px] rounded-full blur-[100px] opacity-30"
-          style={{ backgroundColor: teamIdentity.color }}
-        />
-        <div
-          className="absolute -right-24 top-1/4 w-[360px] h-[360px] rounded-full blur-[100px] opacity-30"
-          style={{ backgroundColor: series.opponent.logoColor }}
-        />
-        {isFinals && (
-          <div
-            className="absolute left-1/2 -translate-x-1/2 top-8 w-[340px] h-[220px] rounded-full blur-[90px] opacity-25"
-            style={{ backgroundColor: '#e2b714' }}
-          />
-        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#06090f]/75 via-transparent to-[#06090f]/90" />
       </div>
 
       {/* =====================================================================
@@ -743,24 +723,15 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
               })}
             </div>
 
-            {/* CENTER CORRIDOR: VERTICAL ATMOSPHERIC DIVIDER + CENTRAL MAP WINDOW */}
+            {/* CENTER CORRIDOR: CRISP MAP TITLE OVER CLEAR CENTER MAP */}
             <div className="relative flex flex-col items-center justify-between py-1">
-              {/* Vertical blurred split beam (matching sketch center texture) */}
+              {/* Clean vertical split line */}
               <div
                 className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-[1px]"
                 style={{
                   background: isFinals
-                    ? 'linear-gradient(180deg, transparent 0%, rgba(226,183,20,0.65) 20%, rgba(226,183,20,0.85) 50%, rgba(226,183,20,0.65) 80%, transparent 100%)'
-                    : 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.28) 20%, rgba(255,70,85,0.55) 50%, rgba(255,255,255,0.28) 80%, transparent 100%)',
-                }}
-                aria-hidden
-              />
-              <div
-                className="pointer-events-none absolute inset-y-6 left-1/2 -translate-x-1/2 w-24 blur-[38px] opacity-35"
-                style={{
-                  background: isFinals
-                    ? 'linear-gradient(180deg, #e2b714 0%, transparent 50%, #e2b714 100%)'
-                    : `linear-gradient(180deg, ${teamIdentity.color} 0%, transparent 50%, ${series.opponent.logoColor} 100%)`,
+                    ? 'linear-gradient(180deg, transparent 0%, rgba(226,183,20,0.55) 20%, rgba(226,183,20,0.75) 50%, rgba(226,183,20,0.55) 80%, transparent 100%)'
+                    : 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.22) 20%, rgba(255,70,85,0.45) 50%, rgba(255,255,255,0.22) 80%, transparent 100%)',
                 }}
                 aria-hidden
               />
@@ -777,7 +748,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                 />
                 {focusedRole && (
                   <span
-                    className="mt-1 px-2 py-0.5 rounded-[2px] bg-[#070b12]/80 backdrop-blur-md border border-white/15 font-mono-vct text-[10px] font-bold uppercase tracking-wider"
+                    className="mt-1 px-2 py-0.5 rounded-[2px] bg-[#070b12]/85 border border-white/15 font-mono-vct text-[10px] font-bold uppercase tracking-wider"
                     style={{ color: ROLE_COLORS[focusedRole] }}
                   >
                     Duelo · {ROLE_NAMES_PT[focusedRole]}
@@ -785,55 +756,28 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                 )}
               </div>
 
-              {/* CENTERPIECE: MAP FOCUS WINDOW OVER FULL-BLEED MAP */}
-              <div
-                className={`relative z-10 w-full rounded-[5px] border p-3.5 text-center shadow-[0_20px_50px_-10px_rgba(0,0,0,0.85)] backdrop-blur-md ${
-                  isFinals
-                    ? 'bg-[#090d16]/62 border-[#e2b714]/45'
-                    : 'bg-[#090d16]/55 border-white/20'
-                }`}
-              >
-                {/* Top map label */}
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <MapPin
-                    className="w-3.5 h-3.5 shrink-0"
-                    style={{ color: isFinals ? '#e2b714' : activeMapArt.accentColor }}
-                  />
-                  <span className="font-mono-vct text-[10px] font-bold uppercase tracking-[0.14em] text-slate-200">
-                    {isSelectedDecider
-                      ? `Mapa ${selectedMapIdx + 1} · Decider`
-                      : `Mapa ${selectedMapIdx + 1} de ${mapQueue.length}`}
-                  </span>
-                </div>
-
-                {/* Big crisp Map Name */}
+              {/* CENTERPIECE: CLEAN MAP NAME ONLY (NO BLUR) */}
+              <div className="relative z-10 w-full flex flex-col items-center justify-center text-center px-2">
                 <AnimatePresence mode="wait">
-                  <motion.div
+                  <motion.h3
                     key={activeMapArt.name}
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.16 }}
+                    className="font-display text-5xl xl:text-6xl leading-[0.88] text-white uppercase tracking-wider drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] select-none"
                   >
-                    <h3 className="font-display text-4xl xl:text-5xl leading-[0.9] text-white uppercase tracking-wider drop-shadow-[0_3px_12px_rgba(0,0,0,0.9)]">
-                      {activeMapArt.name}
-                    </h3>
-                    <span
-                      className="block font-mono-vct text-[10px] uppercase tracking-widest mt-1"
-                      style={{ color: activeMapArt.accentColor }}
-                    >
-                      {activeMapArt.location}
-                    </span>
-                  </motion.div>
+                    {activeMapArt.name}
+                  </motion.h3>
                 </AnimatePresence>
 
-                {/* Grand Finals Bans inside the center map card */}
+                {/* Grand Finals Bans (only in Finals) */}
                 {isFinals && bannedMaps.length > 0 && (
-                  <div className="mt-2.5 pt-2 border-t border-white/10 flex flex-wrap items-center justify-center gap-1.5">
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
                     {bannedMaps.map((b, i) => (
                       <span
                         key={`${b.mapName}-${i}`}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] bg-rose-950/60 border border-rose-500/35 font-mono-vct text-[9px] uppercase text-rose-200"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] bg-[#070a10]/85 border border-rose-500/40 font-mono-vct text-[9px] uppercase text-rose-200"
                         title={`Banido por ${b.bannedBy === 'player' ? teamIdentity.name : oppShort}`}
                       >
                         <Ban className="w-2.5 h-2.5 text-rose-400 shrink-0" />
@@ -842,55 +786,45 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                     ))}
                   </div>
                 )}
-
-                {/* Interactive Map Switcher Pills (swap the full-bleed background map!) */}
-                <div className="mt-3 pt-2.5 border-t border-white/10">
-                  <span className="block font-mono-vct text-[9px] uppercase tracking-widest text-slate-300/80 mb-1.5">
-                    Ordem da Série · Clique para visualizar
-                  </span>
-                  <div
-                    className={`grid gap-1 ${
-                      mapQueue.length >= 5 ? 'grid-cols-5' : 'grid-cols-3'
-                    }`}
-                  >
-                    {mapQueue.map((mName, idx) => {
-                      const active = idx === selectedMapIdx;
-                      const decider = idx === mapQueue.length - 1;
-                      return (
-                        <button
-                          key={`${mName}-${idx}`}
-                          type="button"
-                          onClick={() => {
-                            playSelectSound();
-                            setSelectedMapIdx(idx);
-                          }}
-                          className={`px-1 py-1.5 rounded-[3px] border text-center transition-all cursor-pointer ${
-                            active
-                              ? isFinals
-                                ? 'bg-[#e2b714]/25 border-[#e2b714] text-white shadow-sm'
-                                : 'bg-[#ff4655]/25 border-[#ff4655] text-white shadow-sm'
-                              : 'bg-[#070a10]/65 border-white/10 text-slate-300 hover:border-white/30 hover:text-white'
-                          }`}
-                          title={`Mapa ${idx + 1}: ${mName}`}
-                        >
-                          <span className="block font-mono-vct text-[9px] font-bold uppercase leading-none opacity-80">
-                            {decider ? 'DEC' : `M${idx + 1}`}
-                          </span>
-                          <span className="block font-display text-xs xl:text-sm leading-tight uppercase truncate mt-0.5">
-                            {mName}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
               </div>
 
-              {/* Bottom center tag */}
-              <div className="relative z-10 text-center">
-                <span className="inline-block px-2.5 py-1 rounded-[2px] bg-[#070b12]/70 backdrop-blur-md border border-white/10 font-mono-vct text-[10px] uppercase tracking-wider text-slate-200">
-                  Vence em {Math.ceil(series.bestOf / 2)} mapas · MD{series.bestOf}
-                </span>
+              {/* Bottom: Interactive Map Switcher Pills */}
+              <div className="relative z-10 w-full px-1">
+                <div
+                  className={`grid gap-1 ${
+                    mapQueue.length >= 5 ? 'grid-cols-5' : 'grid-cols-3'
+                  }`}
+                >
+                  {mapQueue.map((mName, idx) => {
+                    const active = idx === selectedMapIdx;
+                    const decider = idx === mapQueue.length - 1;
+                    return (
+                      <button
+                        key={`${mName}-${idx}`}
+                        type="button"
+                        onClick={() => {
+                          playSelectSound();
+                          setSelectedMapIdx(idx);
+                        }}
+                        className={`px-1 py-1.5 rounded-[3px] border text-center transition-all cursor-pointer ${
+                          active
+                            ? isFinals
+                              ? 'bg-[#e2b714]/25 border-[#e2b714] text-white shadow-sm'
+                              : 'bg-[#ff4655]/25 border-[#ff4655] text-white shadow-sm'
+                            : 'bg-[#070a10]/80 border-white/15 text-slate-300 hover:border-white/35 hover:text-white'
+                        }`}
+                        title={`Mapa ${idx + 1}: ${mName}`}
+                      >
+                        <span className="block font-mono-vct text-[9px] font-bold uppercase leading-none opacity-80">
+                          {decider ? 'DEC' : `M${idx + 1}`}
+                        </span>
+                        <span className="block font-display text-xs xl:text-sm leading-tight uppercase truncate mt-0.5">
+                          {mName}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -929,39 +863,18 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
 
           {/* MOBILE & TABLET LAYOUT (< lg) */}
           <div className="lg:hidden space-y-3">
-            {/* Compact Map Switcher Card */}
-            <div
-              className={`rounded-[4px] border p-3 text-center backdrop-blur-md ${
-                isFinals
-                  ? 'bg-[#090d16]/65 border-[#e2b714]/45'
-                  : 'bg-[#090d16]/60 border-white/15'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="text-left">
-                  <span className="block font-mono-vct text-[10px] font-bold uppercase tracking-wider text-slate-300">
-                    {isSelectedDecider
-                      ? `Mapa ${selectedMapIdx + 1} · Decider`
-                      : `Mapa ${selectedMapIdx + 1} de ${mapQueue.length}`}
-                  </span>
-                  <span className="font-display text-3xl leading-none text-white uppercase tracking-wide">
-                    {activeMapArt.name}
-                  </span>
-                </div>
-                <span
-                  className="font-mono-vct text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-[#070a10]/70 border border-white/10"
-                  style={{ color: activeMapArt.accentColor }}
-                >
-                  {activeMapArt.location}
-                </span>
-              </div>
+            {/* Compact Map Switcher Card (clean map name, no blur) */}
+            <div className="p-2 text-center space-y-2">
+              <h3 className="font-display text-4xl leading-none text-white uppercase tracking-wider drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)]">
+                {activeMapArt.name}
+              </h3>
 
               {isFinals && bannedMaps.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
                   {bannedMaps.map((b, i) => (
                     <span
                       key={`${b.mapName}-${i}`}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] bg-rose-950/60 border border-rose-500/35 font-mono-vct text-[10px] uppercase text-rose-200"
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] bg-[#070a10]/85 border border-rose-500/40 font-mono-vct text-[10px] uppercase text-rose-200"
                     >
                       <Ban className="w-2.5 h-2.5 text-rose-400" />
                       <span className="line-through">{b.mapName}</span>
@@ -990,7 +903,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                           ? isFinals
                             ? 'bg-[#e2b714]/25 border-[#e2b714] text-white'
                             : 'bg-[#ff4655]/25 border-[#ff4655] text-white'
-                          : 'bg-[#070a10]/70 border-white/10 text-slate-300'
+                          : 'bg-[#070a10]/80 border-white/15 text-slate-300'
                       }`}
                     >
                       <span className="block font-mono-vct text-[9px] font-bold opacity-80">
@@ -1005,7 +918,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
               </div>
             </div>
 
-            {/* 5 Stacked Compact Mirrored Duels on Mobile */}
+            {/* 5 Stacked Compact Mirrored Duels on Mobile (no blur) */}
             <div className="space-y-2">
               {ROLE_ORDER.map(role => {
                 const myP = lineup[role];
@@ -1020,9 +933,9 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                 return (
                   <div
                     key={`mob-${role}`}
-                    className="rounded-[4px] overflow-hidden border border-white/12 bg-[#090d16]/65 backdrop-blur-md"
+                    className="rounded-[4px] overflow-hidden border border-white/15 bg-[#090d16]/85"
                   >
-                    <div className="px-2.5 py-1 bg-[#070a10]/70 border-b border-white/[0.07] flex items-center justify-center gap-1.5">
+                    <div className="px-2.5 py-1 bg-[#070a10]/80 border-b border-white/[0.07] flex items-center justify-center gap-1.5">
                       <RoleEmblem role={role} size="xs" showBackground={false} />
                       <span
                         className="font-mono-vct text-[10px] font-bold uppercase tracking-wider"
@@ -1049,7 +962,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                               alt=""
                               aria-hidden
                               referrerPolicy="no-referrer"
-                              className="pointer-events-none absolute right-[-15%] top-[-15%] h-[170%] w-auto opacity-35 blur-[2px]"
+                              className="pointer-events-none absolute right-[-15%] top-[-15%] h-[170%] w-auto opacity-45"
                             />
                           )}
                           <div className="relative z-10 flex items-center gap-1">
@@ -1075,7 +988,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                               alt=""
                               aria-hidden
                               referrerPolicy="no-referrer"
-                              className="pointer-events-none absolute left-[-15%] top-[-15%] h-[170%] w-auto opacity-35 blur-[2px] -scale-x-100"
+                              className="pointer-events-none absolute left-[-15%] top-[-15%] h-[170%] w-auto opacity-45 -scale-x-100"
                             />
                           )}
                           <div className="relative z-10 flex items-center justify-end gap-1">
