@@ -354,12 +354,44 @@ export const TEAM_REAL_LOGOS: Record<string, TeamLogoData> = {
     logoUrl: './logos/drg.png',
     category: 'China',
   },
+  envy: {
+    name: 'Team Envy',
+    shortName: 'ENVY',
+    primaryColor: '#0ea5e9',
+    secondaryColor: '#111111',
+    logoUrl: './logos/envy.png',
+    category: 'Americas',
+  },
+  bbl: {
+    name: 'BBL Esports',
+    shortName: 'BBL',
+    primaryColor: '#f59e0b',
+    secondaryColor: '#111111',
+    logoUrl: './logos/bbl.png',
+    category: 'EMEA',
+  },
+  gambit: {
+    name: 'Gambit Esports',
+    shortName: 'GMB',
+    primaryColor: '#ef4444',
+    secondaryColor: '#111111',
+    logoUrl: './logos/gambit.png',
+    category: 'EMEA',
+  },
+  secret: {
+    name: 'Team Secret',
+    shortName: 'TS',
+    primaryColor: '#ffffff',
+    secondaryColor: '#111111',
+    logoUrl: './logos/secret.png',
+    category: 'Pacific',
+  },
 };
 
 // Normalized helper to find team data
 export function getTeamLogoData(teamQuery: string): TeamLogoData | null {
   if (!teamQuery) return null;
-  const q = teamQuery.toLowerCase().replace(/[\s-]/g, '');
+  const q = teamQuery.toLowerCase().replace(/[\s.-]/g, '');
 
   if (q.includes('loud')) return TEAM_REAL_LOGOS.loud;
   if (q.includes('furia') || q === 'fur') return TEAM_REAL_LOGOS.furia;
@@ -406,6 +438,10 @@ export function getTeamLogoData(teamQuery: string): TeamLogoData | null {
   if (q.includes('xset')) return TEAM_REAL_LOGOS.xset;
   if (q.includes('boom') || q === 'bme') return TEAM_REAL_LOGOS.boom;
   if (q.includes('xerxia') || q === 'xia') return TEAM_REAL_LOGOS.xerxia;
+  if (q.includes('envy')) return TEAM_REAL_LOGOS.envy;
+  if (q.includes('bbl')) return TEAM_REAL_LOGOS.bbl;
+  if (q.includes('gambit') || q === 'gmb') return TEAM_REAL_LOGOS.gambit;
+  if (q.includes('secret') || q === 'ts') return TEAM_REAL_LOGOS.secret;
 
   return null;
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ArrowRight, Trophy, Users, Swords } from 'lucide-react';
+import { X, Trophy, Users, Swords } from 'lucide-react';
 import { playSelectSound } from '../utils/audio';
 import { Card, PrimaryButton } from './ui';
 
@@ -36,85 +36,35 @@ export const RulesModal: React.FC<RulesModalProps> = ({ onClose, onReplayTutoria
           </div>
         </div>
 
-        {/* Visual 3-Step Flow: Draft -> Torneio -> Troféu */}
+        {/* Clean 3-Step Flow: Draft -> Torneio -> Troféu */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-          {/* Step 1: Draft */}
-          <div className="surface-sub p-4 flex flex-col justify-between gap-3">
+          <div className="surface-sub p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs font-mono-vct">
               <span className="text-[#ff4655] font-bold">01 · DRAFT</span>
-              <Users className="w-4 h-4 text-[#ff4655]" />
+              <Users className="w-4 h-4 text-slate-400" />
             </div>
-
-            {/* Visual mini mockup */}
-            <div className="bg-[#080b10] border border-white/[0.06] rounded-[2px] p-2.5 space-y-1.5">
-              <div className="grid grid-cols-5 gap-1">
-                {['#ff4655', '#38bdf8', '#a855f7', '#eab308', '#10b981'].map((c, idx) => (
-                  <div
-                    key={idx}
-                    className="h-5 rounded-[1px] bg-[#141a24] border-t-2"
-                    style={{ borderTopColor: c }}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center justify-between text-xs font-mono-vct text-slate-400">
-                <span>5 funções</span>
-                <span className="text-emerald-400">+Química</span>
-              </div>
-            </div>
-
             <p className="text-xs text-slate-300 leading-relaxed">
-              Pega 1 jogador entre os 3 times da rodada até fechar as 5 vagas. Jogadores do mesmo elenco dão química extra.
+              Escolha 1 jogador entre os 3 times da rodada até fechar as 5 funções. Jogadores do mesmo elenco somam química extra.
             </p>
           </div>
 
-          {/* Step 2: Torneio */}
-          <div className="surface-sub p-4 flex flex-col justify-between gap-3">
+          <div className="surface-sub p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs font-mono-vct">
-              <span className="text-[#38bdf8] font-bold">02 · TORNEIO</span>
-              <Swords className="w-4 h-4 text-[#38bdf8]" />
+              <span className="text-white font-bold">02 · TORNEIO</span>
+              <Swords className="w-4 h-4 text-slate-400" />
             </div>
-
-            {/* Visual mini mockup */}
-            <div className="bg-[#080b10] border border-white/[0.06] rounded-[2px] p-2.5 space-y-1.5">
-              <div className="flex items-center justify-center gap-1.5 font-mono-vct text-xs font-bold">
-                <span className="px-1.5 py-0.5 bg-[#141a24] text-emerald-400">2</span>
-                <span className="text-slate-500">:</span>
-                <span className="px-1.5 py-0.5 bg-[#141a24] text-rose-400">1</span>
-              </div>
-              <div className="flex items-center justify-center gap-1 text-xs font-mono-vct text-slate-400">
-                <span>Grupos</span>
-                <ArrowRight className="w-3 h-3" />
-                <span>Quartas</span>
-                <ArrowRight className="w-3 h-3" />
-                <span>Final</span>
-              </div>
-            </div>
-
             <p className="text-xs text-slate-300 leading-relaxed">
-              Disputa 4 séries seguidas (MD3 até as semis e Grande Final MD5). O Overall fica oculto pra ninguém resetar antes da hora.
+              Dispute 4 séries seguidas (MD3 até as semis e Grande Final MD5). O Overall fica oculto durante o draft.
             </p>
           </div>
 
-          {/* Step 3: Troféu */}
-          <div className="surface-sub p-4 flex flex-col justify-between gap-3">
+          <div className="surface-sub p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs font-mono-vct">
               <span className="text-[#e2b714] font-bold">03 · TROFÉU</span>
-              <Trophy className="w-4 h-4 text-[#e2b714]" />
+              <Trophy className="w-4 h-4 text-slate-400" />
             </div>
-
-            {/* Visual mini mockup */}
-            <div className="bg-[#080b10] border border-white/[0.06] rounded-[2px] p-2.5 space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-mono-vct">
-                <span className="text-[#e2b714] font-bold">MVP</span>
-                <span className="text-slate-200">248 ACS</span>
-              </div>
-              <div className="h-1.5 bg-white/10 rounded-[1px] overflow-hidden">
-                <div className="w-4/5 h-full bg-[#e2b714]" />
-              </div>
-            </div>
-
             <p className="text-xs text-slate-300 leading-relaxed">
-              Venceu a final, o título, os 5 jogadores e o MVP ficam salvos na tua Sala de Troféus.
+              Ao vencer a final, seu elenco campeão, o MVP da campanha e as conquistas ficam salvos na Sala de Troféus.
             </p>
           </div>
         </div>

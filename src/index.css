@@ -23,22 +23,22 @@
   --color-role-sentinel: #eab308;
   --color-role-flex: #10b981;
 
-  --animate-fadeIn: fadeIn 0.25s ease-out both;
-  --animate-popIn: popIn 0.24s cubic-bezier(0.2, 1.15, 0.4, 1) both;
-  --animate-slideInLeft: slideInLeft 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-slideUp: slideUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fadeIn: fadeIn 0.18s ease-out both;
+  --animate-popIn: popIn 0.16s ease-out both;
+  --animate-slideInLeft: slideInLeft 0.2s ease-out both;
+  --animate-slideUp: slideUp 0.2s ease-out both;
 }
 
 /* ================================================================
    KEYFRAMES (Action-driven only; zero idle ambient looping)
    ================================================================ */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes popIn {
-  0% { opacity: 0; transform: scale(0.96) translateY(6px); }
+  0% { opacity: 0; transform: scale(0.985) translateY(3px); }
   100% { opacity: 1; transform: none; }
 }
 

@@ -418,7 +418,7 @@ export const ValorantGridMode: React.FC = () => {
     <div className="w-full max-w-3xl mx-auto py-1 sm:py-2 space-y-2.5 sm:space-y-4">
       {/* Mode Switcher Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-xl border border-white/10">
+        <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-[3px] border border-white/10">
           <button
             id="grid-mode-daily-btn"
             onClick={() => {
@@ -426,9 +426,9 @@ export const ValorantGridMode: React.FC = () => {
               setShowGridPicker(false);
               loadBoardIntoView('daily', currentPuzzleIndex);
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-[2px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
               mode === 'daily'
-                ? 'bg-[#ff4655] text-white shadow-sm'
+                ? 'bg-[#ff4655] text-white'
                 : 'text-slate-300 hover:text-white'
             }`}
           >
@@ -441,9 +441,9 @@ export const ValorantGridMode: React.FC = () => {
               playSelectSound();
               loadBoardIntoView('classic', currentPuzzleIndex);
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-[2px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
               mode === 'classic'
-                ? 'bg-[#ff4655] text-white shadow-sm'
+                ? 'bg-[#ff4655] text-white'
                 : 'text-slate-300 hover:text-white'
             }`}
           >

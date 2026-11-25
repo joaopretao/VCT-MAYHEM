@@ -536,7 +536,7 @@ export const PLAYERS_2023: Player[] = [
     championsYears: [2022, 2023, 2024, 2025, 2026],
     primaryRole: 'Duelist',
     secondaryRoles: ['Flex'],
-    signatureAgent: 'Operator / Jett',
+    signatureAgent: 'Jett',
     rating: 92,
     consistency: 90,
     clutch: 93,

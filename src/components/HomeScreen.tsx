@@ -5,7 +5,7 @@ import { Difficulty, RunRuleId } from '../types';
 import { RUN_RULES } from '../utils/runRules';
 import { Card, PrimaryButton, SecondaryButton } from './ui';
 import { TeamLogo } from './TeamLogo';
-import { playSelectSound, playHoverSound } from '../utils/audio';
+import { playSelectSound } from '../utils/audio';
 
 type ModeTab = 'draft' | 'grid' | 'trivia' | 'history';
 
@@ -130,7 +130,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   CHAMPIONS MAYHEM
                 </h1>
                 <p className="text-xs sm:text-sm md:text-base text-slate-300 max-w-xl leading-relaxed">
-                  Cinco picks, três times por rodada. Monta tua line com jogadores reais do VCT (2022–2026) e busca o título mundial.
+                  Cinco picks, três times por rodada. Monte seu elenco com jogadores reais do VCT (2022–2026) e dispute o título mundial.
                 </p>
               </div>
 
@@ -148,7 +148,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <PrimaryButton
                     id="home-play-mayhem-btn"
                     size="lg"
-                    onMouseEnter={() => playHoverSound()}
                     onClick={() => {
                       playSelectSound();
                       onSelectMode('draft');
@@ -290,77 +289,74 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <Card
           variant="interactive"
           padding="none"
-          onMouseEnter={() => playHoverSound()}
           onClick={() => {
             playSelectSound();
             onSelectMode('grid');
           }}
-          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-[#e2b714]/55"
+          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-white/30"
         >
           <div className="space-y-0.5 md:space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
-              <span className="text-[#e2b714] font-bold uppercase tracking-wider">3×3</span>
-              <span className="text-slate-300">5 tabuleiros</span>
+              <span className="text-[#ff4655] font-bold uppercase tracking-wider">3×3 · 9 vidas</span>
+              <span className="text-slate-400">Diário + 5 clássicos</span>
             </div>
             <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
               GRID VCT
             </h3>
             <p className="hidden md:block text-sm text-slate-300 leading-relaxed">
-              Cruza camisas, janelas de transferência e nacionalidades sem dar um chute aleatório.
+              Cruze transferências e nacionalidades do VCT (2021–2026) com 9 tentativas por tabuleiro.
             </p>
           </div>
 
           <SecondaryButton id="home-play-grid-btn" size="sm" className="shrink-0 md:w-full md:justify-between">
             <span className="md:hidden">Jogar</span>
             <span className="hidden md:inline">Abrir Grid</span>
-            <ArrowRight className="w-4 h-4 text-[#e2b714]" />
+            <ArrowRight className="w-4 h-4 text-slate-300" />
           </SecondaryButton>
         </Card>
 
         <Card
           variant="interactive"
           padding="none"
-          onMouseEnter={() => playHoverSound()}
           onClick={() => {
             playSelectSound();
             onSelectMode('trivia');
           }}
-          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-[#38bdf8]/55"
+          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-white/30"
         >
           <div className="space-y-0.5 md:space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
-              <span className="text-[#38bdf8] font-bold uppercase tracking-wider">Diário</span>
-              <span className="text-slate-300">8 chances</span>
+              <span className="text-[#ff4655] font-bold uppercase tracking-wider">Diário</span>
+              <span className="text-slate-400">8 tentativas</span>
             </div>
             <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
               TRIVIA DOS PROS
             </h3>
             <p className="hidden md:block text-sm text-slate-300 leading-relaxed">
-              Descobre o jogador misterioso pelas pistas de time, região, função e agente assinatura.
+              Descubra o atleta secreto usando país, equipe, idade, estreia, títulos internacionais e status.
             </p>
           </div>
 
           <SecondaryButton id="home-play-trivia-btn" size="sm" className="shrink-0 md:w-full md:justify-between">
             <span className="md:hidden">Jogar</span>
             <span className="hidden md:inline">Jogar Trivia</span>
-            <ArrowRight className="w-4 h-4 text-[#38bdf8]" />
+            <ArrowRight className="w-4 h-4 text-slate-300" />
           </SecondaryButton>
         </Card>
 
         <Card
           variant="interactive"
           padding="none"
-          onMouseEnter={() => playHoverSound()}
           onClick={() => {
             playSelectSound();
             onSelectMode('history');
           }}
-          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-[#10b981]/55"
+          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-white/30"
         >
           <div className="space-y-0.5 md:space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
-              <span className="text-[#10b981] font-bold uppercase tracking-wider">Histórico</span>
-              <span className="text-slate-300">
+              <span className="text-slate-300 font-bold uppercase tracking-wider">Histórico</span>
+              <span className="text-slate-400">
                 {trophiesCount} {trophiesCount === 1 ? 'título' : 'títulos'}
               </span>
             </div>
@@ -368,14 +364,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               SALA DE TROFÉUS
             </h3>
             <p className="hidden md:block text-sm text-slate-300 leading-relaxed">
-              Teus campeões salvos, MVPs de cada campanha e conquistas desbloqueadas.
+              Seus elencos campeões salvos, MVPs de cada campanha e conquistas desbloqueadas.
             </p>
           </div>
 
           <SecondaryButton id="home-open-history-btn" size="sm" className="shrink-0 md:w-full md:justify-between">
             <span className="md:hidden">Abrir</span>
             <span className="hidden md:inline">Ver Troféus</span>
-            <ArrowRight className="w-4 h-4 text-[#10b981]" />
+            <ArrowRight className="w-4 h-4 text-slate-300" />
           </SecondaryButton>
         </Card>
       </div>

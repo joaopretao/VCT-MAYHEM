@@ -191,7 +191,7 @@ export const GridPlayerSearchModal: React.FC<GridPlayerSearchModalProps> = ({
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Digite o nick ou nome real do jogador (ex: aspas, Sacy, Derke, Ethan)..."
               autoFocus
-              className="w-full pl-10 pr-8 py-2.5 bg-black/40 border border-white/15 rounded-xl text-white placeholder:text-slate-400 text-xs sm:text-sm focus:outline-none focus:border-[#ff4655]"
+              className="w-full pl-10 pr-8 py-2.5 bg-black/40 border border-white/15 rounded-[3px] text-white placeholder:text-slate-400 text-xs sm:text-sm focus:outline-none focus:border-[#ff4655]"
             />
             {searchTerm && (
               <button
@@ -227,7 +227,7 @@ export const GridPlayerSearchModal: React.FC<GridPlayerSearchModalProps> = ({
                 <div
                   key={player.id}
                   onClick={() => !isUsed && handlePlayerClick(player)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-colors ${
+                  className={`flex items-center justify-between px-3 py-2 rounded-[3px] border transition-colors ${
                     isUsed
                       ? 'opacity-40 cursor-not-allowed bg-black/30 border-white/5'
                       : 'glass-film cursor-pointer hover:border-[#ff4655] hover:bg-[#ff4655]/10'
@@ -247,7 +247,7 @@ export const GridPlayerSearchModal: React.FC<GridPlayerSearchModalProps> = ({
 
                   <button
                     disabled={isUsed}
-                    className={`px-3 py-1 rounded-lg text-xs font-mono-vct font-bold uppercase tracking-wider transition-colors ${
+                    className={`px-3 py-1 rounded-[2px] text-xs font-mono-vct font-bold uppercase tracking-wider transition-colors ${
                       isUsed
                         ? 'bg-white/5 text-slate-400'
                         : 'bg-[#ff4655] hover:bg-[#e03b49] text-white'

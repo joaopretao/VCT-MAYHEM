@@ -40,10 +40,10 @@ interface StageQualifiedScreenProps {
 }
 
 const STAGE_COPY: Record<TournamentStage, { tag: string; title: string; next: string }> = {
-  group: { tag: 'Fase de Grupos', title: 'Passou. Próxima: Quartas.', next: 'Ir pras Quartas' },
-  quarters: { tag: 'Quartas de Final', title: 'Nas Semis.', next: 'Ir pras Semis' },
-  semis: { tag: 'Semifinal', title: 'Na Grande Final.', next: 'Disputar a Final' },
-  finals: { tag: 'Grande Final', title: 'Campeão.', next: 'Continuar' },
+  group: { tag: 'Fase de Grupos', title: 'Classificado às Quartas', next: 'Ir para as Quartas' },
+  quarters: { tag: 'Quartas de Final', title: 'Classificado às Semis', next: 'Ir para as Semis' },
+  semis: { tag: 'Semifinal', title: 'Na Grande Final', next: 'Disputar a Final' },
+  finals: { tag: 'Grande Final', title: 'Campeão Mundial', next: 'Continuar' },
 };
 
 export const StageQualifiedScreen: React.FC<StageQualifiedScreenProps> = ({

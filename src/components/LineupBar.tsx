@@ -16,7 +16,6 @@ import { TraitBadge } from './TraitBadge';
 import { CountryFlag } from './CountryFlag';
 import { TeamCrest, DEFAULT_TEAM_IDENTITY } from './TeamCrest';
 import { MayhemBonusChip } from './MayhemBonusChip';
-import { Confetti } from './Confetti';
 import { ROLE_ORDER, getNextOpenRole } from './roleOrder';
 import { Card, StatPill, PrimaryButton, SecondaryButton, AnimatedNumber } from './ui';
 
@@ -685,8 +684,6 @@ export const LineupBar: React.FC<LineupBarProps> = ({
           );
         })}
       </div>
-
-      <Confetti fire={isComplete} />
     </Card>
   );
 };

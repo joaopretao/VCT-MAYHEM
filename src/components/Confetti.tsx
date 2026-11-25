@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-const COLORS = ['#ff4655', '#e2b714', '#38bdf8', '#10b981', '#a855f7', '#ffffff'];
+const COLORS = ['#ff4655', '#e2b714', '#ffffff'];
 
 interface ConfettiProps {
   /** Fires a burst every time this becomes true */

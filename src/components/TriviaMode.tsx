@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Check, X, ArrowUp, ArrowDown, HelpCircle, Trophy, RotateCcw, MapPin, Calendar, Flame } from 'lucide-react';
 import { Player, TriviaGuess } from '../types';
 import { PLAYERS_DATABASE, TEAMS_DATABASE } from '../data/teamsAndPlayers';
@@ -10,7 +10,6 @@ import { playRoundWinSound, playRoundLossSound, playSelectSound } from '../utils
 import { TeamLogo } from './TeamLogo';
 import { PlayerAvatar } from './PlayerAvatar';
 import { RoleEmblem } from './RoleEmblem';
-import { Confetti } from './Confetti';
 import { Card, PrimaryButton } from './ui';
 
 interface CanonicalTriviaPlayer {
@@ -105,7 +104,6 @@ export const TriviaMode: React.FC = () => {
   const [guesses, setGuesses] = useState<TriviaGuess[]>([]);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [streak, setStreak] = useState<number>(() => loadTriviaStreak(todayKey).streak);
-  const practiceFireConfettiRef = useRef<boolean>(false);
 
   const getRegionForTeam = (teamName: string): string => {
     const dbTeam = TEAMS_DATABASE.find(t => t.name.toLowerCase() === teamName.toLowerCase());
@@ -210,7 +208,6 @@ export const TriviaMode: React.FC = () => {
             }
             const won = restored.some(g => g.isCorrect);
             const done = won || restored.length >= MAX_TRIVIA_ATTEMPTS;
-            practiceFireConfettiRef.current = false;
             setGuesses(restored);
             setIsGameOver(done);
             return;
@@ -220,7 +217,6 @@ export const TriviaMode: React.FC = () => {
         // ignore invalid storage
       }
 
-      practiceFireConfettiRef.current = false;
       setGuesses([]);
       setIsGameOver(false);
       return;
@@ -228,7 +224,6 @@ export const TriviaMode: React.FC = () => {
 
     const randomEntry =
       CANONICAL_TRIVIA_PLAYERS[Math.floor(Math.random() * CANONICAL_TRIVIA_PLAYERS.length)];
-    practiceFireConfettiRef.current = false;
     setTargetEntry(randomEntry);
     setGuesses([]);
     setIsGameOver(false);
@@ -262,7 +257,6 @@ export const TriviaMode: React.FC = () => {
     }
 
     if (isMatch) {
-      practiceFireConfettiRef.current = true;
       setIsGameOver(true);
       playRoundWinSound();
 
@@ -327,9 +321,6 @@ export const TriviaMode: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto my-1 sm:my-4 space-y-3 sm:space-y-4">
-      {/* Confetti on fresh victory */}
-      <Confetti fire={practiceFireConfettiRef.current && isGameOver && Boolean(guesses[0]?.isCorrect)} />
-
       {/* Header Banner */}
       <div className="text-center space-y-1 sm:space-y-1.5">
         <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-[#38bdf8] block">
@@ -369,15 +360,15 @@ export const TriviaMode: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-xl border border-white/10">
+          <div className="flex items-center gap-1 bg-[#0b0e14] p-1 rounded-[3px] border border-white/10">
             <button
               onClick={() => {
                 playSelectSound();
                 setMode('daily');
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-[2px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                 mode === 'daily'
-                  ? 'bg-[#ff4655] text-white shadow-sm'
+                  ? 'bg-[#ff4655] text-white'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -393,9 +384,9 @@ export const TriviaMode: React.FC = () => {
                   setMode('practice');
                 }
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-[2px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                 mode === 'practice'
-                  ? 'bg-[#ff4655] text-white shadow-sm'
+                  ? 'bg-[#ff4655] text-white'
                   : 'text-slate-300 hover:text-white'
               }`}
             >

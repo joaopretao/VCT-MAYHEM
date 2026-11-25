@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Flame, Crown, Swords, Sparkles, Zap, Dices, X, Check } from 'lucide-react';
+import { Shield, Flame, Crown, Swords, Crosshair, Zap, Dices, X, Check } from 'lucide-react';
 import { CustomEmblemId, UserTeamIdentity } from '../types';
 import { playSelectSound } from '../utils/audio';
 import { Card, PrimaryButton, SecondaryButton } from './ui';
@@ -15,7 +15,7 @@ export const TEAM_EMBLEMS: { id: CustomEmblemId; label: string }[] = [
   { id: 'flame', label: 'Chama' },
   { id: 'crown', label: 'Coroa' },
   { id: 'sword', label: 'Lâminas' },
-  { id: 'phoenix', label: 'Fênix' },
+  { id: 'phoenix', label: 'Mira' },
   { id: 'bolt', label: 'Raio' },
 ];
 
@@ -25,18 +25,18 @@ export const TEAM_COLOR_SWATCHES: { color: string; label: string }[] = [
   { color: '#38bdf8', label: 'Azul Celeste' },
   { color: '#10b981', label: 'Esmeralda' },
   { color: '#a855f7', label: 'Roxo Radiante' },
-  { color: '#f97316', label: 'Laranja Fúria' },
+  { color: '#f97316', label: 'Laranja' },
 ];
 
 export const SUGGESTED_TEAM_NAMES = [
-  'TEAM MAYHEM',
-  'RADIANTS BR',
-  'OMEGA FIVE',
-  'SPIKE CLUB',
-  'VANGUARDIA',
-  'CLUTCH KINGS',
-  'VALOR BR',
-  'APEX PROTOCOL',
+  'BOMB SITE A',
+  'ECO ROUND',
+  'RETAKE FIVE',
+  'SPIKE DOWN',
+  'LAST CHANCE',
+  'OVERDRIVE',
+  'MAIN ENTRY',
+  'CLUTCH LINE',
 ];
 
 function renderEmblemGlyph(emblemId: CustomEmblemId, className: string, color: string) {
@@ -49,7 +49,7 @@ function renderEmblemGlyph(emblemId: CustomEmblemId, className: string, color: s
     case 'sword':
       return <Swords className={className} style={style} />;
     case 'phoenix':
-      return <Sparkles className={className} style={style} />;
+      return <Crosshair className={className} style={style} />;
     case 'bolt':
       return <Zap className={className} style={style} />;
     case 'shield':

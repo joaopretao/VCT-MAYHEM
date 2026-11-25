@@ -89,8 +89,8 @@ export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
             </span>
           </div>
 
-          {/* 3 Bonus Cards with 3D reveal flip + Synergy preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4 [perspective:1100px]">
+          {/* 3 Bonus Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
             {choices.map((bonus, idx) => {
               const meta = BONUS_RARITY_META[bonus.rarity];
               const hotkey = idx + 1;
@@ -112,17 +112,15 @@ export const MayhemBonusModal: React.FC<MayhemBonusModalProps> = ({
                   key={bonus.id}
                   id={`mayhem-bonus-card-${idx}`}
                   type="button"
-                  initial={{ opacity: 0, rotateY: 85, scale: 0.96 }}
-                  animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{
-                    delay: idx * 0.08,
-                    duration: 0.34,
-                    ease: [0.22, 1, 0.36, 1],
+                    delay: idx * 0.05,
+                    duration: 0.18,
+                    ease: 'easeOut',
                   }}
-                  whileHover={{ y: -3 }}
-                  whileTap={{ scale: 0.985 }}
                   onClick={() => onSelect(bonus)}
-                  className="group relative text-left rounded-[4px] border bg-[#11151d] hover:bg-[#161c27] active:bg-[#1a212e] p-3.5 sm:p-5 flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 sm:gap-4 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/60 overflow-hidden [transform-style:preserve-3d]"
+                  className="group relative text-left rounded-[4px] border bg-[#11151d] hover:bg-[#161c27] active:bg-[#1a212e] p-3.5 sm:p-5 flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 sm:gap-4 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/60 overflow-hidden"
                   style={{
                     borderColor: meta.borderColor,
                     boxShadow: meta.glowShadow,

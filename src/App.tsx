@@ -657,8 +657,6 @@ export default function App() {
       <Navbar
         currentTab={currentTab}
         onTabChange={handleTabChange}
-        difficulty={difficulty}
-        onDifficultyChange={handleDifficultyChange}
         onOpenHelp={() => setShowRulesModal(true)}
         trophiesCount={championshipsCount}
       />

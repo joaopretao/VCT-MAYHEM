@@ -50,11 +50,11 @@ export const GridResultModal: React.FC<GridResultModalProps> = ({
   const isPerfect = isCompleted && totalScore === maxPossible;
 
   const getRankBadge = () => {
-    if (isPerfect) return { title: 'Radiante', color: '#f59e0b', desc: '9/9 de primeira. Gabarito limpo.' };
-    if (isCompleted && totalScore >= 450) return { title: 'Imortal', color: '#ff4655', desc: 'Quase perfeito nas janelas e elencos.' };
-    if (totalScore >= 300) return { title: 'Ascendente / Diamante', color: '#38bdf8', desc: 'Boa leitura das conexões.' };
-    if (solvedCount >= 5) return { title: 'Ouro / Platina', color: '#10b981', desc: 'Mandou bem nos principais cruzamentos.' };
-    return { title: 'Ferro / Prata', color: '#94a3b8', desc: 'Confira o gabarito para ver as conexões possíveis.' };
+    if (isPerfect) return { title: 'Radiante', color: '#f59e0b', desc: '9/9 sem erros.' };
+    if (isCompleted && totalScore >= 450) return { title: 'Imortal', color: '#ff4655', desc: 'Tabuleiro completo com alta precisão.' };
+    if (totalScore >= 300) return { title: 'Ascendente / Diamante', color: '#38bdf8', desc: 'Bom domínio de elencos e transferências.' };
+    if (solvedCount >= 5) return { title: 'Ouro / Platina', color: '#10b981', desc: 'Mais da metade das interseções resolvidas.' };
+    return { title: 'Ferro / Prata', color: '#94a3b8', desc: 'Confira o gabarito para ver as conexões válidas.' };
   };
 
   const rank = getRankBadge();
