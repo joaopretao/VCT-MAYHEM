@@ -9,6 +9,7 @@ import {
   UserTeamIdentity,
 } from '../types';
 import { getPlayerPhotoUrl } from '../data/playerPhotos';
+import { TEAM_REAL_LOGOS } from '../data/teamLogos';
 import { getFrameMeta } from '../data/frames';
 import { getRunRuleMeta } from './runRules';
 import { ROLE_COLORS, ROLE_NAMES_PT } from '../data/roleIcons';
@@ -133,10 +134,6 @@ export async function generateShareResultPngDataUrl(params: ShareCardParams): Pr
     : `VALORANT CHAMPIONS MAYHEM · ${STAGE_LABEL_PT[params.stageReached]}`;
   ctx.fillText(topSubtitle, 54, 72);
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '800 50px system-ui, -apple-system, sans-serif';
-  ctx.fillText(params.teamIdentity.name.slice(0, 22), 54, 128);
-
   // Result pill on top right
   const scoreBadgeText = params.wonChampionship
     ? `CAMPEÃO (${params.seriesScore})`
@@ -160,14 +157,27 @@ export async function generateShareResultPngDataUrl(params: ShareCardParams): Pr
     160
   );
 
-  // 3. Load brand mark and the 5 Player Card photos in parallel
-  const [brandLogo, ...photos] = await Promise.all([
+  // 3. Load brand mark, optional custom team logo, and the 5 Player Card photos in parallel
+  const userTeamLogoUrl = params.teamIdentity.logoTeamKey
+    ? TEAM_REAL_LOGOS[params.teamIdentity.logoTeamKey]?.logoUrl.replace(/^\.\//, '/') || null
+    : null;
+  const [brandLogo, userTeamLogo, ...photos] = await Promise.all([
     loadImageSafe('/brand/logo-color.png'),
+    loadImageSafe(userTeamLogoUrl),
     ...ROLE_ORDER.map(role => {
       const p = params.lineup[role];
       return loadImageSafe(p ? getPlayerPhotoUrl(p.ign) : null);
     }),
   ]);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '800 50px system-ui, -apple-system, sans-serif';
+  if (userTeamLogo) {
+    ctx.drawImage(userTeamLogo, 54, 86, 44, 44);
+    ctx.fillText(params.teamIdentity.name.slice(0, 20), 110, 128);
+  } else {
+    ctx.fillText(params.teamIdentity.name.slice(0, 22), 54, 128);
+  }
 
   const cardStartX = 54;
   const cardGap = 18;

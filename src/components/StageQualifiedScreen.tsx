@@ -84,7 +84,12 @@ export const StageQualifiedScreen: React.FC<StageQualifiedScreenProps> = ({
         <div className="absolute inset-x-0 top-0 h-1 bg-emerald-400" aria-hidden />
 
         <div className="flex items-center gap-2 mb-1">
-          <TeamCrest emblemId={teamIdentity.emblemId} color={teamIdentity.color} size="xs" />
+          <TeamCrest
+            emblemId={teamIdentity.emblemId}
+            color={teamIdentity.color}
+            logoTeamKey={teamIdentity.logoTeamKey}
+            size="xs"
+          />
           <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-emerald-400">
             {teamIdentity.name} · {copy.tag}
           </span>

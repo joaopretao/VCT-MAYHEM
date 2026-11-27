@@ -600,6 +600,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
               <TeamCrest
                 emblemId={teamIdentity.emblemId}
                 color={teamIdentity.color}
+                logoTeamKey={teamIdentity.logoTeamKey}
                 size="lg"
                 className="w-10 h-10 sm:w-12 sm:h-12 shrink-0"
               />

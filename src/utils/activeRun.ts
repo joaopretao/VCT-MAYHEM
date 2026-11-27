@@ -1,5 +1,6 @@
 import { ActiveRunSave, Difficulty, Lineup, Player, RunRuleId, SavedTournamentState, UserTeamIdentity } from '../types';
 import { DEFAULT_TEAM_IDENTITY } from '../components/TeamCrest';
+import { TEAM_REAL_LOGOS } from '../data/teamLogos';
 import { isSamePlayer } from './runRules';
 
 const ACTIVE_RUN_STORAGE_KEY = 'vct_mayhem_active_run_v1';
@@ -48,7 +49,11 @@ function sanitizeTeamIdentity(value: unknown): UserTeamIdentity {
     typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)
       ? value.color
       : DEFAULT_TEAM_IDENTITY.color;
-  return { name, emblemId, color };
+  const logoTeamKey =
+    typeof value.logoTeamKey === 'string' && value.logoTeamKey in TEAM_REAL_LOGOS
+      ? value.logoTeamKey
+      : undefined;
+  return { name, emblemId, color, logoTeamKey };
 }
 
 export function saveActiveRun(run: ActiveRunSave): void {

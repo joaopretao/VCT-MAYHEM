@@ -165,6 +165,7 @@ export interface CampaignHistory {
   teamName?: string;
   teamEmblemId?: CustomEmblemId;
   teamColor?: string;
+  teamLogoKey?: string;
   runRule?: RunRuleId;
   seed?: string;
   rerollsUsed?: number;
@@ -345,6 +346,7 @@ export interface UserTeamIdentity {
   name: string;
   emblemId: CustomEmblemId;
   color: string;
+  logoTeamKey?: string;
 }
 
 export interface SavedTournamentState {

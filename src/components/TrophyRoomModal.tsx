@@ -334,6 +334,7 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
                           <TeamCrest
                             emblemId={camp.teamEmblemId}
                             color={camp.teamColor}
+                            logoTeamKey={camp.teamLogoKey}
                             size="xs"
                           />
                           <span>{camp.teamName}</span>

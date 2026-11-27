@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Flame, Crown, Swords, Crosshair, Zap, Dices, X, Check } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Shield, Flame, Crown, Swords, Crosshair, Zap, Dices, X, Check, Search } from 'lucide-react';
 import { CustomEmblemId, UserTeamIdentity } from '../types';
+import { TEAM_REAL_LOGOS, getTeamLogoData } from '../data/teamLogos';
 import { playSelectSound } from '../utils/audio';
+import { TeamLogo } from './TeamLogo';
 import { Card, PrimaryButton, SecondaryButton } from './ui';
 
 export const DEFAULT_TEAM_IDENTITY: UserTeamIdentity = {
@@ -39,6 +41,10 @@ export const SUGGESTED_TEAM_NAMES = [
   'CLUTCH LINE',
 ];
 
+const SORTED_OFFICIAL_TEAM_LOGOS = Object.entries(TEAM_REAL_LOGOS)
+  .map(([key, data]) => ({ key, ...data }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
 function renderEmblemGlyph(emblemId: CustomEmblemId, className: string, color: string) {
   const style = { color };
   switch (emblemId) {
@@ -61,35 +67,54 @@ function renderEmblemGlyph(emblemId: CustomEmblemId, className: string, color: s
 interface TeamCrestProps {
   emblemId?: CustomEmblemId;
   color?: string;
+  logoTeamKey?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 const CREST_SIZES = {
-  xs: { box: 'w-5 h-5 rounded-[2px]', icon: 'w-3 h-3' },
-  sm: { box: 'w-7 h-7 rounded-[3px]', icon: 'w-4 h-4' },
-  md: { box: 'w-10 h-10 rounded-[3px]', icon: 'w-5 h-5' },
-  lg: { box: 'w-12 h-12 rounded-[4px]', icon: 'w-6 h-6' },
+  xs: { box: 'w-5 h-5 rounded-[2px]', icon: 'w-3 h-3', logoPad: 'p-0.5' },
+  sm: { box: 'w-7 h-7 rounded-[3px]', icon: 'w-4 h-4', logoPad: 'p-0.5' },
+  md: { box: 'w-10 h-10 rounded-[3px]', icon: 'w-5 h-5', logoPad: 'p-1' },
+  lg: { box: 'w-12 h-12 rounded-[4px]', icon: 'w-6 h-6', logoPad: 'p-1.5' },
 };
 
 export const TeamCrest: React.FC<TeamCrestProps> = ({
   emblemId = 'shield',
   color = '#ff4655',
+  logoTeamKey,
   size = 'md',
   className = '',
 }) => {
   const dim = CREST_SIZES[size];
+  const resolvedLogo = logoTeamKey
+    ? TEAM_REAL_LOGOS[logoTeamKey] || getTeamLogoData(logoTeamKey)
+    : null;
+
   return (
     <span
-      className={`inline-flex items-center justify-center border shrink-0 ${dim.box} ${className}`}
+      className={`inline-flex items-center justify-center border shrink-0 overflow-hidden ${dim.box} ${
+        resolvedLogo ? dim.logoPad : ''
+      } ${className}`}
       style={{
         background: `radial-gradient(circle at 50% 30%, ${color}33 0%, #0d1118 85%)`,
         borderColor: `${color}66`,
         boxShadow: `0 0 12px -4px ${color}66`,
       }}
-      aria-hidden="true"
+      aria-hidden={!resolvedLogo}
     >
-      {renderEmblemGlyph(emblemId, dim.icon, color)}
+      {resolvedLogo ? (
+        <TeamLogo
+          teamName={resolvedLogo.name}
+          shortName={resolvedLogo.shortName}
+          logoUrl={resolvedLogo.logoUrl}
+          primaryColor={resolvedLogo.primaryColor}
+          size={size}
+          className="w-full h-full"
+        />
+      ) : (
+        renderEmblemGlyph(emblemId, dim.icon, color)
+      )}
     </span>
   );
 };
@@ -108,22 +133,44 @@ export const TeamIdentityModal: React.FC<TeamIdentityModalProps> = ({
   const [name, setName] = useState(identity.name);
   const [emblemId, setEmblemId] = useState<CustomEmblemId>(identity.emblemId);
   const [color, setColor] = useState(identity.color);
+  const [logoTeamKey, setLogoTeamKey] = useState<string | undefined>(identity.logoTeamKey);
+  const [crestMode, setCrestMode] = useState<'teams' | 'icons'>(
+    identity.logoTeamKey ? 'teams' : 'teams'
+  );
+  const [teamSearch, setTeamSearch] = useState('');
 
   useEffect(() => {
     setName(identity.name);
     setEmblemId(identity.emblemId);
     setColor(identity.color);
+    setLogoTeamKey(identity.logoTeamKey);
   }, [identity]);
+
+  const selectedOfficialTeam = logoTeamKey ? TEAM_REAL_LOGOS[logoTeamKey] || null : null;
+
+  const filteredTeams = useMemo(() => {
+    const q = teamSearch.trim().toLowerCase();
+    if (!q) return SORTED_OFFICIAL_TEAM_LOGOS;
+    return SORTED_OFFICIAL_TEAM_LOGOS.filter(
+      t =>
+        t.name.toLowerCase().includes(q) ||
+        t.shortName.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q)
+    );
+  }, [teamSearch]);
 
   const handleRandomSuggestion = () => {
     playSelectSound();
     const candidates = SUGGESTED_TEAM_NAMES.filter(n => n !== name);
-    const randomName = candidates[Math.floor(Math.random() * candidates.length)] || SUGGESTED_TEAM_NAMES[0];
+    const randomName =
+      candidates[Math.floor(Math.random() * candidates.length)] || SUGGESTED_TEAM_NAMES[0];
     const randomEmblem = TEAM_EMBLEMS[Math.floor(Math.random() * TEAM_EMBLEMS.length)].id;
-    const randomColor = TEAM_COLOR_SWATCHES[Math.floor(Math.random() * TEAM_COLOR_SWATCHES.length)].color;
+    const randomColor =
+      TEAM_COLOR_SWATCHES[Math.floor(Math.random() * TEAM_COLOR_SWATCHES.length)].color;
     setName(randomName);
     setEmblemId(randomEmblem);
     setColor(randomColor);
+    setLogoTeamKey(undefined);
   };
 
   const handleConfirm = (e: React.FormEvent) => {
@@ -134,6 +181,7 @@ export const TeamIdentityModal: React.FC<TeamIdentityModalProps> = ({
       name: trimmed.length > 0 ? trimmed.toUpperCase() : DEFAULT_TEAM_IDENTITY.name,
       emblemId,
       color,
+      logoTeamKey,
     });
     onClose();
   };
@@ -141,12 +189,12 @@ export const TeamIdentityModal: React.FC<TeamIdentityModalProps> = ({
   return (
     <div
       id="team-identity-modal"
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
       role="dialog"
       aria-modal="true"
       aria-labelledby="team-identity-title"
     >
-      <Card variant="modal" padding="lg" cutCorner className="w-full max-w-md relative animate-popIn">
+      <Card variant="modal" padding="lg" cutCorner className="w-full max-w-lg relative animate-popIn">
         <button
           type="button"
           onClick={() => {
@@ -160,7 +208,12 @@ export const TeamIdentityModal: React.FC<TeamIdentityModalProps> = ({
         </button>
 
         <div className="flex items-center gap-3 mb-4">
-          <TeamCrest emblemId={emblemId} color={color} size="lg" />
+          <TeamCrest
+            emblemId={emblemId}
+            color={color}
+            logoTeamKey={logoTeamKey}
+            size="lg"
+          />
           <div className="min-w-0">
             <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-[#e2b714] block">
               Identidade da Equipe
@@ -171,6 +224,11 @@ export const TeamIdentityModal: React.FC<TeamIdentityModalProps> = ({
             >
               {name.trim() ? name.toUpperCase() : DEFAULT_TEAM_IDENTITY.name}
             </h3>
+            {selectedOfficialTeam && (
+              <span className="font-mono-vct text-[11px] text-slate-300 block mt-0.5">
+                Escudo selecionado: {selectedOfficialTeam.name}
+              </span>
+            )}
           </div>
         </div>
 
@@ -201,41 +259,153 @@ export const TeamIdentityModal: React.FC<TeamIdentityModalProps> = ({
               placeholder="Ex: TEAM MAYHEM"
               className="w-full px-3 py-2 rounded-[3px] bg-[#090c11] border border-white/15 focus:border-[#ff4655] outline-none text-sm font-bold text-white uppercase tracking-wider"
             />
+            {selectedOfficialTeam &&
+              name.trim().toUpperCase() !== selectedOfficialTeam.name.slice(0, 18).toUpperCase() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSelectSound();
+                    setName(selectedOfficialTeam.name.slice(0, 18).toUpperCase());
+                  }}
+                  className="mt-1.5 text-[11px] font-mono-vct text-[#38bdf8] hover:text-sky-300 underline underline-offset-2 cursor-pointer"
+                >
+                  Usar também o nome "{selectedOfficialTeam.name}"
+                </button>
+              )}
           </div>
 
-          <div>
-            <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-slate-200 block mb-1.5">
-              Escudo
-            </span>
-            <div className="grid grid-cols-6 gap-2">
-              {TEAM_EMBLEMS.map(item => {
-                const active = emblemId === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      playSelectSound();
-                      setEmblemId(item.id);
-                    }}
-                    title={item.label}
-                    aria-label={item.label}
-                    className={`p-2 rounded-[3px] border flex items-center justify-center transition-colors cursor-pointer ${
-                      active
-                        ? 'bg-[#1a2230] border-white/50'
-                        : 'bg-[#0b0e14] border-white/10 hover:border-white/30'
-                    }`}
-                  >
-                    {renderEmblemGlyph(item.id, 'w-5 h-5', active ? color : '#cbd5e1')}
-                  </button>
-                );
-              })}
+          {/* Crest Picker Tabs: Official Team Photos (47) vs Custom Icons */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-slate-200">
+                Foto / Escudo do Time
+              </span>
+              <div className="flex items-center gap-1 bg-[#070a10] p-0.5 rounded-[3px] border border-white/10 font-mono-vct text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSelectSound();
+                    setCrestMode('teams');
+                  }}
+                  className={`px-2 py-1 rounded-[2px] font-bold uppercase transition-colors cursor-pointer ${
+                    crestMode === 'teams'
+                      ? 'bg-[#ff4655] text-white'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Times ({SORTED_OFFICIAL_TEAM_LOGOS.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSelectSound();
+                    setCrestMode('icons');
+                  }}
+                  className={`px-2 py-1 rounded-[2px] font-bold uppercase transition-colors cursor-pointer ${
+                    crestMode === 'icons'
+                      ? 'bg-[#ff4655] text-white'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Ícones
+                </button>
+              </div>
             </div>
+
+            {crestMode === 'teams' ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      id="team-logo-search-input"
+                      type="text"
+                      value={teamSearch}
+                      onChange={e => setTeamSearch(e.target.value)}
+                      placeholder="Buscar time (ex: LOUD, Sentinels, Fnatic, Cloud9)..."
+                      className="w-full pl-8 pr-3 py-1.5 rounded-[3px] bg-[#090c11] border border-white/12 focus:border-[#ff4655] outline-none text-xs text-white placeholder:text-slate-400"
+                    />
+                  </div>
+                  {logoTeamKey && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSelectSound();
+                        setLogoTeamKey(undefined);
+                      }}
+                      className="px-2 py-1.5 rounded-[3px] bg-[#0b0e14] border border-white/15 hover:border-white/35 text-[11px] font-mono-vct text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                    >
+                      Limpar foto
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-48 overflow-y-auto pr-1 grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                  {filteredTeams.map(team => {
+                    const active = logoTeamKey === team.key;
+                    return (
+                      <button
+                        key={team.key}
+                        type="button"
+                        onClick={() => {
+                          playSelectSound();
+                          setLogoTeamKey(team.key);
+                          setColor(team.primaryColor);
+                        }}
+                        title={`${team.name} (${team.category})`}
+                        className={`p-1.5 rounded-[3px] border flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${
+                          active
+                            ? 'bg-[#182131] border-[#ff4655]'
+                            : 'bg-[#090c11] border-white/10 hover:border-white/30 hover:bg-[#111622]'
+                        }`}
+                      >
+                        <TeamLogo
+                          teamName={team.name}
+                          shortName={team.shortName}
+                          logoUrl={team.logoUrl}
+                          primaryColor={team.primaryColor}
+                          size="sm"
+                        />
+                        <span className="font-mono-vct text-[9px] font-bold uppercase text-slate-200 truncate max-w-full leading-none">
+                          {team.shortName}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-6 gap-2">
+                {TEAM_EMBLEMS.map(item => {
+                  const active = !logoTeamKey && emblemId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        playSelectSound();
+                        setLogoTeamKey(undefined);
+                        setEmblemId(item.id);
+                      }}
+                      title={item.label}
+                      aria-label={item.label}
+                      className={`p-2 rounded-[3px] border flex items-center justify-center transition-colors cursor-pointer ${
+                        active
+                          ? 'bg-[#1a2230] border-white/50'
+                          : 'bg-[#0b0e14] border-white/10 hover:border-white/30'
+                      }`}
+                    >
+                      {renderEmblemGlyph(item.id, 'w-5 h-5', active ? color : '#cbd5e1')}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div>
             <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-slate-200 block mb-1.5">
-              Cor do escudo
+              Cor de destaque
             </span>
             <div className="flex items-center gap-2 flex-wrap">
               {TEAM_COLOR_SWATCHES.map(swatch => {

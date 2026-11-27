@@ -721,6 +721,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       teamName: teamIdentity.name,
       teamEmblemId: teamIdentity.emblemId,
       teamColor: teamIdentity.color,
+      teamLogoKey: teamIdentity.logoTeamKey,
       runRule,
       seed,
       rerollsUsed,
@@ -912,6 +913,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
             <TeamCrest
               emblemId={teamIdentity.emblemId}
               color={teamIdentity.color}
+              logoTeamKey={teamIdentity.logoTeamKey}
               size="lg"
               className="hidden sm:inline-flex"
             />
@@ -1532,7 +1534,12 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
             />
 
             <div className="flex items-center justify-center gap-2 text-xs font-mono-vct font-bold text-[#e2b714] uppercase tracking-widest mb-1.5">
-              <TeamCrest emblemId={teamIdentity.emblemId} color={teamIdentity.color} size="xs" />
+              <TeamCrest
+                emblemId={teamIdentity.emblemId}
+                color={teamIdentity.color}
+                logoTeamKey={teamIdentity.logoTeamKey}
+                size="xs"
+              />
               <span>{teamIdentity.name} · Título Mundial</span>
             </div>
 

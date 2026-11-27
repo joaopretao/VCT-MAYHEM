@@ -190,6 +190,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
               <TeamCrest
                 emblemId={teamIdentity.emblemId}
                 color={teamIdentity.color}
+                logoTeamKey={teamIdentity.logoTeamKey}
                 size="sm"
               />
               <span className="font-display text-2xl md:text-3xl leading-none text-white tracking-wide uppercase truncate max-w-[170px] sm:max-w-none">
