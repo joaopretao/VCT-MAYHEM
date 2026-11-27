@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { Navbar, TabId } from './components/Navbar';
 import { HomeScreen } from './components/HomeScreen';
@@ -667,6 +667,18 @@ export default function App() {
       ? { mapName: 'Abyss', isFinals: true, intensity: 'ambient' }
       : { mapName: 'Ascent', intensity: 'ambient' };
 
+  const activeViewKey =
+    currentTab === 'draft' ? (isTournamentActive ? 'tournament' : 'draft') : currentTab;
+  const prevViewKeyRef = useRef<string>(activeViewKey);
+  const [slashTick, setSlashTick] = useState(0);
+
+  useEffect(() => {
+    if (prevViewKeyRef.current !== activeViewKey) {
+      prevViewKeyRef.current = activeViewKey;
+      setSlashTick(t => t + 1);
+    }
+  }, [activeViewKey]);
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen overflow-x-hidden bg-transparent text-slate-100 flex flex-col selection:bg-[#ff4655] selection:text-white relative isolate">
@@ -681,15 +693,26 @@ export default function App() {
         trophiesCount={championshipsCount}
       />
 
+      {/* Non-blocking VCT Broadcast Slash Sweep on Tab/Phase Switch */}
+      {slashTick > 0 && (
+        <div
+          key={`slash-${slashTick}`}
+          aria-hidden
+          className="pointer-events-none fixed inset-x-0 top-[56px] z-40 h-[3px] overflow-hidden"
+        >
+          <div className="vct-broadcast-slash h-full w-2/3 bg-gradient-to-r from-transparent via-[#ff4655] to-[#e2b714]" />
+        </div>
+      )}
+
       {/* Main Content Area */}
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-2.5 py-2.5 md:px-4 md:py-4 flex flex-col relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
-            key={currentTab === 'draft' ? (isTournamentActive ? 'tournament' : 'draft') : currentTab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
+            key={activeViewKey}
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
             className="flex-1 flex flex-col"
           >
             {currentTab === 'home' && (

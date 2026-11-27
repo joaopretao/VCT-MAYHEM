@@ -8,10 +8,16 @@ interface ConfettiProps {
   fire: boolean;
   pieces?: number;
   duration?: number;
+  accentColor?: string;
 }
 
-// Pure-CSS confetti burst rendered in a portal so it always covers the viewport
-export const Confetti: React.FC<ConfettiProps> = ({ fire, pieces = 90, duration = 4200 }) => {
+// Pure-CSS 2-wave confetti burst rendered in a portal so it always covers the viewport
+export const Confetti: React.FC<ConfettiProps> = ({
+  fire,
+  pieces = 110,
+  duration = 4800,
+  accentColor,
+}) => {
   const [burst, setBurst] = useState(0);
   const [visible, setVisible] = useState(false);
 
@@ -26,23 +32,29 @@ export const Confetti: React.FC<ConfettiProps> = ({ fire, pieces = 90, duration 
     return () => clearTimeout(t);
   }, [fire, duration]);
 
-  const items = useMemo(
-    () =>
-      Array.from({ length: pieces }, (_, i) => ({
+  const items = useMemo(() => {
+    const palette = accentColor
+      ? [accentColor, '#e2b714', '#ffffff', accentColor, '#ff4655', '#e2b714']
+      : COLORS;
+    const wave1Count = Math.floor(pieces * 0.65);
+
+    return Array.from({ length: pieces }, (_, i) => {
+      const isWave2 = i >= wave1Count;
+      return {
         id: i,
         left: Math.random() * 100,
-        delay: Math.random() * 0.7,
-        dur: 2.3 + Math.random() * 1.6,
-        dx: (Math.random() - 0.5) * 260,
+        delay: isWave2 ? 0.75 + Math.random() * 0.7 : Math.random() * 0.65,
+        dur: (isWave2 ? 2.5 : 2.2) + Math.random() * 1.6,
+        dx: (Math.random() - 0.5) * 280,
         rot: Math.random() * 720 - 360,
-        color: COLORS[i % COLORS.length],
+        color: palette[i % palette.length],
         w: 6 + Math.random() * 6,
         h: 8 + Math.random() * 10,
-        round: Math.random() < 0.3,
-      })),
+        round: Math.random() < 0.28,
+      };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [burst, pieces]
-  );
+  }, [burst, pieces, accentColor]);
 
   if (!visible || typeof document === 'undefined') return null;
 

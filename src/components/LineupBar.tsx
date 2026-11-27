@@ -134,6 +134,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   onStartTournament,
 }) => {
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [completionSweepKey, setCompletionSweepKey] = useState(0);
   const filledCount = ROLE_ORDER.filter(r => lineup[r]).length;
   const currentRound = Math.min(5, filledCount + 1);
   const isComplete = filledCount === 5;
@@ -146,6 +147,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
   React.useEffect(() => {
     if (isComplete && !prevCompleteRef.current) {
       playRosterCompleteSound();
+      setCompletionSweepKey(k => k + 1);
     }
     prevCompleteRef.current = isComplete;
   }, [isComplete]);
@@ -427,7 +429,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
 
       {/* 5 Album-Sticker Slots (Always 5 in 1 horizontal row so mobile matches PC without vertical scroll) */}
       <div className="grid grid-cols-5 gap-1.5 md:gap-3">
-        {ROLE_ORDER.map(role => {
+        {ROLE_ORDER.map((role, slotIdx) => {
           const lockedPlayer = lineup[role];
           const roleColor = ROLE_COLORS[role];
           const silhouette = ROLE_SILHOUETTES[role];
@@ -455,9 +457,15 @@ export const LineupBar: React.FC<LineupBarProps> = ({
           const isCutoutPng = usingRealPhoto && portraitUrl!.toLowerCase().endsWith('.png');
 
           return (
-            <div
+            <motion.div
               key={role}
               id={`lineup-slot-${role.toLowerCase()}`}
+              animate={
+                completionSweepKey > 0 && isComplete
+                  ? { y: [0, -3, 0] }
+                  : { y: 0 }
+              }
+              transition={{ duration: 0.28, delay: slotIdx * 0.05, ease: 'easeOut' }}
               onClick={() => {
                 if (lockedPlayer) {
                   playSelectSound();
@@ -476,6 +484,16 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                   : 'bg-[#070b12]/70 border-white/[0.09]'
               }`}
             >
+              {/* One-shot metallic lock-in flash when a player locks into this slot */}
+              {lockedPlayer && (
+                <div
+                  key={`lock-sheen-${lockedPlayer.id}-${completionSweepKey}`}
+                  className="vct-sheen-once z-30"
+                  style={{ animationDelay: completionSweepKey > 0 && isComplete ? `${slotIdx * 60}ms` : '0ms' }}
+                  aria-hidden
+                />
+              )}
+
               {/* Top Role Accent Bar */}
               <div
                 className="h-[3px] w-full shrink-0"
@@ -534,19 +552,28 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                 ) : null}
               </div>
 
-              {/* Sticker Portrait Frame with Crisp Agent Backdrop */}
+              {/* Sticker Portrait Frame with Animated Agent Lock-In Backdrop */}
               <div className="relative flex-1 min-h-0 flex items-end justify-center overflow-hidden">
-                {activePlayer && fallbackAgentUrl && (
-                  <img
-                    src={fallbackAgentUrl}
-                    alt=""
-                    aria-hidden="true"
-                    referrerPolicy="no-referrer"
-                    className={`pointer-events-none select-none absolute inset-x-0 top-[-14%] mx-auto h-[155%] w-auto max-w-none object-contain ${
-                      lockedPlayer ? 'opacity-40' : 'opacity-28'
-                    }`}
-                  />
-                )}
+                <AnimatePresence mode="popLayout">
+                  {activePlayer && fallbackAgentUrl && (
+                    <motion.img
+                      key={`${activePlayer.id}-${lockedPlayer ? 'locked' : 'preview'}-agent`}
+                      src={fallbackAgentUrl}
+                      alt=""
+                      aria-hidden="true"
+                      referrerPolicy="no-referrer"
+                      initial={{ opacity: 0, y: 18, scale: 0.94 }}
+                      animate={{
+                        opacity: lockedPlayer ? 0.44 : 0.28,
+                        y: 0,
+                        scale: 1,
+                      }}
+                      exit={{ opacity: 0, y: 8 }}
+                      transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+                      className="pointer-events-none select-none absolute inset-x-0 top-[-14%] mx-auto h-[155%] w-auto max-w-none object-contain"
+                    />
+                  )}
+                </AnimatePresence>
                 <div
                   className="absolute inset-0 pointer-events-none"
                   style={{
@@ -559,11 +586,11 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                 <AnimatePresence mode="wait" initial={false}>
                   {activePlayer ? (
                     <motion.div
-                      key={activePlayer.id}
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ duration: 0.14 }}
+                      key={`${activePlayer.id}-${lockedPlayer ? 'locked' : 'preview'}`}
+                      initial={{ opacity: 0, y: 8, scale: 0.94 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ type: 'spring', stiffness: 440, damping: 28 }}
                       className="relative w-full h-full flex items-end justify-center"
                     >
                       {portraitUrl && !imgErrors[portraitKey] ? (
@@ -692,7 +719,7 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>

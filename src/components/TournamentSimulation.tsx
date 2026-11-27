@@ -886,7 +886,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
 
   return (
     <div className="flex flex-col gap-2.5 md:gap-4 pb-4">
-      <Confetti fire={isChampionshipWon} />
+      <Confetti fire={isChampionshipWon} accentColor={teamIdentity.color} />
 
       {/* TOP FULL-WIDTH SCOREBOARD (Shown during Live Series; Pre-Series uses unified Broadcast Header) */}
       {!isPreSeriesPrep && (
@@ -1131,8 +1131,10 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
 
             <div className="flex flex-col gap-2">
               {(() => {
-                const latestClutchIgn =
-                  revealedEvents[revealedEvents.length - 1]?.clutchPlayer?.toLowerCase() || null;
+                const latestEvent = revealedEvents[revealedEvents.length - 1];
+                const latestActorIgn =
+                  (latestEvent?.actorIgn || latestEvent?.clutchPlayer)?.toLowerCase() || null;
+                const parity = revealedEvents.length % 2 === 0 ? 'a' : 'b';
 
                 return ROLE_ORDER.map(role => {
                   const p = lineup[role];
@@ -1140,22 +1142,67 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                   const agentPortrait = p?.signatureAgent
                     ? AGENT_FULL_PORTRAITS[p.signatureAgent]
                     : null;
-                  const isHighlighted = Boolean(
-                    p && latestClutchIgn && p.ign.toLowerCase() === latestClutchIgn
+                  const isActing = Boolean(
+                    p && latestActorIgn && p.ign.toLowerCase() === latestActorIgn
                   );
+                  const reaction = isActing
+                    ? latestEvent?.playQuality ||
+                      (latestEvent?.type === 'loss' ? 'mistake' : 'good')
+                    : null;
+
+                  const reactionAnimCls = reaction ? `vct-react-${reaction}-${parity}` : '';
+
+                  let rowBorderCls = 'border-white/[0.11] bg-[#070b12]/80';
+                  let edgeBarColor = roleColor;
+                  let agentOpacityCls = 'opacity-40';
+                  let reactionBadge: { label: string; cls: string } | null = null;
+
+                  if (reaction === 'clutch') {
+                    rowBorderCls =
+                      'border-[#e2b714] bg-[#161510]/90 shadow-[0_0_16px_-4px_rgba(226,183,20,0.5)]';
+                    edgeBarColor = '#e2b714';
+                    agentOpacityCls = 'opacity-70';
+                    reactionBadge = {
+                      label: 'Clutch',
+                      cls: 'bg-[#e2b714]/20 border-[#e2b714]/55 text-[#fde047]',
+                    };
+                  } else if (reaction === 'good') {
+                    rowBorderCls =
+                      'border-emerald-400/75 bg-[#0a1715]/90 shadow-[0_0_14px_-4px_rgba(16,185,129,0.4)]';
+                    edgeBarColor = '#10b981';
+                    agentOpacityCls = 'opacity-65';
+                    reactionBadge = {
+                      label: 'Impacto',
+                      cls: 'bg-emerald-500/20 border-emerald-400/50 text-emerald-200',
+                    };
+                  } else if (reaction === 'mistake') {
+                    rowBorderCls = 'border-rose-500/60 bg-[#170b10]/90';
+                    edgeBarColor = '#f43f5e';
+                    agentOpacityCls = 'opacity-25 grayscale';
+                  } else if (reaction === 'tilt') {
+                    rowBorderCls =
+                      'border-rose-500/80 bg-[#1c0a11]/95 shadow-[0_0_14px_-4px_rgba(244,63,94,0.4)]';
+                    edgeBarColor = '#ff4655';
+                    agentOpacityCls = 'opacity-20 grayscale';
+                    reactionBadge = {
+                      label: 'Pressão',
+                      cls: 'bg-rose-500/20 border-rose-500/50 text-rose-200',
+                    };
+                  }
+
+                  const isNegativeReaction = reaction === 'mistake' || reaction === 'tilt';
 
                   return (
                     <div
                       key={role}
-                      className={`relative h-[54px] rounded-[4px] overflow-hidden border flex items-center justify-between gap-2 px-2.5 transition-colors ${
-                        isHighlighted
-                          ? 'border-[#e2b714] bg-[#14171f]/90 shadow-[0_0_16px_-4px_rgba(226,183,20,0.5)]'
-                          : 'border-white/[0.11] bg-[#070b12]/80'
-                      }`}
+                      className={`relative h-[54px] rounded-[4px] overflow-hidden border flex items-center justify-between gap-2 px-2.5 transition-colors duration-200 ${rowBorderCls} ${reactionAnimCls}`}
                     >
+                      {reaction === 'clutch' && latestEvent && (
+                        <div key={`sheen-${latestEvent.id}`} className="vct-sheen-once z-20" aria-hidden />
+                      )}
                       <div
-                        className="absolute inset-y-0 left-0 w-[3px] z-20"
-                        style={{ backgroundColor: isHighlighted ? '#e2b714' : roleColor }}
+                        className="absolute inset-y-0 left-0 w-[3px] z-20 transition-colors duration-200"
+                        style={{ backgroundColor: edgeBarColor }}
                         aria-hidden
                       />
                       {agentPortrait && (
@@ -1164,9 +1211,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                           alt=""
                           aria-hidden="true"
                           referrerPolicy="no-referrer"
-                          className={`pointer-events-none select-none absolute right-[-6%] top-[-20%] h-[185%] w-auto max-w-none object-contain ${
-                            isHighlighted ? 'opacity-65' : 'opacity-40'
-                          }`}
+                          className={`pointer-events-none select-none absolute right-[-6%] top-[-20%] h-[185%] w-auto max-w-none object-contain transition-all duration-200 ${agentOpacityCls}`}
                         />
                       )}
                       <div
@@ -1180,13 +1225,23 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
 
                       <div className="relative z-10 flex items-center gap-2.5 min-w-0 pl-0.5">
                         {p ? (
-                          <PlayerAvatar player={p} size="sm" teamColor={teamIdentity.color} />
+                          <div
+                            className={`transition-all duration-200 ${
+                              isNegativeReaction ? 'brightness-75 grayscale-[55%]' : ''
+                            }`}
+                          >
+                            <PlayerAvatar player={p} size="sm" teamColor={teamIdentity.color} />
+                          </div>
                         ) : (
                           <RoleEmblem role={role} size="xs" showBackground={false} />
                         )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-display text-xl leading-none text-white uppercase tracking-wide truncate">
+                            <span
+                              className={`font-display text-xl leading-none uppercase tracking-wide truncate transition-colors ${
+                                isNegativeReaction ? 'text-rose-200/90' : 'text-white'
+                              }`}
+                            >
                               {p?.ign || '—'}
                             </span>
                             {p?.countryCode && <CountryFlag code={p.countryCode} size="xs" />}
@@ -1199,9 +1254,11 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                       </div>
 
                       <div className="relative z-10 flex flex-col items-end shrink-0">
-                        {isHighlighted && (
-                          <span className="font-mono-vct text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-[2px] bg-[#e2b714]/20 border border-[#e2b714]/50 text-[#fde047] mb-0.5">
-                            Destaque
+                        {reactionBadge && (
+                          <span
+                            className={`font-mono-vct text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-[2px] border mb-0.5 ${reactionBadge.cls}`}
+                          >
+                            {reactionBadge.label}
                           </span>
                         )}
                         <span
@@ -1514,17 +1571,18 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
 
       {/* Grand Final Championship Victory Screen */}
       {isChampionshipWon && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 bg-black/88 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
           <Card
             variant="modal"
             padding="lg"
             cutCorner
             className="w-full max-w-2xl text-center text-white my-auto animate-popIn relative overflow-hidden"
             style={{
-              borderColor: frameId !== 'default' ? frameMeta.borderColor : 'rgba(226, 183, 20, 0.5)',
-              boxShadow: frameId !== 'default' ? frameMeta.glowShadow : undefined,
+              borderColor: frameId !== 'default' ? frameMeta.borderColor : 'rgba(226, 183, 20, 0.55)',
+              boxShadow: frameId !== 'default' ? frameMeta.glowShadow : '0 24px 80px -15px rgba(226, 183, 20, 0.25)',
             }}
           >
+            <div className="vct-sheen-once z-20" aria-hidden />
             <div
               className="absolute inset-x-0 top-0 h-1"
               style={{
@@ -1532,6 +1590,37 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               }}
               aria-hidden
             />
+
+            {/* Real VALORANT Champions Trophy Ceremony Pedestal */}
+            <div className="relative flex flex-col items-center justify-center mb-3 pt-1">
+              <div className="relative w-28 h-36 sm:w-32 sm:h-40 flex items-center justify-center">
+                <div
+                  className="pointer-events-none absolute inset-1 rounded-full vct-halo-spin opacity-60"
+                  style={{
+                    background:
+                      'conic-gradient(from 0deg, transparent 0deg, rgba(226,183,20,0.45) 45deg, transparent 105deg, rgba(255,255,255,0.22) 180deg, transparent 235deg, rgba(226,183,20,0.45) 300deg, transparent 360deg)',
+                    maskImage: 'radial-gradient(circle, transparent 42%, black 66%, transparent 72%)',
+                    WebkitMaskImage: 'radial-gradient(circle, transparent 42%, black 66%, transparent 72%)',
+                  }}
+                  aria-hidden
+                />
+                <div
+                  className="pointer-events-none absolute inset-4 rounded-full"
+                  style={{
+                    background: 'radial-gradient(circle, rgba(226,183,20,0.28) 0%, transparent 72%)',
+                  }}
+                  aria-hidden
+                />
+                <motion.img
+                  src="/brand/champions-trophy.png"
+                  alt="Troféu oficial do VALORANT Champions"
+                  initial={{ opacity: 0, y: 22, scale: 0.88 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative z-10 h-full w-auto object-contain select-none drop-shadow-[0_10px_24px_rgba(226,183,20,0.45)]"
+                />
+              </div>
+            </div>
 
             <div className="flex items-center justify-center gap-2 text-xs font-mono-vct font-bold text-[#e2b714] uppercase tracking-widest mb-1.5">
               <TeamCrest
@@ -1543,25 +1632,39 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               <span>{teamIdentity.name} · Título Mundial</span>
             </div>
 
-            <h2 className="text-4xl sm:text-5xl font-display font-bold text-white tracking-wide uppercase leading-none">
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.32, delay: 0.08, ease: 'easeOut' }}
+              className="text-4xl sm:text-5xl font-display font-bold text-white tracking-wide uppercase leading-none"
+            >
               Campeão do Champions
-            </h2>
+            </motion.h2>
             <p className="text-sm text-slate-300 mt-1 mb-5">
               {series.playerWins}–{series.opponentWins} na Grande Final sobre {series.opponent.name}.
             </p>
 
-            {/* All 5 Champions side by side with Crisp Agent Backdrops */}
+            {/* All 5 Champions side by side with Staggered Reveal & Crisp Agent Backdrops */}
             <div className="grid grid-cols-5 gap-1.5 sm:gap-2 mb-5">
-              {ROLE_ORDER.map(role => {
+              {ROLE_ORDER.map((role, idx) => {
                 const p = lineup[role];
                 if (!p) return null;
                 const isMvp = tournamentMvp?.player.id === p.id;
                 const agentBg = p.signatureAgent ? AGENT_FULL_PORTRAITS[p.signatureAgent] : null;
                 return (
-                  <div
+                  <motion.div
                     key={role}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: isMvp ? -4 : 0 }}
+                    transition={{
+                      duration: 0.28,
+                      delay: 0.14 + idx * 0.055,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
                     className={`relative overflow-hidden surface-sub p-2 flex flex-col items-center gap-1 border-b-2 ${
-                      isMvp ? 'border-[#e2b714]' : 'border-white/15'
+                      isMvp
+                        ? 'border-[#e2b714] shadow-[0_8px_22px_-8px_rgba(226,183,20,0.55)]'
+                        : 'border-white/15'
                     }`}
                     style={{ borderBottomColor: isMvp ? '#e2b714' : ROLE_COLORS[role] }}
                   >
@@ -1583,7 +1686,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                     <span className="relative z-10 text-[10px] font-mono-vct text-slate-300 uppercase">
                       {isMvp ? 'MVP' : ROLE_NAMES_PT[role]}
                     </span>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair,
@@ -154,6 +154,7 @@ interface MirroredPlayerCardProps {
   isFocused: boolean;
   isDimmed: boolean;
   spotlightBadge?: string | null;
+  walkoutDelay?: number;
   onHoverChange: (role: Role | null) => void;
 }
 
@@ -167,6 +168,7 @@ const MirroredPlayerCard: React.FC<MirroredPlayerCardProps> = ({
   isFocused,
   isDimmed,
   spotlightBadge,
+  walkoutDelay = 0,
   onHoverChange,
 }) => {
   const roleColor = ROLE_COLORS[role];
@@ -224,20 +226,19 @@ const MirroredPlayerCard: React.FC<MirroredPlayerCardProps> = ({
           isLeft ? 'text-left' : 'text-right'
         }`}
       >
-        {/* Crisp Agent Artwork in Background ("Boneco no fundo", no blur) */}
+        {/* Crisp Agent Artwork in Background ("Boneco no fundo", no blur) — slides in 60ms after card */}
         {agentPortrait && (
-          <img
+          <motion.img
             src={agentPortrait}
             alt=""
             aria-hidden="true"
             referrerPolicy="no-referrer"
-            className={`pointer-events-none select-none absolute top-[-18%] h-[185%] w-auto max-w-none object-contain transition-opacity duration-200 ${
+            initial={{ opacity: 0, x: isLeft ? 18 : -18 }}
+            animate={{ opacity: isFocused ? 0.75 : 0.55, x: 0 }}
+            transition={{ duration: 0.24, delay: walkoutDelay + 0.06, ease: 'easeOut' }}
+            className={`pointer-events-none select-none absolute top-[-18%] h-[185%] w-auto max-w-none object-contain ${
               isLeft ? 'right-[-10%]' : 'left-[-10%] -scale-x-100'
-            } ${
-              isFocused
-                ? 'opacity-75 brightness-100'
-                : 'opacity-55 brightness-95'
-            }`}
+            } ${isFocused ? 'brightness-100' : 'brightness-95'}`}
           />
         )}
 
@@ -400,6 +401,15 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
   onStartSeries,
 }) => {
   const isFinals = series.stage === 'finals';
+  const seriesKey = `${series.stage}-${series.opponent.id}-${series.opponent.name}`;
+  const playedFinalsIntroRef = useRef<string | null>(null);
+  const [showFinalsIntro, setShowFinalsIntro] = useState<boolean>(() => {
+    if (isFinals) {
+      playedFinalsIntroRef.current = seriesKey;
+      return true;
+    }
+    return false;
+  });
   const [selectedMapIdx, setSelectedMapIdx] = useState<number>(0);
   const [focusedRole, setFocusedRole] = useState<Role | null>(null);
 
@@ -410,6 +420,27 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
         : Array.from({ length: series.bestOf }, () => 'Ascent'),
     [series.mapQueue, series.bestOf]
   );
+
+  // Trigger Grand Finals 1.25s Broadcast Intro once per Finals series (skippable on any click or keypress)
+  useEffect(() => {
+    if (isFinals && playedFinalsIntroRef.current !== seriesKey) {
+      playedFinalsIntroRef.current = seriesKey;
+      setShowFinalsIntro(true);
+    } else if (!isFinals) {
+      setShowFinalsIntro(false);
+    }
+  }, [isFinals, seriesKey]);
+
+  useEffect(() => {
+    if (!showFinalsIntro) return;
+    const timer = window.setTimeout(() => setShowFinalsIntro(false), 1300);
+    const skip = () => setShowFinalsIntro(false);
+    window.addEventListener('keydown', skip);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('keydown', skip);
+    };
+  }, [showFinalsIntro]);
 
   // Reset map preview when advancing to a new series
   useEffect(() => {
@@ -455,6 +486,117 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
         isFinals ? 'border-[#e2b714]/45' : 'border-white/15'
       }`}
     >
+      {/* =====================================================================
+          GRAND FINALS OPENING WALKOUT VIGNETTE (~1.3s, click anywhere to skip)
+         ===================================================================== */}
+      <AnimatePresence>
+        {isFinals && showFinalsIntro && (
+          <motion.div
+            key="grand-finals-intro"
+            role="button"
+            tabIndex={0}
+            aria-label="Pular abertura da Grande Final"
+            onClick={() => setShowFinalsIntro(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="fixed inset-0 z-50 bg-[#05080f]/95 flex flex-col items-center justify-center p-6 cursor-pointer select-none overflow-hidden"
+          >
+            {/* Top & Bottom Gold Broadcast Hairlines */}
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#e2b714] to-transparent"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-[#e2b714] to-transparent"
+              aria-hidden
+            />
+
+            <motion.span
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="font-mono-vct text-xs sm:text-sm font-bold uppercase tracking-[0.26em] text-[#fde047] mb-3"
+            >
+              Valorant Champions · Grande Final MD5
+            </motion.span>
+
+            {/* Team Crest vs Real Trophy vs Rival Logo */}
+            <div className="flex items-center justify-center gap-6 sm:gap-12 my-2">
+              <motion.div
+                initial={{ opacity: 0, x: -28 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+                className="flex flex-col items-center gap-2 text-center"
+              >
+                <TeamCrest
+                  emblemId={teamIdentity.emblemId}
+                  color={teamIdentity.color}
+                  logoTeamKey={teamIdentity.logoTeamKey}
+                  size="lg"
+                  className="w-16 h-16 sm:w-20 sm:h-20"
+                />
+                <span className="font-display text-2xl sm:text-3xl text-white uppercase tracking-wide max-w-[140px] sm:max-w-[200px] truncate">
+                  {teamIdentity.name}
+                </span>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.86, y: 14 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="relative w-28 h-40 sm:w-36 sm:h-52 flex items-center justify-center shrink-0"
+              >
+                <div
+                  className="pointer-events-none absolute inset-2 rounded-full"
+                  style={{
+                    background: 'radial-gradient(circle, rgba(226,183,20,0.32) 0%, transparent 70%)',
+                  }}
+                  aria-hidden
+                />
+                <img
+                  src="/brand/champions-trophy.png"
+                  alt="Troféu VALORANT Champions"
+                  className="relative z-10 h-full w-auto object-contain drop-shadow-[0_12px_30px_rgba(226,183,20,0.5)]"
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, x: 28 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+                className="flex flex-col items-center gap-2 text-center"
+              >
+                <div
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-[4px] bg-[#090d16] border p-2 flex items-center justify-center"
+                  style={{
+                    borderColor: `${series.opponent.logoColor}88`,
+                    boxShadow: `0 0 24px -6px ${series.opponent.logoColor}88`,
+                  }}
+                >
+                  <TeamLogo
+                    teamName={series.opponent.name}
+                    shortName={series.opponent.tag}
+                    logoUrl={series.opponent.logoUrl}
+                    primaryColor={series.opponent.logoColor}
+                    size="lg"
+                    className="w-full h-full"
+                  />
+                </div>
+                <span className="font-display text-2xl sm:text-3xl text-white uppercase tracking-wide max-w-[140px] sm:max-w-[200px] truncate">
+                  {realOpponentTeam?.name || oppShort}
+                </span>
+              </motion.div>
+            </div>
+
+            <span className="mt-6 font-mono-vct text-[11px] uppercase tracking-widest text-slate-400">
+              Clique em qualquer lugar para pular
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* =====================================================================
           FULL-BLEED STAGE BACKGROUND: CRISP FULL MAP (NO BLUR)
          ===================================================================== */}
@@ -699,12 +841,13 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                     ? `Líder · ${runLeader.acs} ACS · ${runLeader.kdRatio.toFixed(2)} K/D`
                     : null;
 
+                const walkoutDelay = isFinals ? idx * 0.065 : idx * 0.035;
                 return (
                   <motion.div
-                    key={`left-${role}`}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.22, delay: idx * 0.035, ease: 'easeOut' }}
+                    key={`left-${role}-${showFinalsIntro ? 'wait' : 'go'}`}
+                    initial={{ opacity: 0, x: isFinals ? -24 : -12 }}
+                    animate={{ opacity: showFinalsIntro ? 0 : 1, x: showFinalsIntro ? -24 : 0 }}
+                    transition={{ duration: isFinals ? 0.28 : 0.22, delay: walkoutDelay, ease: [0.22, 1, 0.36, 1] }}
                   >
                     <MirroredPlayerCard
                       player={p}
@@ -716,6 +859,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                       isFocused={focusedRole === role}
                       isDimmed={focusedRole !== null && focusedRole !== role}
                       spotlightBadge={spotlightLabel}
+                      walkoutDelay={walkoutDelay}
                       onHoverChange={setFocusedRole}
                     />
                   </motion.div>
@@ -836,12 +980,13 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                   isFinals &&
                   Boolean(opp && opponentStar && opponentStar.id === opp.id);
 
+                const walkoutDelay = isFinals ? idx * 0.065 : idx * 0.035;
                 return (
                   <motion.div
-                    key={`right-${role}`}
-                    initial={{ opacity: 0, x: 12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.22, delay: idx * 0.035, ease: 'easeOut' }}
+                    key={`right-${role}-${showFinalsIntro ? 'wait' : 'go'}`}
+                    initial={{ opacity: 0, x: isFinals ? 24 : 12 }}
+                    animate={{ opacity: showFinalsIntro ? 0 : 1, x: showFinalsIntro ? 24 : 0 }}
+                    transition={{ duration: isFinals ? 0.28 : 0.22, delay: walkoutDelay, ease: [0.22, 1, 0.36, 1] }}
                   >
                     <MirroredPlayerCard
                       player={opp}
@@ -853,6 +998,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                       isFocused={focusedRole === role}
                       isDimmed={focusedRole !== null && focusedRole !== role}
                       spotlightBadge={isOppStar ? 'Estrela Rival' : null}
+                      walkoutDelay={walkoutDelay}
                       onHoverChange={setFocusedRole}
                     />
                   </motion.div>

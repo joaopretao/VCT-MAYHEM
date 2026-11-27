@@ -240,6 +240,85 @@
     animation: confetti-fall var(--dur) cubic-bezier(0.25, 0.6, 0.4, 1) var(--delay) forwards;
   }
 
+  /* VCT Broadcast Motion utilities (Zero-blur, GPU-composited) */
+  .vct-sheen-once {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      115deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.24) 48%,
+      rgba(226, 183, 20, 0.32) 52%,
+      transparent 78%
+    );
+    transform: translateX(-140%) skewX(-20deg);
+    animation: vct-sheen-sweep 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform;
+  }
+
+  .vct-trophy-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .vct-trophy-sheen::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      115deg,
+      transparent 25%,
+      rgba(226, 183, 20, 0.16) 49%,
+      rgba(255, 255, 255, 0.14) 52%,
+      transparent 76%
+    );
+    transform: translateX(-150%) skewX(-20deg);
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .vct-trophy-sheen:hover::after {
+    transform: translateX(160%) skewX(-20deg);
+  }
+
+  .vct-halo-spin {
+    animation: vct-halo-spin 18s linear infinite;
+    will-change: transform;
+  }
+
+  .vct-broadcast-slash {
+    pointer-events: none;
+    animation: vct-broadcast-slash 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  /* Live simulation per-round player reactions (paired A/B keyframes so consecutive rounds re-trigger smoothly with zero DOM remount) */
+  .vct-react-good-a {
+    animation: vct-react-good-a 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .vct-react-good-b {
+    animation: vct-react-good-b 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .vct-react-clutch-a {
+    animation: vct-react-clutch-a 0.44s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .vct-react-clutch-b {
+    animation: vct-react-clutch-b 0.44s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .vct-react-mistake-a {
+    animation: vct-react-mistake-a 0.32s ease-out;
+  }
+  .vct-react-mistake-b {
+    animation: vct-react-mistake-b 0.32s ease-out;
+  }
+  .vct-react-tilt-a {
+    animation: vct-react-tilt-a 0.38s ease-out;
+  }
+  .vct-react-tilt-b {
+    animation: vct-react-tilt-b 0.38s ease-out;
+  }
+
   .scrollbar-none {
     scrollbar-width: none;
   }
@@ -247,6 +326,90 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+}
+
+@keyframes vct-sheen-sweep {
+  0% {
+    transform: translateX(-140%) skewX(-20deg);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+@keyframes vct-halo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes vct-broadcast-slash {
+  0% {
+    transform: translateX(-105%) skewX(-24deg);
+    opacity: 0.95;
+  }
+  70% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(115%) skewX(-24deg);
+    opacity: 0;
+  }
+}
+
+@keyframes vct-react-good-a {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
+}
+@keyframes vct-react-good-b {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes vct-react-clutch-a {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.028); }
+  100% { transform: scale(1); }
+}
+@keyframes vct-react-clutch-b {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.028); }
+  100% { transform: scale(1); }
+}
+
+@keyframes vct-react-mistake-a {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  78% { transform: translateX(-2px); }
+}
+@keyframes vct-react-mistake-b {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  78% { transform: translateX(-2px); }
+}
+
+@keyframes vct-react-tilt-a {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  62% { transform: translateX(-3px); }
+  82% { transform: translateX(2px); }
+}
+@keyframes vct-react-tilt-b {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  62% { transform: translateX(-3px); }
+  82% { transform: translateX(2px); }
 }
 
 /* ================================================================

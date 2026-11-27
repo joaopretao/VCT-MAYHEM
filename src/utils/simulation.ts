@@ -668,15 +668,23 @@ export function simulateSingleMap(
       }
 
       let eventText = '';
+      let heroPlayer = activePlayer;
+      let playQuality: 'clutch' | 'good' = i === 3 || i === 4 ? 'clutch' : 'good';
 
       // Specific narrative hooks for traits
       if (i === 0 && fbKingPlayer && Math.random() < 0.75) {
+        heroPlayer = fbKingPlayer;
+        playQuality = 'good';
         eventText = `[FIRST BLOOD] ${fbKingPlayer.ign} explode no bombsite de Classic, anota a primeira baixa relâmpago e garante o pistol!`;
         if (playerStatsMap[fbKingPlayer.id]) playerStatsMap[fbKingPlayer.id].firstBloods += 1;
       } else if (clutchMasterRescued) {
+        heroPlayer = clutchMasterPlayer!;
+        playQuality = 'clutch';
         eventText = `[CLUTCH MASTER] REVIRAVOLTA HEROICA! Quando tudo parecia perdido no map point, ${clutchMasterPlayer!.ign} acha um ângulo impossível, converte o 1v3 e salva a equipe!`;
         if (playerStatsMap[clutchMasterPlayer!.id]) playerStatsMap[clutchMasterPlayer!.id].clutches += 1;
       } else if ((i === 3 || i === 4) && finalBossPlayer && Math.random() < 0.70) {
+        heroPlayer = finalBossPlayer;
+        playQuality = 'clutch';
         eventText = `[FINAL BOSS] Sob pressão sufocante, ${finalBossPlayer.ign} assume o servidor, fecha o round com frieza absurda e levanta a arena!`;
         if (playerStatsMap[finalBossPlayer.id]) playerStatsMap[finalBossPlayer.id].clutches += 1;
       } else {
@@ -684,14 +692,14 @@ export function simulateSingleMap(
         eventText = template(activePlayer);
       }
 
-      // Update stats
-      if (playerStatsMap[activePlayer.id]) {
-        playerStatsMap[activePlayer.id].kills += Math.random() < 0.4 ? 2 : 1;
-        if (i === 3 || i === 4) playerStatsMap[activePlayer.id].clutches += 1;
-        if (i === 0) playerStatsMap[activePlayer.id].firstBloods += 1;
+      // Update stats for the actual acting player
+      if (playerStatsMap[heroPlayer.id]) {
+        playerStatsMap[heroPlayer.id].kills += Math.random() < 0.4 ? 2 : 1;
+        if (i === 3 || i === 4) playerStatsMap[heroPlayer.id].clutches += 1;
+        if (i === 0) playerStatsMap[heroPlayer.id].firstBloods += 1;
       }
       const assistPlayer = players[Math.floor(Math.random() * players.length)];
-      if (assistPlayer.id !== activePlayer.id && playerStatsMap[assistPlayer.id]) {
+      if (assistPlayer.id !== heroPlayer.id && playerStatsMap[assistPlayer.id]) {
         playerStatsMap[assistPlayer.id].assists += 1;
       }
 
@@ -700,7 +708,9 @@ export function simulateSingleMap(
         roundNumber: situation.roundNumber,
         text: eventText,
         type: 'win',
-        clutchPlayer: activePlayer.ign,
+        clutchPlayer: heroPlayer.ign,
+        actorIgn: heroPlayer.ign,
+        playQuality,
         situationTitle: situation.title,
         situationIndex: i + 1,
       });
@@ -709,19 +719,26 @@ export function simulateSingleMap(
       consecutiveLosses++;
 
       let lossText = '';
+      const deadPlayer = players[Math.floor(Math.random() * players.length)];
+      let blamedPlayer = deadPlayer;
+      let playQuality: 'mistake' | 'tilt' = 'mistake';
 
       // Specific narrative hooks for negative traits
       if ((i === 3 || i === 4) && chokePlayer && Math.random() < 0.65) {
+        blamedPlayer = chokePlayer;
+        playQuality = 'tilt';
         lossText = `[AMARELÃO] As mãos suaram frio no round decisivo: ${chokePlayer.ign} erra a mira sob tensão máxima e o adversário fatura o ponto!`;
       } else if (consecutiveLosses >= 2 && tiltedPlayer && stats.synergy < 82 && Math.random() < 0.65) {
+        blamedPlayer = tiltedPlayer;
+        playQuality = 'tilt';
         lossText = `[TILTADO] ${tiltedPlayer.ign} perde o foco com a desvantagem no placar e a desorganização defensiva custa a rodada.`;
       } else {
+        // Generic team/round loss: keep narrative unnamed, while randomly selecting one player to subtly react
         lossText = situation.lossTemplates[Math.floor(Math.random() * situation.lossTemplates.length)];
       }
 
-      const deadPlayer = players[Math.floor(Math.random() * players.length)];
-      if (playerStatsMap[deadPlayer.id]) {
-        playerStatsMap[deadPlayer.id].deaths += 1;
+      if (playerStatsMap[blamedPlayer.id]) {
+        playerStatsMap[blamedPlayer.id].deaths += 1;
       }
 
       events.push({
@@ -729,6 +746,8 @@ export function simulateSingleMap(
         roundNumber: situation.roundNumber,
         text: lossText,
         type: 'loss',
+        actorIgn: blamedPlayer.ign,
+        playQuality,
         situationTitle: situation.title,
         situationIndex: i + 1,
       });

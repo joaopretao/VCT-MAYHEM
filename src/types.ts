@@ -83,6 +83,8 @@ export interface MatchEvent {
   text: string;
   type: 'win' | 'loss' | 'neutral';
   clutchPlayer?: string;
+  actorIgn?: string;
+  playQuality?: 'clutch' | 'good' | 'mistake' | 'tilt';
   situationTitle?: string;
   situationIndex?: number;
 }

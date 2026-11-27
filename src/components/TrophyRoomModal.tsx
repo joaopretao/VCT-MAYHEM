@@ -134,6 +134,20 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
 
         <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
+            <div className="relative w-12 h-16 sm:w-14 sm:h-20 flex items-center justify-center shrink-0">
+              <div
+                className="pointer-events-none absolute inset-0 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(226,183,20,0.28) 0%, transparent 72%)',
+                }}
+                aria-hidden
+              />
+              <img
+                src="/brand/champions-trophy.png"
+                alt="Troféu VALORANT Champions"
+                className="relative z-10 h-full w-auto object-contain select-none drop-shadow-[0_6px_14px_rgba(226,183,20,0.38)]"
+              />
+            </div>
             <span className="vct-slash h-8" aria-hidden />
             <div>
               <span className="text-xs font-mono-vct font-bold text-[#e2b714] uppercase tracking-wider block">
@@ -325,7 +339,7 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
                 <Card
                   key={camp.id}
                   padding="md"
-                  className={camp.wonChampionship ? 'border-amber-500/40' : ''}
+                  className={camp.wonChampionship ? 'border-amber-500/45 vct-trophy-sheen' : ''}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2.5 border-b border-white/[0.07]">
                     <div className="flex items-center gap-2 flex-wrap">

@@ -307,11 +307,12 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                       }
 
                       return (
-                        <div
+                        <motion.div
                           key={player.id}
                           id={`player-chip-${player.id}`}
                           role="button"
                           tabIndex={0}
+                          whileTap={selectable ? { scale: 0.985 } : undefined}
                           onMouseEnter={() => {
                             if (selectable) setHoveredPlayer(player);
                           }}
@@ -333,6 +334,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                           }}
                           className={`group/player relative h-[68px] rounded-[4px] border overflow-hidden flex items-stretch transition-colors duration-150 outline-none ${rowCls}`}
                         >
+                          {drafted && <div className="vct-sheen-once z-30" aria-hidden />}
                           {/* Left 3px Accent Edge */}
                           <div
                             className="absolute inset-y-0 left-0 w-[3px] z-20"
@@ -383,11 +385,11 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                                 alt=""
                                 aria-hidden="true"
                                 referrerPolicy="no-referrer"
-                                className={`pointer-events-none select-none absolute right-[-8%] top-[-18%] h-[185%] w-auto max-w-none object-contain transition-opacity duration-150 ${
+                                className={`pointer-events-none select-none absolute right-[-8%] top-[-18%] h-[185%] w-auto max-w-none object-contain transition-all duration-200 ${
                                   banned || ruleBlocked
                                     ? 'grayscale opacity-15'
                                     : selectable
-                                    ? 'opacity-45 group-hover/player:opacity-70'
+                                    ? 'opacity-45 group-hover/player:opacity-75 group-hover/player:-translate-x-1'
                                     : 'opacity-35'
                                 }`}
                               />
@@ -483,7 +485,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                               </button>
                             </div>
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     })}
                   </div>
