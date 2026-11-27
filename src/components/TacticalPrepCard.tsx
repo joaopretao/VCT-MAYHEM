@@ -7,7 +7,6 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  Zap,
   Sparkles,
   Check,
   Trophy,
@@ -1068,17 +1067,9 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-              <p className="text-xs sm:text-sm text-slate-100 leading-snug">
-                {report.headline}
-              </p>
-              {report.recommendedReason && (
-                <div className="text-[11px] font-mono-vct text-emerald-300 bg-emerald-500/12 border border-emerald-500/30 px-2.5 py-1 rounded-[2px] flex items-center gap-1.5 shrink-0">
-                  <Zap className="w-3.5 h-3.5 shrink-0" />
-                  <span>{report.recommendedReason}</span>
-                </div>
-              )}
-            </div>
+            <p className="text-xs sm:text-sm text-slate-100 leading-snug">
+              {report.headline}
+            </p>
 
             {lowSynergyMasterPenalty && (
               <div className="text-xs font-mono-vct text-rose-300 bg-rose-500/12 border border-rose-500/30 px-2.5 py-1 rounded-[2px]">
@@ -1091,7 +1082,6 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {TACTICAL_STANCES.map(stance => {
               const active = selectedStance === stance.id;
-              const isRecommended = report.recommendedStance === stance.id;
               const StanceIcon = STANCE_ICON[stance.id];
 
               return (
@@ -1125,16 +1115,12 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                       />
                       {stance.label}
                     </span>
-                    {active ? (
+                    {active && (
                       <Check
                         className="w-4 h-4 shrink-0"
                         style={{ color: stance.accentColor }}
                       />
-                    ) : isRecommended ? (
-                      <span className="font-mono-vct text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-[2px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/35">
-                        Ideal
-                      </span>
-                    ) : null}
+                    )}
                   </div>
 
                   <span

@@ -133,10 +133,17 @@ function simulateFullTacticalRun(
 
     const report = generateOpponentScoutReport(series.opponent, difficulty);
     const stances: TacticalStance[] = ['aggressive', 'balanced', 'disciplined'];
-    const stance: TacticalStance =
-      useShopAndScout && report.recommendedStance
-        ? report.recommendedStance
-        : stances[Math.floor(Math.random() * stances.length)];
+    let inferredStance: TacticalStance = stances[Math.floor(Math.random() * stances.length)];
+    if (useShopAndScout && report.visibility === 'full') {
+      if (report.strengthText.includes('retake e clutch')) {
+        inferredStance = 'aggressive';
+      } else if (report.strengthText.includes('Macro disciplinado')) {
+        inferredStance = 'balanced';
+      } else {
+        inferredStance = 'disciplined';
+      }
+    }
+    const stance: TacticalStance = inferredStance;
 
     const targetWins = Math.ceil(series.bestOf / 2);
     let pWins = 0;

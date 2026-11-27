@@ -324,16 +324,10 @@ export const TriviaMode: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto my-1 sm:my-4 space-y-3 sm:space-y-4">
       {/* Header Banner */}
-      <div className="text-center space-y-1 sm:space-y-1.5">
-        <span className="font-mono-vct text-xs font-bold uppercase tracking-widest text-[#38bdf8] block">
-          Trivia VCT · {CANONICAL_TRIVIA_PLAYERS.length} atletas únicos
-        </span>
+      <div className="text-center">
         <h2 className="text-2xl sm:text-4xl font-display font-bold uppercase text-white tracking-wide leading-none">
-          Descubra o Pro Player
+          Descubra o Player
         </h2>
-        <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-          8 tentativas usando país, equipe, região, idade, estreia, títulos internacionais, status, função e agente.
-        </p>
       </div>
 
       {/* Mode Selector & Streak */}

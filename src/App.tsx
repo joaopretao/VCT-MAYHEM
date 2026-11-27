@@ -783,6 +783,12 @@ export default function App() {
         </AnimatePresence>
       </main>
 
+      <footer className="relative z-10 w-full px-3 py-2 text-center pointer-events-none select-none">
+        <p className="font-mono-vct text-[10px] tracking-wide text-slate-400/30">
+          Jogo inspirado no LoLdle Worlds Mayhem, utilizando jogadores do cenário competitivo de VALORANT da Riot Games.
+        </p>
+      </footer>
+
       {/* Roguelike Mayhem Bonus Selection Modal (Pick 2 & Pick 4) */}
       {pendingBonusChoices && currentTab === 'draft' && !isTournamentActive && (
         <MayhemBonusModal

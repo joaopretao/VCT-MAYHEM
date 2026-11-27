@@ -22,6 +22,9 @@ const DARK_LOGOS = new Set([
   'optic',
   'xset',
   'secret',
+  'kc',
+  'karmine',
+  'vitality',
 ]);
 
 export const TeamLogo: React.FC<TeamLogoProps> = ({

@@ -140,8 +140,6 @@ export interface OpponentScoutReport {
   headline: string;
   strengthText: string;
   weaknessText: string | null;
-  recommendedStance: TacticalStance | null;
-  recommendedReason: string | null;
   rosterPreview: { ign: string; agent: string }[];
 }
 
@@ -173,29 +171,19 @@ export function generateOpponentScoutReport(
 
   let strengthText = 'Forte em trocas armadas de meio de mapa';
   let weaknessText = 'Oscila nos pistol rounds iniciais';
-  let recommendedStance: TacticalStance = 'aggressive';
-  let recommendedReason = 'Agressiva pressiona o pistol e economia antes do time encaixar.';
 
   if (duelistCount >= 3 || avgClutch < avgConsistency - 1.5) {
     strengthText = 'Agressivo nos primeiros duelos e pistol rounds';
     weaknessText = 'Oscila em retakes e pós-plant tensos';
-    recommendedStance = 'disciplined';
-    recommendedReason = 'Disciplinada segura o ímpeto inicial e pune no retake/decider.';
   } else if (avgClutch >= 87 && avgSynergy >= 86) {
     strengthText = 'Muito frio em situações de retake e clutch (1vX)';
     weaknessText = 'Demora a aquecer nos rounds econômicos';
-    recommendedStance = 'aggressive';
-    recommendedReason = 'Agressiva abre vantagem cedo em pistol/forçado antes do clutch rival.';
   } else if (avgConsistency >= 88) {
     strengthText = 'Macro disciplinado e sólido no Full Buy de rifles';
     weaknessText = 'Previsível contra pressão alternada nos rounds-chave';
-    recommendedStance = 'balanced';
-    recommendedReason = 'Equilibrada mantém duelo parelho no Full Buy sem abrir flancos.';
   } else if (avgSynergy < 83) {
     strengthText = 'Depende de talento individual em rodadas soltas';
     weaknessText = 'Peca em coordenação nos retakes fechados';
-    recommendedStance = 'disciplined';
-    recommendedReason = 'Disciplinada explora a falta de coordenação rival no pós-plant.';
   }
 
   if (difficulty === 'master') {
@@ -204,8 +192,6 @@ export function generateOpponentScoutReport(
       headline: `Relatório restrito (${opponent.region}) — leitura detalhada indisponível no Master.`,
       strengthText: 'Dados táticos bloqueados nesta dificuldade',
       weaknessText: null,
-      recommendedStance: null,
-      recommendedReason: null,
       rosterPreview,
     };
   }
@@ -216,8 +202,6 @@ export function generateOpponentScoutReport(
       headline: `${strengthText}.`,
       strengthText,
       weaknessText: null,
-      recommendedStance: null,
-      recommendedReason: null,
       rosterPreview,
     };
   }
@@ -227,8 +211,6 @@ export function generateOpponentScoutReport(
     headline: `${strengthText} · ${weaknessText}.`,
     strengthText,
     weaknessText,
-    recommendedStance,
-    recommendedReason,
     rosterPreview,
   };
 }

@@ -388,19 +388,21 @@ export const TEAM_REAL_LOGOS: Record<string, TeamLogoData> = {
   },
 };
 
-// Normalized helper to find team data
+// Normalized helper to find team data (ordered carefully so substrings like "cloud9" never match "loud")
 export function getTeamLogoData(teamQuery: string): TeamLogoData | null {
   if (!teamQuery) return null;
   const q = teamQuery.toLowerCase().replace(/[\s.-]/g, '');
 
-  if (q.includes('loud')) return TEAM_REAL_LOGOS.loud;
+  // Check Cloud9 before LOUD ("cloud9" contains "loud")
+  if (q.includes('cloud9') || q === 'c9') return TEAM_REAL_LOGOS.c9;
+  if (q === 'loud' || q.startsWith('loud')) return TEAM_REAL_LOGOS.loud;
+
   if (q.includes('furia') || q === 'fur') return TEAM_REAL_LOGOS.furia;
   if (q.includes('sentinel') || q === 'sen') return TEAM_REAL_LOGOS.sentinels;
   if (q.includes('fnatic') || q === 'fnc') return TEAM_REAL_LOGOS.fnatic;
   if (q.includes('paperrex') || q === 'prx') return TEAM_REAL_LOGOS.paperrex;
   if (q.includes('g2')) return TEAM_REAL_LOGOS.g2;
   if (q.includes('liquid') || q === 'tl') return TEAM_REAL_LOGOS.liquid;
-  if (q.includes('cloud9') || q === 'c9') return TEAM_REAL_LOGOS.c9;
 
   if (q.includes('xilai') || q.includes('xlg')) return TEAM_REAL_LOGOS.xlg;
   if (q.includes('geng') || q === 'gen') return TEAM_REAL_LOGOS.geng;
@@ -415,25 +417,25 @@ export function getTeamLogoData(teamQuery: string): TeamLogoData | null {
   if (q.includes('kru') || q.includes('krü')) return TEAM_REAL_LOGOS.kru;
   if (q.includes('100thieves') || q.includes('100t') || q.includes('thieves')) return TEAM_REAL_LOGOS.thieves;
   if (q.includes('mibr')) return TEAM_REAL_LOGOS.mibr;
-  if (q.includes('optic')) return TEAM_REAL_LOGOS.optic;
+  if (q.includes('optic') || q === 'optc' || q === 'og') return TEAM_REAL_LOGOS.optic;
   if (q.includes('leviathan') || q.includes('leviatan') || q.includes('leviatán') || q === 'lev') return TEAM_REAL_LOGOS.leviatan;
-  if (q.includes('karmine') || q.includes('kc')) return TEAM_REAL_LOGOS.kc;
+  if (q.includes('karmine') || q === 'kc') return TEAM_REAL_LOGOS.kc;
   if (q.includes('drx') || q.includes('dragonx')) return TEAM_REAL_LOGOS.drx;
   if (q.includes('bilibili') || q.includes('blg')) return TEAM_REAL_LOGOS.blg;
 
   if (q.includes('funplus') || q === 'fpx') return TEAM_REAL_LOGOS.fpx;
   if (q.includes('evil') || q === 'eg') return TEAM_REAL_LOGOS.eg;
-  if (q.includes('fut')) return TEAM_REAL_LOGOS.fut;
+  if (q === 'fut' || q.includes('futesports')) return TEAM_REAL_LOGOS.fut;
   if (q.includes('navi') || q.includes('natus')) return TEAM_REAL_LOGOS.navi;
   if (q.includes('zeta')) return TEAM_REAL_LOGOS.zeta;
-  if (q.includes('t1')) return TEAM_REAL_LOGOS.t1;
-  if (q.includes('tyloo')) return TEAM_REAL_LOGOS.tyloo;
-  if (q.includes('giantx') || q.includes('giants') || q === 'gx') return TEAM_REAL_LOGOS.giantx;
+  if (q === 't1' || q.startsWith('t1(')) return TEAM_REAL_LOGOS.t1;
+  if (q.includes('tyloo') || q === 'tyl') return TEAM_REAL_LOGOS.tyloo;
+  if (q.includes('giantx') || q.includes('giants') || q === 'gx' || q === 'gia') return TEAM_REAL_LOGOS.giantx;
   if (q.includes('acend') || q === 'ace') return TEAM_REAL_LOGOS.acend;
   if (q.includes('rexregum') || q.includes('rrq')) return TEAM_REAL_LOGOS.rrq;
   if (q.includes('fullsense') || q === 'fs') return TEAM_REAL_LOGOS.fullsense;
   if (q.includes('allgamers') || q === 'ag') return TEAM_REAL_LOGOS.ag;
-  if (q.includes('dragonranger') || q === 'drg') return TEAM_REAL_LOGOS.drg;
+  if (q.includes('dragonranger') || q.includes('drg')) return TEAM_REAL_LOGOS.drg;
   if (q.includes('global') || q === 'ge') return TEAM_REAL_LOGOS.global;
   if (q.includes('xset')) return TEAM_REAL_LOGOS.xset;
   if (q.includes('boom') || q === 'bme') return TEAM_REAL_LOGOS.boom;
