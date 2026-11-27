@@ -463,16 +463,16 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                   onInspectPlayer(lockedPlayer);
                 }
               }}
-              className={`group/slot relative h-[96px] md:h-[168px] rounded-[3px] border transition-colors duration-150 overflow-hidden flex flex-col justify-between select-none ${
+              className={`group/slot relative h-[96px] md:h-[168px] rounded-[4px] border transition-colors duration-150 overflow-hidden flex flex-col justify-between select-none ${
                 lockedPlayer
-                  ? 'bg-[#0d1118] border-white/15 cursor-pointer hover:border-white/35'
+                  ? 'bg-[#070b12]/82 border-white/18 cursor-pointer hover:border-white/40'
                   : isPreviewTarget
-                  ? 'bg-[#ff4655]/10 border-[#ff4655]'
+                  ? 'bg-[#ff4655]/15 border-[#ff4655]'
                   : isShiftedDestination
-                  ? 'bg-[#38bdf8]/10 border-[#38bdf8]'
+                  ? 'bg-[#38bdf8]/15 border-[#38bdf8]'
                   : isNextSlot
-                  ? 'bg-[#0d1118] border-[#e2b714]/55'
-                  : 'bg-[#0d1118] border-white/[0.07]'
+                  ? 'bg-[#070b12]/78 border-[#e2b714]/60'
+                  : 'bg-[#070b12]/70 border-white/[0.09]'
               }`}
             >
               {/* Top Role Accent Bar */}
@@ -533,13 +533,24 @@ export const LineupBar: React.FC<LineupBarProps> = ({
                 ) : null}
               </div>
 
-              {/* Sticker Portrait Frame */}
+              {/* Sticker Portrait Frame with Crisp Agent Backdrop */}
               <div className="relative flex-1 min-h-0 flex items-end justify-center overflow-hidden">
+                {activePlayer && fallbackAgentUrl && (
+                  <img
+                    src={fallbackAgentUrl}
+                    alt=""
+                    aria-hidden="true"
+                    referrerPolicy="no-referrer"
+                    className={`pointer-events-none select-none absolute inset-x-0 top-[-14%] mx-auto h-[155%] w-auto max-w-none object-contain ${
+                      lockedPlayer ? 'opacity-40' : 'opacity-28'
+                    }`}
+                  />
+                )}
                 <div
                   className="absolute inset-0 pointer-events-none"
                   style={{
                     background: activePlayer
-                      ? `radial-gradient(circle at 50% 42%, ${activeTeamColor}45 0%, transparent 76%)`
+                      ? `linear-gradient(180deg, rgba(6,10,17,0.35) 0%, ${activeTeamColor}25 55%, rgba(6,10,17,0.88) 100%)`
                       : 'none',
                   }}
                 />

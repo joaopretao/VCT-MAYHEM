@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CardFrameId, Team, Player, Lineup, Role, MayhemBonus, RunRuleId, UserTeamIdentity } from '../types';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
+import { AGENT_FULL_PORTRAITS, AGENT_ICONS } from '../data/agentIcons';
+import { getPlayerPhotoUrl } from '../data/playerPhotos';
 import { TeamLogo } from './TeamLogo';
 import { TraitBadge } from './TraitBadge';
-import { PlayerAvatar } from './PlayerAvatar';
+import { RoleEmblem } from './RoleEmblem';
 import { CountryFlag } from './CountryFlag';
 import { LineupBar } from './LineupBar';
 import { isPlayerBanned } from '../utils/bans';
@@ -63,6 +65,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
   const [localWarning, setLocalWarning] = useState<string | null>(null);
   const [hoveredPlayer, setHoveredPlayer] = useState<Player | null>(null);
   const [mobileTeamIdx, setMobileTeamIdx] = useState<number>(0);
+  const [photoErrors, setPhotoErrors] = useState<Record<string, boolean>>({});
 
   const batchKey = availableTeams.map(t => t.id).join('|');
 
@@ -214,14 +217,30 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                 transition={{ delay: idx * 0.04, duration: 0.18 }}
                 className={idx === mobileTeamIdx ? 'block' : 'hidden lg:block'}
               >
-                <Card variant="interactive" padding="none" className="p-3 md:p-4 h-full flex flex-col gap-2.5 md:gap-3.5">
+                <Card
+                  variant="interactive"
+                  padding="none"
+                  className="overflow-hidden h-full flex flex-col"
+                >
+                  {/* Top Team Accent Line */}
+                  <div
+                    className="h-[2px] w-full shrink-0"
+                    style={{ backgroundColor: team.primaryColor }}
+                    aria-hidden
+                  />
+
                   {/* Team Header */}
-                  <div className="flex items-center gap-3.5 pb-2.5 md:pb-3 border-b border-white/[0.08]">
+                  <div
+                    className="flex items-center gap-3.5 px-3.5 py-3 border-b border-white/[0.09]"
+                    style={{
+                      background: `linear-gradient(90deg, ${team.primaryColor}20 0%, rgba(6,10,17,0.45) 75%)`,
+                    }}
+                  >
                     <div
-                      className="w-14 h-14 rounded-[4px] border flex items-center justify-center p-2 shrink-0"
+                      className="w-13 h-13 rounded-[4px] border flex items-center justify-center p-1.5 shrink-0"
                       style={{
-                        background: `radial-gradient(circle, ${team.primaryColor}30 0%, #0d1118 78%)`,
-                        borderColor: `${team.primaryColor}55`,
+                        background: `radial-gradient(circle, ${team.primaryColor}30 0%, #070b12 80%)`,
+                        borderColor: `${team.primaryColor}60`,
                         boxShadow: `0 0 18px -4px ${team.primaryColor}55`,
                       }}
                     >
@@ -241,7 +260,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                         <h3 className="font-display text-2xl leading-none text-white uppercase tracking-wide truncate">
                           {team.name}
                         </h3>
-                        <span className="font-mono-vct text-xs font-bold px-1.5 py-0.5 rounded-[2px] bg-[#0d1118] border border-white/10 text-slate-200">
+                        <span className="font-mono-vct text-xs font-bold px-1.5 py-0.5 rounded-[2px] bg-[#06090f]/80 border border-white/12 text-slate-200">
                           {team.year}
                         </span>
                       </div>
@@ -251,8 +270,8 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                     </div>
                   </div>
 
-                  {/* 5 Player Rows */}
-                  <div className="flex flex-col gap-2">
+                  {/* 5 Crisp Agent-Backdrop Player Banners */}
+                  <div className="flex flex-col gap-2 p-2.5 md:p-3 flex-1">
                     {team.roster.map(player => {
                       const drafted = isPlayerDrafted(player);
                       const banned = isPlayerBanned(player, bannedPlayers);
@@ -260,19 +279,31 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                       const slot = getDestinationSlot(player);
                       const selectable = slot.available;
                       const roleColor = ROLE_COLORS[player.primaryRole] || '#ff4655';
+                      const agentPortrait = player.signatureAgent
+                        ? AGENT_FULL_PORTRAITS[player.signatureAgent]
+                        : null;
+                      const photoUrl = getPlayerPhotoUrl(player.ign);
+                      const photoFailed = Boolean(photoErrors[player.id]);
+                      const agentIcon = player.signatureAgent
+                        ? AGENT_ICONS[player.signatureAgent]
+                        : null;
 
                       let rowCls = '';
+                      let edgeColor = team.primaryColor;
                       if (banned) {
-                        rowCls = 'bg-[#170c10] border-rose-500/30 opacity-65 cursor-not-allowed';
+                        rowCls = 'bg-[#170c10]/85 border-rose-500/35 opacity-70 cursor-not-allowed';
+                        edgeColor = '#f43f5e';
                       } else if (ruleBlocked) {
-                        rowCls = 'bg-[#0b0e14] border-white/[0.05] opacity-40 cursor-not-allowed';
+                        rowCls = 'bg-[#070b12]/70 border-white/[0.06] opacity-45 cursor-not-allowed';
+                        edgeColor = '#475569';
                       } else if (drafted) {
-                        rowCls = 'bg-emerald-950/25 border-emerald-500/35 opacity-75 cursor-default';
+                        rowCls = 'bg-emerald-950/35 border-emerald-500/45 opacity-85 cursor-default';
+                        edgeColor = '#10b981';
                       } else if (selectable) {
                         rowCls =
-                          'surface-sub cursor-pointer hover:border-[#ff4655] hover:bg-[#1a151c] focus-visible:border-[#ff4655]';
+                          'bg-[#070b12]/82 border-white/[0.12] cursor-pointer hover:border-[#ff4655] focus-visible:border-[#ff4655]';
                       } else {
-                        rowCls = 'bg-[#0b0e14] border-white/[0.05] opacity-45 cursor-pointer';
+                        rowCls = 'bg-[#070b12]/65 border-white/[0.06] opacity-50 cursor-pointer';
                       }
 
                       return (
@@ -300,20 +331,83 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                               handleTileClick(player);
                             }
                           }}
-                          className={`group/player relative min-h-[64px] rounded-[3px] border px-2.5 py-1.5 flex items-center justify-between gap-2.5 transition-colors duration-150 outline-none ${rowCls}`}
+                          className={`group/player relative h-[68px] rounded-[4px] border overflow-hidden flex items-stretch transition-colors duration-150 outline-none ${rowCls}`}
                         >
-                          {/* Left: Player Face + Name + Flag + Champion + Role + Agent */}
-                          <div className="flex items-center gap-3 min-w-0">
-                            <PlayerAvatar
-                              player={player}
-                              size="draft"
-                              teamColor={team.primaryColor}
+                          {/* Left 3px Accent Edge */}
+                          <div
+                            className="absolute inset-y-0 left-0 w-[3px] z-20"
+                            style={{ backgroundColor: edgeColor }}
+                            aria-hidden
+                          />
+
+                          {/* Flush Outer-Left Player Photo Square */}
+                          <div
+                            className="relative w-[62px] sm:w-[66px] h-full shrink-0 border-r border-white/12 overflow-hidden flex items-center justify-center"
+                            style={{
+                              background: `radial-gradient(circle at 50% 25%, ${team.primaryColor}40 0%, #070b12 88%)`,
+                            }}
+                          >
+                            {photoUrl && !photoFailed ? (
+                              <img
+                                src={photoUrl}
+                                alt={player.ign}
+                                loading="lazy"
+                                onError={() =>
+                                  setPhotoErrors(prev => ({ ...prev, [player.id]: true }))
+                                }
+                                className={`w-full h-full object-cover object-top select-none ${
+                                  banned || ruleBlocked ? 'grayscale opacity-75' : ''
+                                }`}
+                              />
+                            ) : agentIcon ? (
+                              <img
+                                src={agentIcon}
+                                alt={player.signatureAgent}
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover p-1.5 select-none"
+                              />
+                            ) : (
+                              <RoleEmblem role={player.primaryRole} size="sm" showBackground={false} />
+                            )}
+                            <div
+                              className="pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-[#06090f]/80 to-transparent"
+                              aria-hidden
+                            />
+                          </div>
+
+                          {/* Wide Banner with Crisp Agent in Background ("Boneco no fundo") */}
+                          <div className="relative flex-1 min-w-0 px-2.5 sm:px-3 py-1.5 flex items-center justify-between gap-2 overflow-hidden">
+                            {agentPortrait && (
+                              <img
+                                src={agentPortrait}
+                                alt=""
+                                aria-hidden="true"
+                                referrerPolicy="no-referrer"
+                                className={`pointer-events-none select-none absolute right-[-8%] top-[-18%] h-[185%] w-auto max-w-none object-contain transition-opacity duration-150 ${
+                                  banned || ruleBlocked
+                                    ? 'grayscale opacity-15'
+                                    : selectable
+                                    ? 'opacity-45 group-hover/player:opacity-70'
+                                    : 'opacity-35'
+                                }`}
+                              />
+                            )}
+
+                            {/* Directional Dark Readability Veil */}
+                            <div
+                              className="pointer-events-none absolute inset-0"
+                              style={{
+                                background:
+                                  'linear-gradient(90deg, rgba(6,10,17,0.92) 0%, rgba(6,10,17,0.68) 60%, rgba(6,10,17,0.28) 100%)',
+                              }}
+                              aria-hidden
                             />
 
-                            <div className="min-w-0 text-left">
+                            {/* Left Foreground Info */}
+                            <div className="relative z-10 min-w-0 text-left">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span
-                                  className={`text-base font-bold leading-tight truncate ${
+                                  className={`font-display text-xl sm:text-[22px] leading-none uppercase tracking-wide truncate drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] ${
                                     banned ? 'text-rose-300 line-through' : 'text-white'
                                   }`}
                                 >
@@ -322,7 +416,7 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                                 <CountryFlag
                                   code={player.countryCode}
                                   country={player.country}
-                                  size="sm"
+                                  size="xs"
                                 />
                                 {player.isChampionsWinner && (
                                   <span
@@ -337,57 +431,57 @@ export const ValorantDraftBoard: React.FC<ValorantDraftBoardProps> = ({
                                 )}
                               </div>
 
-                              <div className="flex items-center gap-1.5 text-xs leading-tight mt-0.5">
-                                <span className="font-bold shrink-0" style={{ color: roleColor }}>
+                              <div className="flex items-center gap-1.5 text-[11px] font-mono-vct leading-tight mt-0.5">
+                                <span className="font-bold uppercase shrink-0" style={{ color: roleColor }}>
                                   {ROLE_NAMES_PT[player.primaryRole]}
                                   {player.secondaryRoles.length > 0
-                                    ? ` / ${ROLE_NAMES_PT[player.secondaryRoles[0]]}`
+                                    ? ` / ${ROLE_NAMES_PT[player.secondaryRoles[0]].slice(0, 4)}`
                                     : ''}
                                 </span>
                                 <span className="text-slate-500">·</span>
                                 <span className="text-slate-200 truncate">{player.signatureAgent}</span>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Right: Pick label / BANIDO stamp / Status + Info */}
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {selectable ? (
-                              <span className="opacity-0 group-hover/player:opacity-100 group-focus-visible/player:opacity-100 px-2.5 py-1 rounded-[2px] bg-[#ff4655] text-white font-mono-vct text-xs font-bold uppercase tracking-wider transition-opacity">
-                                Pegar
-                              </span>
-                            ) : banned ? (
-                              <span className="ban-stamp px-2 py-0.5 font-mono-vct text-xs font-bold uppercase">
-                                BANIDO
-                              </span>
-                            ) : ruleBlocked ? (
-                              <span className="text-[11px] font-mono-vct text-slate-300">
-                                Fora
-                              </span>
-                            ) : drafted ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-mono-vct font-semibold text-emerald-300">
-                                <Check className="w-3.5 h-3.5" />
-                                No time
-                              </span>
-                            ) : (
-                              <span className="text-xs text-slate-300">
-                                Cheia
-                              </span>
-                            )}
+                            {/* Right Action / Status + Info */}
+                            <div className="relative z-10 flex items-center gap-1 shrink-0">
+                              {selectable ? (
+                                <span className="opacity-0 group-hover/player:opacity-100 group-focus-visible/player:opacity-100 px-2 py-1 rounded-[2px] bg-[#ff4655] text-white font-mono-vct text-[11px] font-bold uppercase tracking-wider transition-opacity shadow-md">
+                                  Pegar
+                                </span>
+                              ) : banned ? (
+                                <span className="ban-stamp px-1.5 py-0.5 font-mono-vct text-[10px] font-bold uppercase">
+                                  BANIDO
+                                </span>
+                              ) : ruleBlocked ? (
+                                <span className="text-[11px] font-mono-vct text-slate-300 bg-[#06090f]/80 px-1.5 py-0.5 rounded-[2px]">
+                                  Fora
+                                </span>
+                              ) : drafted ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-mono-vct font-semibold text-emerald-300 bg-[#06090f]/80 px-1.5 py-0.5 rounded-[2px] border border-emerald-500/30">
+                                  <Check className="w-3 h-3" />
+                                  No time
+                                </span>
+                              ) : (
+                                <span className="text-[11px] font-mono-vct text-slate-300 bg-[#06090f]/80 px-1.5 py-0.5 rounded-[2px]">
+                                  Cheia
+                                </span>
+                              )}
 
-                            <button
-                              type="button"
-                              onClick={e => {
-                                e.stopPropagation();
-                                playSelectSound();
-                                onInspectPlayer(player);
-                              }}
-                              className="p-1.5 rounded-[2px] text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                              title={`Perfil de ${player.ign}`}
-                              aria-label={`Ver detalhes de ${player.ign}`}
-                            >
-                              <Info className="w-4 h-4" />
-                            </button>
+                              <button
+                                type="button"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  playSelectSound();
+                                  onInspectPlayer(player);
+                                }}
+                                className="p-1.5 rounded-[2px] bg-[#06090f]/75 border border-white/10 text-slate-200 hover:text-white hover:border-white/30 transition-colors cursor-pointer"
+                                title={`Perfil de ${player.ign}`}
+                                aria-label={`Ver detalhes de ${player.ign}`}
+                              >
+                                <Info className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );

@@ -648,13 +648,30 @@ export default function App() {
     ? `Pick ${Math.min(5, picksCount)}/5`
     : null;
 
+  const DRAFT_BACKDROP_MAPS = ['Lotus', 'Corrode', 'Sunset', 'Haven', 'Split', 'Bind', 'Pearl', 'Icebox'];
+  const seedHash = (runSeed || 'VCT')
+    .split('')
+    .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const draftMapName = DRAFT_BACKDROP_MAPS[seedHash % DRAFT_BACKDROP_MAPS.length];
+
+  const resolvedBackdrop: AppBackdropConfig =
+    currentTab === 'draft' && isTournamentActive && tournamentBackdrop
+      ? { ...tournamentBackdrop, intensity: 'stage' }
+      : currentTab === 'draft'
+      ? { mapName: draftMapName, leftGlowColor: teamIdentity.color, intensity: 'ambient' }
+      : currentTab === 'grid'
+      ? { mapName: 'Pearl', intensity: 'ambient' }
+      : currentTab === 'trivia'
+      ? { mapName: 'Haven', intensity: 'ambient' }
+      : currentTab === 'history'
+      ? { mapName: 'Abyss', isFinals: true, intensity: 'ambient' }
+      : { mapName: 'Ascent', intensity: 'ambient' };
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen overflow-x-hidden bg-transparent text-slate-100 flex flex-col selection:bg-[#ff4655] selection:text-white relative isolate">
-      {/* Ambient Drifting Background */}
-      <AppBackground
-        backdrop={currentTab === 'draft' && isTournamentActive ? tournamentBackdrop : null}
-      />
+      {/* Crisp Full-HD Map Background synced with active mode & tournament map */}
+      <AppBackground backdrop={resolvedBackdrop} />
 
       {/* Top Navbar */}
       <Navbar
