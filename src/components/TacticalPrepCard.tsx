@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair,
@@ -433,7 +434,7 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
 
   useEffect(() => {
     if (!showFinalsIntro) return;
-    const timer = window.setTimeout(() => setShowFinalsIntro(false), 1300);
+    const timer = window.setTimeout(() => setShowFinalsIntro(false), 2400);
     const skip = () => setShowFinalsIntro(false);
     window.addEventListener('keydown', skip);
     return () => {
@@ -487,115 +488,222 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
       }`}
     >
       {/* =====================================================================
-          GRAND FINALS OPENING WALKOUT VIGNETTE (~1.3s, click anywhere to skip)
+          GRAND FINALS BROADCAST OPENING (Portal to body -> exact viewport center, click anywhere to skip)
          ===================================================================== */}
-      <AnimatePresence>
-        {isFinals && showFinalsIntro && (
-          <motion.div
-            key="grand-finals-intro"
-            role="button"
-            tabIndex={0}
-            aria-label="Pular abertura da Grande Final"
-            onClick={() => setShowFinalsIntro(false)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="fixed inset-0 z-50 bg-[#05080f]/95 flex flex-col items-center justify-center p-6 cursor-pointer select-none overflow-hidden"
-          >
-            {/* Top & Bottom Gold Broadcast Hairlines */}
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#e2b714] to-transparent"
-              aria-hidden
-            />
-            <div
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-[#e2b714] to-transparent"
-              aria-hidden
-            />
-
-            <motion.span
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="font-mono-vct text-xs sm:text-sm font-bold uppercase tracking-[0.26em] text-[#fde047] mb-3"
-            >
-              Valorant Champions · Grande Final MD5
-            </motion.span>
-
-            {/* Team Crest vs Real Trophy vs Rival Logo */}
-            <div className="flex items-center justify-center gap-6 sm:gap-12 my-2">
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {isFinals && showFinalsIntro && (
               <motion.div
-                initial={{ opacity: 0, x: -28 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-col items-center gap-2 text-center"
+                key="grand-finals-intro"
+                role="button"
+                tabIndex={0}
+                aria-label="Pular abertura da Grande Final"
+                onClick={() => setShowFinalsIntro(false)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
+                className="fixed inset-0 z-[80] bg-[#05080f] flex flex-col items-center justify-center px-4 sm:px-8 cursor-pointer select-none overflow-hidden"
               >
-                <TeamCrest
-                  emblemId={teamIdentity.emblemId}
-                  color={teamIdentity.color}
-                  logoTeamKey={teamIdentity.logoTeamKey}
-                  size="lg"
-                  className="w-16 h-16 sm:w-20 sm:h-20"
+                {/* Crisp Full-Bleed Map Backdrop (Zero Blur) */}
+                <img
+                  src={activeMapArt.splash}
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 w-full h-full object-cover opacity-22 saturate-110"
                 />
-                <span className="font-display text-2xl sm:text-3xl text-white uppercase tracking-wide max-w-[140px] sm:max-w-[200px] truncate">
-                  {teamIdentity.name}
-                </span>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, scale: 0.86, y: 14 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="relative w-28 h-40 sm:w-36 sm:h-52 flex items-center justify-center shrink-0"
-              >
                 <div
-                  className="pointer-events-none absolute inset-2 rounded-full"
+                  className="pointer-events-none absolute inset-0"
                   style={{
-                    background: 'radial-gradient(circle, rgba(226,183,20,0.32) 0%, transparent 70%)',
+                    background:
+                      'radial-gradient(ellipse 60% 70% at 50% 50%, rgba(12,15,24,0.35) 0%, rgba(5,8,15,0.88) 65%, rgba(4,6,12,0.97) 100%)',
                   }}
                   aria-hidden
                 />
-                <img
-                  src="/brand/champions-trophy.png"
-                  alt="Troféu VALORANT Champions"
-                  className="relative z-10 h-full w-auto object-contain drop-shadow-[0_12px_30px_rgba(226,183,20,0.5)]"
-                />
-              </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, x: 28 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-col items-center gap-2 text-center"
-              >
-                <div
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-[4px] bg-[#090d16] border p-2 flex items-center justify-center"
+                {/* Center Vertical Gold Stage Light Pillar */}
+                <motion.div
+                  initial={{ opacity: 0, scaleY: 0.4 }}
+                  animate={{ opacity: 1, scaleY: 1 }}
+                  transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                  className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-[260px] sm:w-[340px]"
                   style={{
-                    borderColor: `${series.opponent.logoColor}88`,
-                    boxShadow: `0 0 24px -6px ${series.opponent.logoColor}88`,
+                    background:
+                      'linear-gradient(180deg, rgba(226,183,20,0.22) 0%, rgba(226,183,20,0.09) 48%, rgba(226,183,20,0.24) 100%)',
+                    maskImage:
+                      'linear-gradient(90deg, transparent 0%, black 35%, black 65%, transparent 100%)',
+                    WebkitMaskImage:
+                      'linear-gradient(90deg, transparent 0%, black 35%, black 65%, transparent 100%)',
                   }}
-                >
-                  <TeamLogo
-                    teamName={series.opponent.name}
-                    shortName={series.opponent.tag}
-                    logoUrl={series.opponent.logoUrl}
-                    primaryColor={series.opponent.logoColor}
-                    size="lg"
-                    className="w-full h-full"
-                  />
-                </div>
-                <span className="font-display text-2xl sm:text-3xl text-white uppercase tracking-wide max-w-[140px] sm:max-w-[200px] truncate">
-                  {realOpponentTeam?.name || oppShort}
-                </span>
-              </motion.div>
-            </div>
+                  aria-hidden
+                />
 
-            <span className="mt-6 font-mono-vct text-[11px] uppercase tracking-widest text-slate-400">
-              Clique em qualquer lugar para pular
-            </span>
-          </motion.div>
+                {/* Top & Bottom Animated Gold Broadcast Hairlines */}
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="pointer-events-none absolute inset-x-0 top-0 h-[2px] origin-center bg-gradient-to-r from-transparent via-[#e2b714] to-transparent"
+                  aria-hidden
+                />
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] origin-center bg-gradient-to-r from-transparent via-[#e2b714] to-transparent"
+                  aria-hidden
+                />
+
+                {/* Top Broadcast Kicker */}
+                <motion.div
+                  initial={{ opacity: 0, y: -12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.38, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative z-10 flex flex-col items-center text-center mb-4 sm:mb-6"
+                >
+                  <span className="font-mono-vct text-[11px] sm:text-xs font-bold uppercase tracking-[0.3em] text-[#fde047]">
+                    Valorant Champions
+                  </span>
+                  <h2 className="font-display text-4xl sm:text-6xl leading-none text-white uppercase tracking-[0.08em] mt-1 drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)]">
+                    Grande Final · MD5
+                  </h2>
+                </motion.div>
+
+                {/* Symmetric 3-Column Stage Grid: [Left 1fr] | [Exact Center Trophy] | [Right 1fr] */}
+                <div className="relative z-10 w-full max-w-4xl grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-8">
+                  {/* LEFT TEAM */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -36 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.45, delay: 0.14, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex flex-col items-center sm:items-end text-center sm:text-right min-w-0"
+                  >
+                    <div
+                      className="w-16 h-16 sm:w-24 sm:h-24 rounded-[5px] bg-[#080c15] border p-2 flex items-center justify-center shadow-2xl"
+                      style={{
+                        borderColor: `${teamIdentity.color}99`,
+                        boxShadow: `0 0 28px -6px ${teamIdentity.color}80`,
+                      }}
+                    >
+                      <TeamCrest
+                        emblemId={teamIdentity.emblemId}
+                        color={teamIdentity.color}
+                        logoTeamKey={teamIdentity.logoTeamKey}
+                        size="lg"
+                        className="w-full h-full"
+                      />
+                    </div>
+                    <span className="font-mono-vct text-[10px] sm:text-xs font-bold uppercase tracking-[0.18em] text-[#38bdf8] mt-2.5">
+                      Finalista · Sua Equipe
+                    </span>
+                    <span className="font-display text-2xl sm:text-4xl leading-none text-white uppercase tracking-wide mt-1 max-w-full truncate drop-shadow">
+                      {teamIdentity.name}
+                    </span>
+                  </motion.div>
+
+                  {/* EXACT CENTER: REAL CHAMPIONS TROPHY */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 24, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.52, delay: 0.04, ease: [0.16, 1, 0.3, 1] }}
+                    className="relative flex flex-col items-center justify-center shrink-0 px-2 sm:px-4"
+                  >
+                    <div className="relative w-32 h-48 sm:w-44 sm:h-64 flex items-center justify-center">
+                      {/* Crisp rotating gold ring */}
+                      <div
+                        className="pointer-events-none absolute inset-2 rounded-full vct-halo-spin opacity-65"
+                        style={{
+                          background:
+                            'conic-gradient(from 0deg, transparent 0deg, rgba(226,183,20,0.5) 45deg, transparent 105deg, rgba(255,255,255,0.22) 180deg, transparent 235deg, rgba(226,183,20,0.5) 300deg, transparent 360deg)',
+                          maskImage:
+                            'radial-gradient(circle, transparent 48%, black 64%, transparent 70%)',
+                          WebkitMaskImage:
+                            'radial-gradient(circle, transparent 48%, black 64%, transparent 70%)',
+                        }}
+                        aria-hidden
+                      />
+                      {/* Warm golden radial backlight */}
+                      <div
+                        className="pointer-events-none absolute inset-3 rounded-full"
+                        style={{
+                          background:
+                            'radial-gradient(circle, rgba(226,183,20,0.34) 0%, rgba(226,183,20,0.08) 52%, transparent 74%)',
+                        }}
+                        aria-hidden
+                      />
+                      <img
+                        src="/brand/champions-trophy.png"
+                        alt="Troféu oficial do VALORANT Champions"
+                        className="relative z-10 h-full w-auto object-contain drop-shadow-[0_14px_32px_rgba(226,183,20,0.48)]"
+                      />
+                    </div>
+
+                    <div className="mt-2 flex items-center gap-2.5">
+                      <span className="h-[1px] w-7 bg-gradient-to-r from-transparent to-[#e2b714]/70" />
+                      <span className="font-mono-vct text-xs font-black tracking-[0.25em] text-[#fde047]">
+                        VS
+                      </span>
+                      <span className="h-[1px] w-7 bg-gradient-to-l from-transparent to-[#e2b714]/70" />
+                    </div>
+                  </motion.div>
+
+                  {/* RIGHT TEAM */}
+                  <motion.div
+                    initial={{ opacity: 0, x: 36 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.45, delay: 0.14, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex flex-col items-center sm:items-start text-center sm:text-left min-w-0"
+                  >
+                    <div
+                      className="w-16 h-16 sm:w-24 sm:h-24 rounded-[5px] bg-[#080c15] border p-2.5 flex items-center justify-center shadow-2xl"
+                      style={{
+                        borderColor: `${series.opponent.logoColor}99`,
+                        boxShadow: `0 0 28px -6px ${series.opponent.logoColor}80`,
+                      }}
+                    >
+                      <TeamLogo
+                        teamName={series.opponent.name}
+                        shortName={series.opponent.tag}
+                        logoUrl={series.opponent.logoUrl}
+                        primaryColor={series.opponent.logoColor}
+                        size="lg"
+                        className="w-full h-full"
+                      />
+                    </div>
+                    <span className="font-mono-vct text-[10px] sm:text-xs font-bold uppercase tracking-[0.18em] text-rose-400 mt-2.5">
+                      {series.opponent.region} · {series.opponent.rating} OVR
+                    </span>
+                    <span className="font-display text-2xl sm:text-4xl leading-none text-white uppercase tracking-wide mt-1 max-w-full truncate drop-shadow">
+                      {realOpponentTeam?.name || oppShort}
+                    </span>
+                  </motion.div>
+                </div>
+
+                {/* Bottom Skip Hint + Auto-Progress Bar */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.3 }}
+                  className="relative z-10 mt-8 flex flex-col items-center gap-2"
+                >
+                  <span className="font-mono-vct text-[11px] uppercase tracking-[0.2em] text-slate-300/80">
+                    Clique em qualquer lugar para pular
+                  </span>
+                  <div className="w-36 h-[2px] bg-white/15 overflow-hidden rounded-full">
+                    <motion.div
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: 2.35, ease: 'linear' }}
+                      className="h-full origin-left bg-[#e2b714]"
+                    />
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
 
       {/* =====================================================================
           FULL-BLEED STAGE BACKGROUND: CRISP FULL MAP (NO BLUR)
@@ -844,10 +952,18 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                 const walkoutDelay = isFinals ? idx * 0.065 : idx * 0.035;
                 return (
                   <motion.div
-                    key={`left-${role}-${showFinalsIntro ? 'wait' : 'go'}`}
+                    key={`left-${role}`}
                     initial={{ opacity: 0, x: isFinals ? -24 : -12 }}
-                    animate={{ opacity: showFinalsIntro ? 0 : 1, x: showFinalsIntro ? -24 : 0 }}
-                    transition={{ duration: isFinals ? 0.28 : 0.22, delay: walkoutDelay, ease: [0.22, 1, 0.36, 1] }}
+                    animate={
+                      showFinalsIntro
+                        ? { opacity: 0, x: -24 }
+                        : { opacity: 1, x: 0 }
+                    }
+                    transition={{
+                      duration: isFinals ? 0.3 : 0.22,
+                      delay: showFinalsIntro ? 0 : walkoutDelay,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
                   >
                     <MirroredPlayerCard
                       player={p}
@@ -983,10 +1099,18 @@ export const TacticalPrepCard: React.FC<TacticalPrepCardProps> = ({
                 const walkoutDelay = isFinals ? idx * 0.065 : idx * 0.035;
                 return (
                   <motion.div
-                    key={`right-${role}-${showFinalsIntro ? 'wait' : 'go'}`}
+                    key={`right-${role}`}
                     initial={{ opacity: 0, x: isFinals ? 24 : 12 }}
-                    animate={{ opacity: showFinalsIntro ? 0 : 1, x: showFinalsIntro ? 24 : 0 }}
-                    transition={{ duration: isFinals ? 0.28 : 0.22, delay: walkoutDelay, ease: [0.22, 1, 0.36, 1] }}
+                    animate={
+                      showFinalsIntro
+                        ? { opacity: 0, x: 24 }
+                        : { opacity: 1, x: 0 }
+                    }
+                    transition={{
+                      duration: isFinals ? 0.3 : 0.22,
+                      delay: showFinalsIntro ? 0 : walkoutDelay,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
                   >
                     <MirroredPlayerCard
                       player={opp}
