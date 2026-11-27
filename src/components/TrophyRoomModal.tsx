@@ -20,7 +20,8 @@ import { CampaignHistory, Achievement, PlayerRecords, CardFrameId } from '../typ
 import { evaluateAchievements } from '../data/achievements';
 import { CARD_FRAMES, getUnlockedFrameIds } from '../data/frames';
 import { getRunRuleMeta } from '../utils/runRules';
-import { ROLE_NAMES_PT } from '../data/roleIcons';
+import { ROLE_COLORS, ROLE_NAMES_PT } from '../data/roleIcons';
+import { getPlayerPhotoUrl } from '../data/playerPhotos';
 import { playSelectSound } from '../utils/audio';
 import { buildRecordsFromCampaigns, getMostUsedBonus } from '../utils/records';
 import { TeamLogo } from './TeamLogo';
@@ -111,8 +112,27 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
   return (
     <div className="max-w-4xl mx-auto my-4 space-y-5">
       {/* Header Banner */}
-      <Card padding="lg">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <Card padding="lg" className="relative overflow-hidden border-[#e2b714]/30">
+        <div
+          className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#e2b714] to-transparent"
+          aria-hidden
+        />
+        <img
+          src="/maps/abyss.jpg"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-22"
+        />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(95deg, rgba(6,10,17,0.94) 0%, rgba(6,10,17,0.82) 60%, rgba(6,10,17,0.72) 100%)',
+          }}
+          aria-hidden
+        />
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <span className="vct-slash h-8" aria-hidden />
             <div>
@@ -147,7 +167,7 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
         </div>
 
         {/* Aggregate Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-white/[0.08]">
+        <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-white/[0.08]">
           <div className="surface-sub p-3 text-center">
             <span className="text-xs uppercase text-slate-300 font-semibold block mb-1">Títulos</span>
             <span className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono-vct tabular-nums">
@@ -180,7 +200,7 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
         {/* Personal Records Section ("Seu histórico") */}
         <div
           id="player-records-section"
-          className="mt-4 pt-4 border-t border-white/[0.08]"
+          className="relative z-10 mt-4 pt-4 border-t border-white/[0.08]"
         >
           <div className="flex items-center justify-between gap-2 mb-2.5">
             <span className="text-xs font-mono-vct font-bold uppercase tracking-wider text-[#e2b714]">
@@ -362,33 +382,57 @@ export const TrophyRoomModal: React.FC<TrophyRoomModalProps> = ({
                     </div>
                   </div>
 
-                  {/* 5 Roster Players */}
+                  {/* 5 Roster Players with Role Edge & Photo */}
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     {camp.lineup.map((p, pIdx) => {
                       const isMvp = camp.mvp === p.ign;
+                      const roleColor = ROLE_COLORS[p.role] || '#ff4655';
+                      const photoUrl = getPlayerPhotoUrl(p.ign);
                       return (
                         <div
                           key={pIdx}
-                          className={`surface-sub p-2.5 text-xs ${
-                            isMvp ? 'border-amber-500/45' : ''
+                          className={`relative overflow-hidden surface-sub pl-3 pr-2.5 py-2 text-xs ${
+                            isMvp ? 'border-amber-500/50' : ''
                           }`}
                         >
-                          <div className="flex justify-between text-xs text-slate-400 mb-0.5">
-                            <span className="flex items-center gap-1 font-semibold">
+                          <div
+                            className="absolute inset-y-0 left-0 w-[3px]"
+                            style={{ backgroundColor: isMvp ? '#e2b714' : roleColor }}
+                            aria-hidden
+                          />
+                          <div className="flex justify-between text-[11px] font-mono-vct text-slate-300 mb-1">
+                            <span
+                              className="flex items-center gap-1 font-bold uppercase truncate"
+                              style={{ color: isMvp ? '#fde047' : roleColor }}
+                            >
                               {ROLE_NAMES_PT[p.role] || p.role}
-                              {isMvp && <Award className="w-3 h-3 text-amber-400" />}
+                              {isMvp && <Award className="w-3 h-3 text-amber-400 shrink-0" />}
                             </span>
-                            <span className="text-amber-400 font-bold font-mono-vct">{p.rating}</span>
+                            <span className="text-amber-400 font-bold shrink-0">{p.rating}</span>
                           </div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className={`font-bold block truncate text-sm ${isMvp ? 'text-amber-300' : 'text-white'}`}>
-                              {p.ign}
-                            </span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            {photoUrl && (
+                              <img
+                                src={photoUrl}
+                                alt={p.ign}
+                                loading="lazy"
+                                className="w-7 h-7 rounded-[2px] object-cover object-top border border-white/15 shrink-0 bg-[#070b12]"
+                              />
+                            )}
+                            <div className="min-w-0">
+                              <span
+                                className={`font-display text-lg leading-none uppercase tracking-wide block truncate ${
+                                  isMvp ? 'text-amber-300' : 'text-white'
+                                }`}
+                              >
+                                {p.ign}
+                              </span>
+                              <span className="text-[11px] text-slate-300 truncate flex items-center gap-1 mt-0.5">
+                                <TeamLogo teamName={p.team} size="xs" />
+                                <span className="truncate">{p.team} '{p.year.toString().slice(2)}</span>
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-xs text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                            <TeamLogo teamName={p.team} size="xs" />
-                            <span className="truncate">{p.team} '{p.year.toString().slice(2)}</span>
-                          </span>
                         </div>
                       );
                     })}

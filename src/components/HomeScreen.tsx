@@ -108,17 +108,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <Card
           padding="none"
           cutCorner
-          className="p-3.5 md:p-6 relative overflow-hidden border-[#ff4655]/35"
+          className="p-3.5 md:p-6 relative overflow-hidden border-[#ff4655]/40"
         >
-          <div className="absolute inset-y-0 left-0 w-1 bg-[#ff4655]" aria-hidden />
+          {/* Crisp HD Map Backdrop inside Hero Card (no blur) */}
+          <img
+            src="/maps/corrode.jpg"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-30"
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(95deg, rgba(6,10,17,0.94) 0%, rgba(6,10,17,0.82) 52%, rgba(6,10,17,0.68) 100%)',
+            }}
+            aria-hidden
+          />
+          <div className="absolute inset-y-0 left-0 w-1 bg-[#ff4655] z-10" aria-hidden />
           <img
             src="/brand/mark.png"
             alt=""
             aria-hidden
-            className="pointer-events-none hidden md:block absolute right-6 top-1/2 -translate-y-1/2 w-56 h-auto opacity-[0.06] select-none"
+            className="pointer-events-none hidden md:block absolute right-6 top-1/2 -translate-y-1/2 w-56 h-auto opacity-[0.07] select-none z-10"
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-center pl-1.5 md:pl-1">
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-center pl-1.5 md:pl-1">
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-3 md:space-y-4">
               <div className="space-y-1">
@@ -290,7 +305,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </Card>
       </motion.div>
 
-      {/* SECONDARY MODES: Compact 1-line strips on mobile, full 3-column cards on md+ desktop */}
+      {/* SECONDARY MODES: Crisp HD map-backed mode cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 md:gap-4">
         <Card
           variant="interactive"
@@ -299,22 +314,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             playSelectSound();
             onSelectMode('grid');
           }}
-          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-white/30"
+          className="group relative overflow-hidden p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-[#ff4655]/60"
         >
-          <div className="space-y-0.5 md:space-y-1.5 min-w-0">
+          <div className="absolute inset-x-0 top-0 h-[2px] bg-[#ff4655]/75 z-10" aria-hidden />
+          <img
+            src="/maps/pearl.jpg"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-25 group-hover:opacity-40 transition-opacity duration-200"
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(100deg, rgba(6,10,17,0.95) 0%, rgba(6,10,17,0.80) 62%, rgba(6,10,17,0.48) 100%)',
+            }}
+            aria-hidden
+          />
+
+          <div className="relative z-10 space-y-0.5 md:space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
               <span className="text-[#ff4655] font-bold uppercase tracking-wider">3×3 · 9 vidas</span>
-              <span className="text-slate-400">Diário + 5 clássicos</span>
+              <span className="text-slate-300">Diário + 5 clássicos</span>
             </div>
-            <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
+            <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide drop-shadow">
               GRID VCT
             </h3>
-            <p className="hidden md:block text-sm text-slate-300 leading-relaxed">
+            <p className="hidden md:block text-sm text-slate-200/90 leading-relaxed">
               Cruze transferências e nacionalidades do VCT (2021–2026) com 9 tentativas por tabuleiro.
             </p>
           </div>
 
-          <SecondaryButton id="home-play-grid-btn" size="sm" className="shrink-0 md:w-full md:justify-between">
+          <SecondaryButton id="home-play-grid-btn" size="sm" className="relative z-10 shrink-0 md:w-full md:justify-between">
             <span className="md:hidden">Jogar</span>
             <span className="hidden md:inline">Abrir Grid</span>
             <ArrowRight className="w-4 h-4 text-slate-300" />
@@ -328,22 +359,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             playSelectSound();
             onSelectMode('trivia');
           }}
-          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-white/30"
+          className="group relative overflow-hidden p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-[#38bdf8]/60"
         >
-          <div className="space-y-0.5 md:space-y-1.5 min-w-0">
+          <div className="absolute inset-x-0 top-0 h-[2px] bg-[#38bdf8]/75 z-10" aria-hidden />
+          <img
+            src="/maps/haven.jpg"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-25 group-hover:opacity-40 transition-opacity duration-200"
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(100deg, rgba(6,10,17,0.95) 0%, rgba(6,10,17,0.80) 62%, rgba(6,10,17,0.48) 100%)',
+            }}
+            aria-hidden
+          />
+
+          <div className="relative z-10 space-y-0.5 md:space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
-              <span className="text-[#ff4655] font-bold uppercase tracking-wider">Diário</span>
-              <span className="text-slate-400">8 tentativas</span>
+              <span className="text-[#38bdf8] font-bold uppercase tracking-wider">Diário</span>
+              <span className="text-slate-300">8 tentativas</span>
             </div>
-            <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
+            <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide drop-shadow">
               TRIVIA DOS PROS
             </h3>
-            <p className="hidden md:block text-sm text-slate-300 leading-relaxed">
+            <p className="hidden md:block text-sm text-slate-200/90 leading-relaxed">
               Descubra o atleta secreto usando país, equipe, idade, estreia, títulos internacionais e status.
             </p>
           </div>
 
-          <SecondaryButton id="home-play-trivia-btn" size="sm" className="shrink-0 md:w-full md:justify-between">
+          <SecondaryButton id="home-play-trivia-btn" size="sm" className="relative z-10 shrink-0 md:w-full md:justify-between">
             <span className="md:hidden">Jogar</span>
             <span className="hidden md:inline">Jogar Trivia</span>
             <ArrowRight className="w-4 h-4 text-slate-300" />
@@ -357,24 +404,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             playSelectSound();
             onSelectMode('history');
           }}
-          className="p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-white/30"
+          className="group relative overflow-hidden p-3 md:p-4 h-full flex flex-row md:flex-col items-center md:items-stretch justify-between gap-3 md:gap-4 cursor-pointer hover:border-[#e2b714]/60"
         >
-          <div className="space-y-0.5 md:space-y-1.5 min-w-0">
+          <div className="absolute inset-x-0 top-0 h-[2px] bg-[#e2b714]/75 z-10" aria-hidden />
+          <img
+            src="/maps/abyss.jpg"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-28 group-hover:opacity-45 transition-opacity duration-200"
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(100deg, rgba(6,10,17,0.95) 0%, rgba(6,10,17,0.80) 62%, rgba(6,10,17,0.48) 100%)',
+            }}
+            aria-hidden
+          />
+
+          <div className="relative z-10 space-y-0.5 md:space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 md:justify-between text-xs font-mono-vct">
-              <span className="text-slate-300 font-bold uppercase tracking-wider">Histórico</span>
-              <span className="text-slate-400">
+              <span className="text-[#e2b714] font-bold uppercase tracking-wider">Histórico</span>
+              <span className="text-slate-300">
                 {trophiesCount} {trophiesCount === 1 ? 'título' : 'títulos'}
               </span>
             </div>
-            <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide">
+            <h3 className="font-display text-2xl md:text-3xl leading-none text-white uppercase tracking-wide drop-shadow">
               SALA DE TROFÉUS
             </h3>
-            <p className="hidden md:block text-sm text-slate-300 leading-relaxed">
+            <p className="hidden md:block text-sm text-slate-200/90 leading-relaxed">
               Seus elencos campeões salvos, MVPs de cada campanha e conquistas desbloqueadas.
             </p>
           </div>
 
-          <SecondaryButton id="home-open-history-btn" size="sm" className="shrink-0 md:w-full md:justify-between">
+          <SecondaryButton id="home-open-history-btn" size="sm" className="relative z-10 shrink-0 md:w-full md:justify-between">
             <span className="md:hidden">Abrir</span>
             <span className="hidden md:inline">Ver Troféus</span>
             <ArrowRight className="w-4 h-4 text-slate-300" />

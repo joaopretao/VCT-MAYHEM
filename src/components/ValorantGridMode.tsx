@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { GridCellState, Player } from '../types';
 import { GRID_PUZZLES, GridPuzzle, playerMatchesCriterion, GRID_PLAYERS_DATABASE } from '../data/gridPuzzles';
+import { AGENT_FULL_PORTRAITS } from '../data/agentIcons';
 import {
   generateDailyGridPuzzle,
   getLocalDateKey,
@@ -641,33 +642,49 @@ export const ValorantGridMode: React.FC = () => {
                     id={`grid-cell-${rIdx}-${cIdx}`}
                     onClick={() => handleCellClick(rIdx, cIdx)}
                     disabled={isSolved || isGameOver}
-                    className={`relative rounded-[3px] border transition-colors flex flex-col items-center justify-center p-1 sm:p-2 text-center select-none ${
+                    className={`relative overflow-hidden rounded-[4px] border transition-colors flex flex-col items-center justify-center p-1 sm:p-2 text-center select-none ${
                       isSolved
-                        ? 'bg-emerald-500/10 border-emerald-500/45 cursor-default'
+                        ? 'bg-[#070b12]/85 border-emerald-500/55 cursor-default'
                         : isGameOver
-                          ? 'bg-[#0b0e14]/70 border-white/[0.06] cursor-default opacity-60'
-                          : 'surface-sub hover:border-[#ff4655] hover:bg-[#1a151c] cursor-pointer group'
+                          ? 'bg-[#070b12]/65 border-white/[0.06] cursor-default opacity-60'
+                          : 'surface-sub hover:border-[#ff4655] hover:bg-[#1a151c]/90 cursor-pointer group'
                     }`}
                   >
                     {isSolved && player ? (
-                      <div className="w-full flex flex-col items-center justify-center">
-                        <div className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5">
-                          <span className="text-xs font-mono-vct font-bold px-1 sm:px-1.5 rounded-[2px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                            +{cell.points}
-                          </span>
-                        </div>
+                      <>
+                        {player.signatureAgent && AGENT_FULL_PORTRAITS[player.signatureAgent] && (
+                          <img
+                            src={AGENT_FULL_PORTRAITS[player.signatureAgent]}
+                            alt=""
+                            aria-hidden="true"
+                            referrerPolicy="no-referrer"
+                            className="pointer-events-none select-none absolute inset-x-0 top-[-14%] mx-auto h-[145%] w-auto max-w-none object-contain opacity-30"
+                          />
+                        )}
+                        <div
+                          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#06090f]/90 via-[#06090f]/45 to-emerald-950/35"
+                          aria-hidden
+                        />
 
-                        <div className="mb-0.5 sm:mb-1">
-                          <PlayerAvatar player={player} size="sm" />
+                        <div className="relative z-10 w-full flex flex-col items-center justify-center">
+                          <div className="absolute -top-0.5 right-0 sm:top-0 sm:right-0">
+                            <span className="text-[10px] sm:text-xs font-mono-vct font-bold px-1 sm:px-1.5 rounded-[2px] bg-[#06090f]/85 text-emerald-300 border border-emerald-500/45">
+                              +{cell.points}
+                            </span>
+                          </div>
+
+                          <div className="mb-0.5 sm:mb-1">
+                            <PlayerAvatar player={player} size="sm" />
+                          </div>
+                          <span className="font-display text-sm sm:text-lg leading-none text-white uppercase tracking-wide truncate max-w-full drop-shadow">
+                            {player.ign}
+                          </span>
+                          <div className="hidden sm:flex items-center gap-1 text-xs text-slate-200 truncate max-w-full justify-center mt-0.5">
+                            <TeamLogo teamName={player.team} size="xs" />
+                            <span className="truncate">{player.team}</span>
+                          </div>
                         </div>
-                        <span className="font-display text-sm sm:text-lg leading-none text-white tracking-wide truncate max-w-full">
-                          {player.ign}
-                        </span>
-                        <div className="hidden sm:flex items-center gap-1 text-xs text-slate-300 truncate max-w-full justify-center mt-0.5">
-                          <TeamLogo teamName={player.team} size="xs" />
-                          <span className="truncate">{player.team}</span>
-                        </div>
-                      </div>
+                      </>
                     ) : (
                       <div className="flex flex-col items-center justify-center">
                         <span className="text-xs sm:text-sm font-mono-vct font-bold text-slate-300 group-hover:text-white transition-colors uppercase">

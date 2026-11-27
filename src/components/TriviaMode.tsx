@@ -4,11 +4,13 @@ import { Player, TriviaGuess } from '../types';
 import { PLAYERS_DATABASE, TEAMS_DATABASE } from '../data/teamsAndPlayers';
 import { getTeamLogoData } from '../data/teamLogos';
 import { ROLE_NAMES_PT } from '../data/roleIcons';
+import { AGENT_FULL_PORTRAITS } from '../data/agentIcons';
 import { getLocalDateKey, getPreviousDateKey, formatDateKeyPtBr } from '../data/infiniteGridGenerator';
 import { getTriviaPlayerMeta, TriviaPlayerStatus } from '../data/triviaMetadata';
 import { playRoundWinSound, playRoundLossSound, playSelectSound } from '../utils/audio';
 import { TeamLogo } from './TeamLogo';
 import { PlayerAvatar } from './PlayerAvatar';
+import { CountryFlag } from './CountryFlag';
 import { RoleEmblem } from './RoleEmblem';
 import { Card, PrimaryButton } from './ui';
 
@@ -445,87 +447,107 @@ export const TriviaMode: React.FC = () => {
         </div>
       )}
 
-      {/* Victory / Defeat Announcement */}
+      {/* Victory / Defeat Announcement with Crisp Agent Reveal Banner */}
       {isGameOver && targetPlayer && targetEntry && (
-        <Card variant="modal" padding="lg" className="text-center max-w-lg mx-auto animate-popIn">
+        <Card variant="modal" padding="lg" className="text-center max-w-xl mx-auto animate-popIn">
           {guesses[0]?.isCorrect ? (
-            <div>
-              <div className="w-12 h-12 rounded-[3px] bg-emerald-500/15 border border-emerald-500/35 flex items-center justify-center mx-auto mb-2.5 text-emerald-400">
+            <div className="mb-4">
+              <div className="w-11 h-11 rounded-[3px] bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center mx-auto mb-2 text-emerald-400">
                 <Check className="w-6 h-6" />
               </div>
               <h3 className="text-3xl font-display font-bold uppercase tracking-wider text-emerald-400">
                 Acertou em {guesses.length}.
               </h3>
-              <div className="text-sm text-slate-300 mt-2 mb-5 flex items-center justify-center gap-1.5 flex-wrap">
-                <span>Era</span>
-                <strong className="text-white font-bold">{targetPlayer.ign}</strong>
-                <span className="inline-flex items-center gap-1">
-                  (<TeamLogo teamName={targetPlayer.team} size="xs" />
-                  {targetPlayer.team} · Estreia {targetEntry.debutYear} · {targetEntry.trophies} {targetEntry.trophies === 1 ? 'título' : 'títulos'}).
-                </span>
-              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                Você descobriu o atleta secreto!
+              </p>
             </div>
           ) : (
-            <div>
-              <div className="w-12 h-12 rounded-[3px] bg-rose-500/15 border border-rose-500/35 flex items-center justify-center mx-auto mb-2.5 text-rose-400">
+            <div className="mb-4">
+              <div className="w-11 h-11 rounded-[3px] bg-rose-500/15 border border-rose-500/40 flex items-center justify-center mx-auto mb-2 text-rose-400">
                 <X className="w-6 h-6" />
               </div>
               <h3 className="text-3xl font-display font-bold uppercase tracking-wider text-rose-400">
                 Sem vidas restantes.
               </h3>
-              <p className="text-xs text-slate-400 mt-1 mb-4">
+              <p className="text-xs text-slate-300 mt-1">
                 Você usou todas as 8 tentativas. O pro player secreto era:
               </p>
+            </div>
+          )}
 
-              {/* Full Reveal Card only on Game Over */}
-              <div className="max-w-md mx-auto mb-5 p-3.5 rounded-[4px] bg-[#0b0e14] border border-white/10 text-left space-y-3">
-                <div className="flex items-center gap-3">
-                  <PlayerAvatar player={targetPlayer} size="md" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-lg font-display font-bold text-white tracking-wide leading-tight truncate">
+          {/* Crisp Broadcast Player Reveal Card (Shown on Both Win & Loss) */}
+          <div className="relative overflow-hidden max-w-md mx-auto mb-5 rounded-[4px] bg-[#070b12] border border-white/15 text-left">
+            {targetPlayer.signatureAgent && AGENT_FULL_PORTRAITS[targetPlayer.signatureAgent] && (
+              <img
+                src={AGENT_FULL_PORTRAITS[targetPlayer.signatureAgent]}
+                alt=""
+                aria-hidden="true"
+                referrerPolicy="no-referrer"
+                className="pointer-events-none select-none absolute right-[-6%] top-[-18%] h-[185%] w-auto max-w-none object-contain opacity-45"
+              />
+            )}
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(90deg, rgba(7,11,18,0.95) 0%, rgba(7,11,18,0.78) 58%, rgba(7,11,18,0.42) 100%)',
+              }}
+              aria-hidden
+            />
+
+            <div className="relative z-10 p-3.5 space-y-3">
+              <div className="flex items-center gap-3">
+                <PlayerAvatar player={targetPlayer} size="lg" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-2xl font-display font-bold uppercase text-white tracking-wide leading-none truncate">
                       {targetPlayer.ign}
-                    </div>
-                    <div className="text-xs text-slate-400 truncate">
-                      {targetPlayer.name}
-                    </div>
+                    </span>
+                    {targetPlayer.countryCode && (
+                      <CountryFlag code={targetPlayer.countryCode} country={targetPlayer.country} size="xs" />
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-[2px] bg-[#161b24] border border-white/10 text-xs font-mono-vct text-slate-200 shrink-0">
-                    <MapPin className="w-3.5 h-3.5 text-[#ff4655]" />
-                    <span>{targetPlayer.country} ({targetPlayer.countryCode})</span>
+                  <div className="text-xs text-slate-300 truncate mt-0.5">
+                    {targetPlayer.name}
                   </div>
                 </div>
+                <div className="flex items-center gap-1 px-2 py-1 rounded-[2px] bg-[#06090f]/85 border border-white/15 text-xs font-mono-vct text-slate-200 shrink-0">
+                  <MapPin className="w-3.5 h-3.5 text-[#ff4655]" />
+                  <span>{targetPlayer.countryCode}</span>
+                </div>
+              </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono-vct">
-                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Equipe / Região</span>
-                    <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5 truncate max-w-full">
-                      <TeamLogo teamName={targetPlayer.team} size="xs" />
-                      <span className="truncate">{targetPlayer.team} ({getRegionForTeam(targetPlayer.team)})</span>
-                    </span>
-                  </div>
-                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Idade / Status</span>
-                    <span className="text-white font-semibold mt-0.5 block truncate">
-                      {targetEntry.age} anos · {targetEntry.status}
-                    </span>
-                  </div>
-                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Estreia / Títulos</span>
-                    <span className="text-white font-semibold mt-0.5 block">
-                      {targetEntry.debutYear} · {targetEntry.trophies} LAN{targetEntry.trophies === 1 ? '' : 's'}
-                    </span>
-                  </div>
-                  <div className="p-2 rounded-[3px] bg-[#141923] border border-white/[0.07]">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Função / Agente</span>
-                    <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5 truncate max-w-full">
-                      <RoleEmblem role={targetPlayer.primaryRole} size="xs" showBackground={false} />
-                      <span className="truncate">{targetPlayer.signatureAgent}</span>
-                    </span>
-                  </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono-vct">
+                <div className="p-2 rounded-[3px] bg-[#06090f]/80 border border-white/[0.09]">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Equipe</span>
+                  <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5 truncate max-w-full">
+                    <TeamLogo teamName={targetPlayer.team} size="xs" />
+                    <span className="truncate">{targetPlayer.team}</span>
+                  </span>
+                </div>
+                <div className="p-2 rounded-[3px] bg-[#06090f]/80 border border-white/[0.09]">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Idade / Status</span>
+                  <span className="text-white font-semibold mt-0.5 block truncate">
+                    {targetEntry.age}a · {targetEntry.status}
+                  </span>
+                </div>
+                <div className="p-2 rounded-[3px] bg-[#06090f]/80 border border-white/[0.09]">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Estreia / LANs</span>
+                  <span className="text-white font-semibold mt-0.5 block">
+                    {targetEntry.debutYear} · {targetEntry.trophies}
+                  </span>
+                </div>
+                <div className="p-2 rounded-[3px] bg-[#06090f]/80 border border-white/[0.09]">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Agente</span>
+                  <span className="inline-flex items-center gap-1 text-white font-semibold mt-0.5 truncate max-w-full">
+                    <RoleEmblem role={targetPlayer.primaryRole} size="xs" showBackground={false} />
+                    <span className="truncate">{targetPlayer.signatureAgent}</span>
+                  </span>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
           {mode === 'daily' && (
             <div className="flex items-center justify-center gap-1.5 text-xs font-mono-vct text-slate-400 mb-3">
@@ -617,7 +639,7 @@ export const TriviaMode: React.FC = () => {
             Deslize a tabela lateralmente →
           </span>
           <div className="overflow-x-auto">
-          <div className="min-w-[940px] bg-[#11151d] border border-white/10 rounded-[3px] p-3.5">
+          <div className="min-w-[940px] bg-[#070b12]/85 border border-white/12 rounded-[4px] p-3.5">
             {/* Table Header */}
             <div className="grid grid-cols-10 gap-1.5 text-center text-xs font-mono-vct text-slate-400 font-semibold uppercase pb-2.5 border-b border-white/[0.08]">
               <div>Jogador</div>
