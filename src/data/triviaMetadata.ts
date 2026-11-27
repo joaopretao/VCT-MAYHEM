@@ -568,6 +568,53 @@ export interface TriviaPlayerMeta {
   status: TriviaPlayerStatus;
 }
 
+/**
+ * Curadoria dos ~115 jogadores mais reconhecíveis / icônicos do cenário VCT (2021–2026).
+ * Usada como pool alvo no Desafio Diário e no modo padrão "Populares" do Treino Livre,
+ * enquanto todos os 220 atletas continuam pesquisáveis para palpites.
+ */
+export const POPULAR_TRIVIA_IGNS: ReadonlySet<string> = new Set([
+  // Americas (~48)
+  'aspas', 'less', 'saadhak', 'sacy', 'pancada', 'cauanzin', 'tuyz', 'lukxo',
+  'dgzin', 'qck', 'khalil', 'nozwerr', 'heat', 'artzin', 'cortezia', 'xenom', 'verno',
+  'tenz', 'zekken', 'johnqt', 'zellsis', 'n4rrate', 'bang',
+  'yay', 'fns', 'victor', 'crashies', 'marved', 's0m', 'ethan',
+  'demon1', 'boostio', 'jawgemo', 'c0m', 'brawk', 'mada', 'skuba',
+  'asuna', 'cryocells', 'derrek', 'trent', 'valyn', 'jonahp', 'leaf', 'babybay',
+  'kingg', 'mazino', 'tex', 'keznit', 'melser', 'klaus', 'shyy', 'daveeys', 'tacolilla',
+  // EMEA (~34)
+  'boaster', 'derke', 'alfajer', 'chronicle', 'leo', 'kaajak', 'hiro', 'mistic', 'enzo',
+  'nats', 'scream', 'nivera', 'jamppi', 'soulcas', 'redgar', 'sayf', 'trexx', 'kamo', 'kicks', 'keiko',
+  'boo', 'benjyfishy', 'miniboo', 'riens', 'wo0t',
+  'shao', 'suygetsu', 'zyppan', 'ange1', 'ardiis', 'cned',
+  'mrfalin', 'yetujey', 'xeus', 'cloud', 'nukkye', 'marteen', 'sayonara',
+  // Pacific (~30)
+  'f0rsaken', 'jinggg', 'd4v41', 'mindfreak', 'something', 'benkai', 'patmen', 'invy',
+  'mako', 'stax', 'buzz', 'rb', 'zest', 'foxy9', 'flashback', 'beyn',
+  't3xture', 'karon', 'meteor', 'munchkin', 'lakia',
+  'izu', 'carpe', 'sayaplayer', 'xeta',
+  'laz', 'dep', 'sugarz3ro', 'tennn', 'crow',
+  'primmie', 'crws', 'sscary',
+  // China (~12)
+  'zmjjkk', 'chichoo', 'nobody', 'smoggy', 'haodong', 's1mon',
+  'whzy', 'biank', 'knight', 'life', 'berlin', 'aaaay',
+]);
+
+export function isPopularTriviaPlayer(ign: string): boolean {
+  return POPULAR_TRIVIA_IGNS.has(ign.trim().toLowerCase());
+}
+
+export function getNameInitials(realName?: string): string {
+  if (!realName) return '—';
+  const parts = realName
+    .trim()
+    .split(/\s+/)
+    .filter(p => p.length > 0 && /[A-Za-zÀ-ÿ]/.test(p[0]));
+  if (parts.length === 0) return '—';
+  if (parts.length === 1) return `${parts[0][0].toUpperCase()}.`;
+  return `${parts[0][0].toUpperCase()}. ${parts[parts.length - 1][0].toUpperCase()}.`;
+}
+
 export function getTriviaPlayerMeta(player: Player, earliestDbYear: number): TriviaPlayerMeta {
   const key = player.ign.trim().toLowerCase();
   const birthDate = PLAYER_BIRTH_DATES[key] || '2001-01-01';

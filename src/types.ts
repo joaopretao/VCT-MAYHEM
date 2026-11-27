@@ -277,7 +277,7 @@ export interface TriviaGuess {
   matches: {
     country: 'correct' | 'wrong';
     region: 'correct' | 'wrong';
-    team: 'correct' | 'wrong';
+    team: 'correct' | 'partial' | 'wrong';
     debut: 'correct' | 'higher' | 'lower';
     trophies: 'correct' | 'higher' | 'lower';
     age: 'correct' | 'higher' | 'lower';
