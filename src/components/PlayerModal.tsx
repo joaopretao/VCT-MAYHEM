@@ -8,7 +8,9 @@ import { RoleEmblem } from './RoleEmblem';
 import { TraitBadge } from './TraitBadge';
 import { PlayerAvatar } from './PlayerAvatar';
 import { CountryFlag } from './CountryFlag';
-import { ROLE_NAMES_PT } from '../data/roleIcons';
+import { ROLE_COLORS, ROLE_NAMES_PT } from '../data/roleIcons';
+import { AGENT_FULL_PORTRAITS } from '../data/agentIcons';
+import { getTeamLogoData } from '../data/teamLogos';
 import { Card, PrimaryButton, SecondaryButton } from './ui';
 
 interface PlayerModalProps {
@@ -57,59 +59,95 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
     }
   }
 
+  const agentPortrait = player.signatureAgent
+    ? AGENT_FULL_PORTRAITS[player.signatureAgent]
+    : null;
+  const teamAccent = getTeamLogoData(player.team)?.primaryColor || ROLE_COLORS[player.primaryRole] || '#ff4655';
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <Card variant="modal" padding="lg" className="w-full max-w-lg text-white animate-popIn">
-        {/* Close button */}
-        <button
-          onClick={() => {
-            playSelectSound();
-            onClose();
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-150">
+      <Card variant="modal" padding="none" className="w-full max-w-lg text-white animate-popIn overflow-hidden">
+        {/* Top Team Accent Line */}
+        <div className="h-[2px] w-full" style={{ backgroundColor: teamAccent }} aria-hidden />
+
+        {/* Broadcast Hero Header with Crisp Agent Artwork */}
+        <div
+          className="relative overflow-hidden px-6 pt-5 pb-5 border-b border-white/10"
+          style={{
+            background: `linear-gradient(100deg, ${teamAccent}22 0%, rgba(7,11,18,0.92) 60%, rgba(7,11,18,0.85) 100%)`,
           }}
-          className="absolute top-4 right-4 p-1.5 rounded-[3px] text-slate-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 transition-colors cursor-pointer"
-          aria-label="Fechar"
         >
-          <X className="w-5 h-5" />
-        </button>
+          {agentPortrait && (
+            <img
+              src={agentPortrait}
+              alt=""
+              aria-hidden="true"
+              referrerPolicy="no-referrer"
+              className="pointer-events-none select-none absolute right-[-4%] top-[-16%] h-[185%] w-auto max-w-none object-contain opacity-50"
+            />
+          )}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(7,11,18,0.92) 0%, rgba(7,11,18,0.68) 58%, rgba(7,11,18,0.28) 100%)',
+            }}
+            aria-hidden
+          />
 
-        {/* Player Header */}
-        <div className="flex items-center gap-4 mb-5">
-          <div className="relative shrink-0">
-            <PlayerAvatar player={player} size="xl" />
-            <div className="absolute -bottom-1.5 -right-1.5 rounded-[2px] bg-[#0b0e14] p-0.5 border border-white/15">
-              <RoleEmblem role={player.primaryRole} size="xs" />
+          {/* Close button */}
+          <button
+            onClick={() => {
+              playSelectSound();
+              onClose();
+            }}
+            className="relative z-20 float-right p-1.5 rounded-[3px] text-slate-300 hover:text-white bg-[#06090f]/80 hover:bg-[#06090f] border border-white/15 transition-colors cursor-pointer"
+            aria-label="Fechar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* Player Header */}
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="relative shrink-0">
+              <PlayerAvatar player={player} size="xl" teamColor={teamAccent} />
+              <div className="absolute -bottom-1.5 -right-1.5 rounded-[2px] bg-[#06090f] p-0.5 border border-white/20">
+                <RoleEmblem role={player.primaryRole} size="xs" />
+              </div>
             </div>
-          </div>
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-[2px] bg-[#0b0e14] text-slate-200 font-semibold border border-white/10">
-                <CountryFlag code={player.countryCode} country={player.country} size="xs" />
-                {player.country}
-              </span>
-              {player.isChampionsWinner && (
-                <span className="text-xs px-2 py-0.5 rounded-[2px] bg-amber-500/15 text-amber-300 border border-amber-500/35 flex items-center gap-1 font-bold">
-                  <Award className="w-3.5 h-3.5 text-amber-400" /> Campeão
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-[2px] bg-[#06090f]/85 text-slate-200 font-semibold border border-white/12">
+                  <CountryFlag code={player.countryCode} country={player.country} size="xs" />
+                  {player.country}
                 </span>
-              )}
-            </div>
-            <h3 className="text-3xl font-display font-bold text-white tracking-wide mt-1 leading-none">
-              {player.ign}
-            </h3>
-            <div className="flex items-center gap-2 mt-1 text-xs text-slate-300 flex-wrap">
-              <span>{player.name}</span>
-              <span className="text-slate-600">·</span>
-              <span className="inline-flex items-center gap-1.5 text-slate-200 font-medium">
-                <TeamLogo teamName={player.team} size="xs" />
-                {player.team} ({player.year})
-              </span>
-              <span className="text-slate-600">·</span>
-              <span className="text-white font-semibold">
-                {ROLE_NAMES_PT[player.primaryRole] || player.primaryRole}
-              </span>
+                {player.isChampionsWinner && (
+                  <span className="text-xs px-2 py-0.5 rounded-[2px] bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 font-bold">
+                    <Award className="w-3.5 h-3.5 text-amber-400" /> Campeão
+                  </span>
+                )}
+              </div>
+              <h3 className="text-4xl font-display font-bold uppercase text-white tracking-wide mt-1 leading-none drop-shadow">
+                {player.ign}
+              </h3>
+              <div className="flex items-center gap-2 mt-1 text-xs text-slate-200 flex-wrap">
+                <span>{player.name}</span>
+                <span className="text-slate-500">·</span>
+                <span className="inline-flex items-center gap-1.5 text-white font-medium">
+                  <TeamLogo teamName={player.team} size="xs" />
+                  {player.team} ({player.year})
+                </span>
+                <span className="text-slate-500">·</span>
+                <span className="font-bold" style={{ color: ROLE_COLORS[player.primaryRole] }}>
+                  {ROLE_NAMES_PT[player.primaryRole] || player.primaryRole}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+
+        <div className="p-6">
 
         {/* Performance Attributes */}
         <div className="surface-sub p-4 mb-4 space-y-3">
@@ -283,6 +321,7 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
               Todas as funções desse jogador já estão ocupadas.
             </div>
           )}
+        </div>
         </div>
       </Card>
     </div>

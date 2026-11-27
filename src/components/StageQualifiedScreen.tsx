@@ -14,7 +14,9 @@ import {
 import { playVictoryFanfare, playSelectSound } from '../utils/audio';
 import { ROLE_ORDER } from './roleOrder';
 import { ROLE_COLORS, ROLE_NAMES_PT } from '../data/roleIcons';
+import { AGENT_FULL_PORTRAITS } from '../data/agentIcons';
 import { PlayerAvatar } from './PlayerAvatar';
+import { CountryFlag } from './CountryFlag';
 import { TraitBadge } from './TraitBadge';
 import { TeamCrest, DEFAULT_TEAM_IDENTITY } from './TeamCrest';
 import { IntermissionShop } from './IntermissionShop';
@@ -98,23 +100,35 @@ export const StageQualifiedScreen: React.FC<StageQualifiedScreenProps> = ({
           </p>
         )}
 
-        {/* Lineup showcase with real player portraits */}
+        {/* Lineup showcase with crisp agent backdrops + real player portraits */}
         {lineup && (
           <div className="grid grid-cols-5 gap-1.5 sm:gap-2 w-full mb-4">
             {ROLE_ORDER.map(role => {
               const p = lineup[role];
               if (!p) return null;
               const isSeriesMvp = seriesMvp?.player.id === p.id;
+              const agentBg = p.signatureAgent ? AGENT_FULL_PORTRAITS[p.signatureAgent] : null;
               return (
                 <div
                   key={role}
-                  className={`surface-sub p-1.5 sm:p-2 flex flex-col items-center gap-1 border-b-2 ${
+                  className={`relative overflow-hidden surface-sub p-1.5 sm:p-2 flex flex-col items-center gap-1 border-b-2 ${
                     isSeriesMvp ? 'border-[#e2b714]' : ''
                   }`}
                   style={{ borderBottomColor: isSeriesMvp ? '#e2b714' : ROLE_COLORS[role] }}
                 >
-                  <PlayerAvatar player={p} size="sm" />
-                  <span className="text-xs font-bold text-white truncate max-w-full">
+                  {agentBg && (
+                    <img
+                      src={agentBg}
+                      alt=""
+                      aria-hidden="true"
+                      referrerPolicy="no-referrer"
+                      className="pointer-events-none select-none absolute inset-x-0 top-[-15%] mx-auto h-[145%] w-auto max-w-none object-contain opacity-30"
+                    />
+                  )}
+                  <div className="relative z-10">
+                    <PlayerAvatar player={p} size="sm" teamColor={teamIdentity.color} />
+                  </div>
+                  <span className="relative z-10 font-display text-base leading-none text-white uppercase tracking-wide truncate max-w-full">
                     {p.ign}
                   </span>
                 </div>
@@ -123,14 +137,33 @@ export const StageQualifiedScreen: React.FC<StageQualifiedScreenProps> = ({
           </div>
         )}
 
-        {/* Series MVP Highlight (embedded directly so there is no extra modal) */}
+        {/* Series MVP Broadcast Hero Banner */}
         {seriesMvp && (
           <div
             id="series-mvp-highlight"
-            className="w-full rounded-[3px] bg-[#090c11] border border-[#e2b714]/40 p-3 mb-5 text-left flex items-center justify-between gap-3 flex-wrap"
+            className="relative overflow-hidden w-full rounded-[4px] bg-[#070b12] border border-[#e2b714]/45 p-3.5 mb-5 text-left flex items-center justify-between gap-3 flex-wrap"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <PlayerAvatar player={seriesMvp.player} size="md" />
+            {seriesMvp.player.signatureAgent &&
+              AGENT_FULL_PORTRAITS[seriesMvp.player.signatureAgent] && (
+                <img
+                  src={AGENT_FULL_PORTRAITS[seriesMvp.player.signatureAgent]}
+                  alt=""
+                  aria-hidden="true"
+                  referrerPolicy="no-referrer"
+                  className="pointer-events-none select-none absolute right-[-4%] top-[-20%] h-[190%] w-auto max-w-none object-contain opacity-45"
+                />
+              )}
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(90deg, rgba(7,11,18,0.95) 0%, rgba(7,11,18,0.75) 60%, rgba(7,11,18,0.42) 100%)',
+              }}
+              aria-hidden
+            />
+
+            <div className="relative z-10 flex items-center gap-3 min-w-0">
+              <PlayerAvatar player={seriesMvp.player} size="lg" teamColor={teamIdentity.color} />
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="inline-flex items-center gap-1 text-xs font-mono-vct font-bold uppercase tracking-wider text-[#e2b714]">
@@ -142,16 +175,21 @@ export const StageQualifiedScreen: React.FC<StageQualifiedScreenProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <strong className="font-display text-xl leading-none text-white tracking-wide">
+                  <strong className="font-display text-2xl leading-none text-white uppercase tracking-wide">
                     {seriesMvp.player.ign}
                   </strong>
+                  {seriesMvp.player.countryCode && (
+                    <CountryFlag code={seriesMvp.player.countryCode} size="xs" />
+                  )}
                   {seriesMvp.player.trait && <TraitBadge trait={seriesMvp.player.trait} iconOnly size="xs" />}
-                  <span className="text-xs text-slate-300 truncate">{seriesMvp.player.signatureAgent}</span>
+                  <span className="text-xs font-mono-vct text-slate-300 truncate">
+                    · {seriesMvp.player.signatureAgent}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 font-mono-vct text-xs bg-[#11151d] px-2.5 py-1.5 rounded-[3px] border border-white/10 shrink-0">
+            <div className="relative z-10 flex items-center gap-3 font-mono-vct text-xs bg-[#06090f]/85 px-2.5 py-1.5 rounded-[3px] border border-white/15 shrink-0">
               <div className="text-center">
                 <span className="text-[10px] uppercase text-slate-300 block leading-none">ACS</span>
                 <strong className="text-sm text-amber-400">{seriesMvp.acs}</strong>

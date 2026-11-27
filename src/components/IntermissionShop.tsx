@@ -16,7 +16,8 @@ import {
   Role,
   SeriesTacticBuff,
 } from '../types';
-import { ROLE_NAMES_PT } from '../data/roleIcons';
+import { ROLE_COLORS, ROLE_NAMES_PT } from '../data/roleIcons';
+import { AGENT_FULL_PORTRAITS } from '../data/agentIcons';
 import { BONUS_RARITY_META } from '../data/mayhemBonuses';
 import {
   MAX_RUN_BONUSES,
@@ -105,6 +106,10 @@ export const IntermissionShop: React.FC<IntermissionShopProps> = ({
           {offer.swapCandidates.map(({ player, targetRole }) => {
             const currentOccupant = lineup[targetRole];
             const canAfford = credits >= PLAYER_SWAP_COST && !offer.swapUsed;
+            const roleColor = ROLE_COLORS[targetRole] || '#38bdf8';
+            const agentPortrait = player.signatureAgent
+              ? AGENT_FULL_PORTRAITS[player.signatureAgent]
+              : null;
 
             return (
               <button
@@ -115,33 +120,60 @@ export const IntermissionShop: React.FC<IntermissionShopProps> = ({
                   playLockSound();
                   onSwapPlayer(player, targetRole);
                 }}
-                className={`p-2.5 rounded-[3px] border text-left flex items-center justify-between gap-2.5 transition-colors ${
+                className={`group/swap relative overflow-hidden p-2.5 pl-3.5 rounded-[4px] border text-left flex items-center justify-between gap-2.5 transition-colors ${
                   canAfford
-                    ? 'bg-[#11151d] border-white/15 hover:border-[#38bdf8] hover:bg-[#151d2a] cursor-pointer'
-                    : 'bg-[#0d1118] border-white/[0.06] opacity-55 cursor-not-allowed'
+                    ? 'bg-[#070b12]/85 border-white/15 hover:border-[#38bdf8] cursor-pointer'
+                    : 'bg-[#070b12]/60 border-white/[0.06] opacity-55 cursor-not-allowed'
                 }`}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className="absolute inset-y-0 left-0 w-[3px] z-20"
+                  style={{ backgroundColor: roleColor }}
+                  aria-hidden
+                />
+                {agentPortrait && (
+                  <img
+                    src={agentPortrait}
+                    alt=""
+                    aria-hidden="true"
+                    referrerPolicy="no-referrer"
+                    className={`pointer-events-none select-none absolute right-[-6%] top-[-18%] h-[185%] w-auto max-w-none object-contain transition-opacity ${
+                      canAfford ? 'opacity-40 group-hover/swap:opacity-65' : 'opacity-20 grayscale'
+                    }`}
+                  />
+                )}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      'linear-gradient(90deg, rgba(6,10,17,0.92) 0%, rgba(6,10,17,0.72) 60%, rgba(6,10,17,0.38) 100%)',
+                  }}
+                  aria-hidden
+                />
+
+                <div className="relative z-10 flex items-center gap-2.5 min-w-0">
                   <PlayerAvatar player={player} size="sm" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-bold text-sm text-white truncate">{player.ign}</span>
+                      <span className="font-display text-xl leading-none uppercase tracking-wide text-white truncate">
+                        {player.ign}
+                      </span>
                       <CountryFlag code={player.countryCode} country={player.country} size="xs" />
                       {player.isChampionsWinner && (
                         <Trophy className="w-3 h-3 text-[#e2b714] shrink-0" />
                       )}
                       {player.trait && <TraitBadge trait={player.trait} iconOnly size="xs" />}
                     </div>
-                    <span className="text-[11px] font-mono-vct text-slate-300 block truncate">
+                    <span className="text-[11px] font-mono-vct text-slate-200 block truncate mt-0.5">
                       Entra em {ROLE_NAMES_PT[targetRole]} (sai {currentOccupant?.ign || '—'})
                     </span>
                   </div>
                 </div>
 
                 <span
-                  className={`font-mono-vct text-xs font-bold px-2 py-1 rounded-[2px] shrink-0 ${
+                  className={`relative z-10 font-mono-vct text-xs font-bold px-2 py-1 rounded-[2px] shrink-0 ${
                     canAfford
-                      ? 'bg-[#38bdf8]/15 border border-[#38bdf8]/40 text-[#7dd3fc]'
+                      ? 'bg-[#06090f]/85 border border-[#38bdf8]/55 text-[#7dd3fc]'
                       : 'bg-white/[0.05] text-slate-400'
                   }`}
                 >

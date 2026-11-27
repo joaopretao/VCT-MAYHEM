@@ -53,6 +53,8 @@ import {
   playBonusRevealSound,
 } from '../utils/audio';
 import { ROLE_NAMES_PT, ROLE_COLORS } from '../data/roleIcons';
+import { AGENT_FULL_PORTRAITS } from '../data/agentIcons';
+import { getMapArt } from '../data/mapArt';
 import { getFrameMeta } from '../data/frames';
 import { downloadShareResultPng } from '../utils/shareCard';
 import { StageQualifiedScreen } from './StageQualifiedScreen';
@@ -73,6 +75,7 @@ import { TeamCrest, DEFAULT_TEAM_IDENTITY } from './TeamCrest';
 import { TraitBadge } from './TraitBadge';
 import { RoleEmblem } from './RoleEmblem';
 import { PlayerAvatar } from './PlayerAvatar';
+import { CountryFlag } from './CountryFlag';
 import { MayhemBonusChip } from './MayhemBonusChip';
 import { ROLE_ORDER } from './roleOrder';
 import { Confetti } from './Confetti';
@@ -1027,7 +1030,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 md:gap-4 items-start">
         {/* LEFT NARROW COLUMN */}
         <div className="lg:col-span-4 flex flex-col gap-2.5 md:gap-4">
-          {/* Map Markers Card */}
+          {/* Map Markers Card with Real HD Map Thumbnails */}
           <Card padding="none" className="p-2.5 md:p-4">
             <div className="hidden md:flex items-center justify-between gap-2 mb-3">
               <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-slate-200">
@@ -1038,7 +1041,11 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-1.5 md:gap-2">
+            <div
+              className={`grid gap-1.5 md:gap-2 ${
+                series.bestOf >= 5 ? 'grid-cols-3 sm:grid-cols-5 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-3'
+              }`}
+            >
               {mapSlots.map((_, idx) => {
                 const committedMap = series.maps[idx];
                 const isCurrentSlot = idx === series.currentMapIndex;
@@ -1047,19 +1054,23 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                 const mapData = committedMap || liveFinishedMap;
                 const scheduledMapName = series.mapQueue?.[idx];
 
-                let boxCls = 'bg-[#0b0e14]/70 border-white/10 text-slate-300';
-                let scoreLabel = isCurrentSlot ? currentMap.mapName : 'A jogar';
+                let borderCls = 'border-white/12 text-slate-200';
+                let scoreColorCls = 'text-slate-200';
+                let scoreLabel = isCurrentSlot ? 'Em jogo' : 'A jogar';
 
                 if (mapData) {
                   if (mapData.playerWon) {
-                    boxCls = 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300';
+                    borderCls = 'border-emerald-500/55 text-emerald-300';
+                    scoreColorCls = 'text-emerald-300';
                     scoreLabel = `${mapData.playerScore}–${mapData.opponentScore} ✓`;
                   } else {
-                    boxCls = 'bg-rose-500/10 border-rose-500/40 text-rose-300';
+                    borderCls = 'border-rose-500/55 text-rose-300';
+                    scoreColorCls = 'text-rose-300';
                     scoreLabel = `${mapData.playerScore}–${mapData.opponentScore} ✗`;
                   }
                 } else if (isCurrentSlot) {
-                  boxCls = 'bg-[#e2b714]/10 border-[#e2b714]/60 text-[#e2b714]';
+                  borderCls = 'border-[#e2b714]/80 text-[#fde047]';
+                  scoreColorCls = 'text-[#fde047]';
                   scoreLabel = 'Em jogo';
                 }
 
@@ -1068,16 +1079,37 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
                   : isCurrentSlot
                   ? currentMap.mapName
                   : scheduledMapName || '';
+                const mapArt = slotMapName ? getMapArt(slotMapName) : null;
 
                 return (
                   <div
                     key={idx}
-                    className={`p-1.5 md:p-2.5 rounded-[3px] border flex flex-col items-center justify-center text-center ${boxCls}`}
+                    className={`relative overflow-hidden min-h-[58px] md:min-h-[68px] p-1.5 md:p-2 rounded-[4px] border flex flex-col items-center justify-center text-center bg-[#06090f] ${borderCls}`}
                   >
-                    <span className="font-mono-vct text-xs font-bold uppercase truncate max-w-full">
+                    {mapArt && (
+                      <img
+                        src={mapArt.splash}
+                        alt=""
+                        aria-hidden="true"
+                        className={`pointer-events-none select-none absolute inset-0 w-full h-full object-cover ${
+                          isCurrentSlot
+                            ? 'opacity-50'
+                            : mapData
+                            ? 'opacity-40'
+                            : 'opacity-22 grayscale-[35%]'
+                        }`}
+                      />
+                    )}
+                    <div
+                      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#06090f]/92 via-[#06090f]/58 to-[#06090f]/75"
+                      aria-hidden
+                    />
+                    <span className="relative z-10 font-mono-vct text-[10px] md:text-[11px] font-bold uppercase truncate max-w-full drop-shadow">
                       M{idx + 1} {slotMapName ? `· ${slotMapName}` : ''}
                     </span>
-                    <span className="font-mono-vct text-xs md:text-sm font-bold mt-0.5 md:mt-1 text-white">
+                    <span
+                      className={`relative z-10 font-mono-vct text-xs md:text-sm font-black mt-0.5 drop-shadow ${scoreColorCls}`}
+                    >
                       {scoreLabel}
                     </span>
                   </div>
@@ -1086,7 +1118,7 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
             </div>
           </Card>
 
-          {/* 5 Players Roster Card (Hidden on < lg mobile so live timeline & controls sit immediately above the fold) */}
+          {/* 5 Players Roster Card with Crisp Agent Banners + Live Clutch Highlight */}
           <Card padding="md" className="hidden lg:block">
             <div className="flex items-center justify-between gap-2 mb-3">
               <span className="font-mono-vct text-xs font-bold uppercase tracking-wider text-slate-200">
@@ -1096,30 +1128,91 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
             </div>
 
             <div className="flex flex-col gap-2">
-              {ROLE_ORDER.map(role => {
-                const p = lineup[role];
-                const roleColor = ROLE_COLORS[role];
-                return (
-                  <div
-                    key={role}
-                    className="surface-sub px-2.5 py-2 flex items-center justify-between gap-2"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {p ? <PlayerAvatar player={p} size="xs" /> : <RoleEmblem role={role} size="xs" showBackground={false} />}
-                      <span className="text-sm font-bold text-white truncate">
-                        {p?.ign || '—'}
-                      </span>
-                      {p?.trait && <TraitBadge trait={p.trait} iconOnly size="xs" />}
-                    </div>
-                    <span
-                      className="font-mono-vct text-xs font-bold uppercase tracking-wider shrink-0"
-                      style={{ color: roleColor }}
+              {(() => {
+                const latestClutchIgn =
+                  revealedEvents[revealedEvents.length - 1]?.clutchPlayer?.toLowerCase() || null;
+
+                return ROLE_ORDER.map(role => {
+                  const p = lineup[role];
+                  const roleColor = ROLE_COLORS[role];
+                  const agentPortrait = p?.signatureAgent
+                    ? AGENT_FULL_PORTRAITS[p.signatureAgent]
+                    : null;
+                  const isHighlighted = Boolean(
+                    p && latestClutchIgn && p.ign.toLowerCase() === latestClutchIgn
+                  );
+
+                  return (
+                    <div
+                      key={role}
+                      className={`relative h-[54px] rounded-[4px] overflow-hidden border flex items-center justify-between gap-2 px-2.5 transition-colors ${
+                        isHighlighted
+                          ? 'border-[#e2b714] bg-[#14171f]/90 shadow-[0_0_16px_-4px_rgba(226,183,20,0.5)]'
+                          : 'border-white/[0.11] bg-[#070b12]/80'
+                      }`}
                     >
-                      {ROLE_NAMES_PT[role]}
-                    </span>
-                  </div>
-                );
-              })}
+                      <div
+                        className="absolute inset-y-0 left-0 w-[3px] z-20"
+                        style={{ backgroundColor: isHighlighted ? '#e2b714' : roleColor }}
+                        aria-hidden
+                      />
+                      {agentPortrait && (
+                        <img
+                          src={agentPortrait}
+                          alt=""
+                          aria-hidden="true"
+                          referrerPolicy="no-referrer"
+                          className={`pointer-events-none select-none absolute right-[-6%] top-[-20%] h-[185%] w-auto max-w-none object-contain ${
+                            isHighlighted ? 'opacity-65' : 'opacity-40'
+                          }`}
+                        />
+                      )}
+                      <div
+                        className="pointer-events-none absolute inset-0"
+                        style={{
+                          background:
+                            'linear-gradient(90deg, rgba(6,10,17,0.92) 0%, rgba(6,10,17,0.68) 58%, rgba(6,10,17,0.32) 100%)',
+                        }}
+                        aria-hidden
+                      />
+
+                      <div className="relative z-10 flex items-center gap-2.5 min-w-0 pl-0.5">
+                        {p ? (
+                          <PlayerAvatar player={p} size="sm" teamColor={teamIdentity.color} />
+                        ) : (
+                          <RoleEmblem role={role} size="xs" showBackground={false} />
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-display text-xl leading-none text-white uppercase tracking-wide truncate">
+                              {p?.ign || '—'}
+                            </span>
+                            {p?.countryCode && <CountryFlag code={p.countryCode} size="xs" />}
+                            {p?.trait && <TraitBadge trait={p.trait} iconOnly size="xs" />}
+                          </div>
+                          <span className="block font-mono-vct text-[10px] text-slate-300 leading-none mt-0.5 truncate">
+                            {p?.signatureAgent || '—'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="relative z-10 flex flex-col items-end shrink-0">
+                        {isHighlighted && (
+                          <span className="font-mono-vct text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-[2px] bg-[#e2b714]/20 border border-[#e2b714]/50 text-[#fde047] mb-0.5">
+                            Destaque
+                          </span>
+                        )}
+                        <span
+                          className="font-mono-vct text-[10px] font-bold uppercase tracking-wider"
+                          style={{ color: roleColor }}
+                        >
+                          {ROLE_NAMES_PT[role]}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </Card>
         </div>
@@ -1450,25 +1543,37 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
               {series.playerWins}–{series.opponentWins} na Grande Final sobre {series.opponent.name}.
             </p>
 
-            {/* All 5 Champions side by side */}
+            {/* All 5 Champions side by side with Crisp Agent Backdrops */}
             <div className="grid grid-cols-5 gap-1.5 sm:gap-2 mb-5">
               {ROLE_ORDER.map(role => {
                 const p = lineup[role];
                 if (!p) return null;
                 const isMvp = tournamentMvp?.player.id === p.id;
+                const agentBg = p.signatureAgent ? AGENT_FULL_PORTRAITS[p.signatureAgent] : null;
                 return (
                   <div
                     key={role}
-                    className={`surface-sub p-2 flex flex-col items-center gap-1 border-b-2 ${
+                    className={`relative overflow-hidden surface-sub p-2 flex flex-col items-center gap-1 border-b-2 ${
                       isMvp ? 'border-[#e2b714]' : 'border-white/15'
                     }`}
                     style={{ borderBottomColor: isMvp ? '#e2b714' : ROLE_COLORS[role] }}
                   >
-                    <PlayerAvatar player={p} size="md" />
-                    <span className="text-xs font-bold text-white truncate max-w-full">
+                    {agentBg && (
+                      <img
+                        src={agentBg}
+                        alt=""
+                        aria-hidden="true"
+                        referrerPolicy="no-referrer"
+                        className="pointer-events-none select-none absolute inset-x-0 top-[-15%] mx-auto h-[145%] w-auto max-w-none object-contain opacity-30"
+                      />
+                    )}
+                    <div className="relative z-10">
+                      <PlayerAvatar player={p} size="md" teamColor={teamIdentity.color} />
+                    </div>
+                    <span className="relative z-10 font-display text-base leading-none text-white uppercase tracking-wide truncate max-w-full">
                       {p.ign}
                     </span>
-                    <span className="text-xs font-mono-vct text-slate-400">
+                    <span className="relative z-10 text-[10px] font-mono-vct text-slate-300 uppercase">
                       {isMvp ? 'MVP' : ROLE_NAMES_PT[role]}
                     </span>
                   </div>
@@ -1477,42 +1582,73 @@ export const TournamentSimulation: React.FC<TournamentSimulationProps> = ({
             </div>
 
             {tournamentMvp && (
-              <div className="rounded-[3px] bg-[#090c11] border border-[#e2b714]/40 p-4 mb-5 text-left">
-                <div className="flex items-center justify-between gap-2 mb-2.5">
+              <div className="relative overflow-hidden rounded-[4px] bg-[#070b12] border border-[#e2b714]/45 p-4 mb-5 text-left">
+                {tournamentMvp.player.signatureAgent &&
+                  AGENT_FULL_PORTRAITS[tournamentMvp.player.signatureAgent] && (
+                    <img
+                      src={AGENT_FULL_PORTRAITS[tournamentMvp.player.signatureAgent]}
+                      alt=""
+                      aria-hidden="true"
+                      referrerPolicy="no-referrer"
+                      className="pointer-events-none select-none absolute right-[-4%] top-[-18%] h-[185%] w-auto max-w-none object-contain opacity-40"
+                    />
+                  )}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      'linear-gradient(90deg, rgba(7,11,18,0.95) 0%, rgba(7,11,18,0.78) 58%, rgba(7,11,18,0.45) 100%)',
+                  }}
+                  aria-hidden
+                />
+
+                <div className="relative z-10 flex items-center justify-between gap-2 mb-2.5">
                   <Badge tone="gold">
                     <Award className="w-3.5 h-3.5" />
                     MVP da Campanha
                   </Badge>
-                  <span className="text-xs font-mono-vct text-slate-300">
+                  <span className="text-xs font-mono-vct text-slate-200">
                     {ROLE_NAMES_PT[tournamentMvp.player.primaryRole]}
                   </span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-2xl font-bold text-white">{tournamentMvp.player.ign}</h3>
-                      {tournamentMvp.player.trait && (
-                        <TraitBadge trait={tournamentMvp.player.trait} size="sm" />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-300 flex-wrap mt-1">
-                      <span>{tournamentMvp.player.name}</span>
-                      <span>·</span>
-                      <span className="text-amber-300 font-semibold">
-                        {tournamentMvp.player.signatureAgent}
-                      </span>
-                      <span>·</span>
-                      <span className="inline-flex items-center gap-1.5 text-slate-200">
-                        <TeamLogo teamName={tournamentMvp.player.team} size="xs" />
-                        <span>
-                          {tournamentMvp.player.team} '{tournamentMvp.player.year.toString().slice(2)}
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <PlayerAvatar
+                      player={tournamentMvp.player}
+                      size="lg"
+                      teamColor={teamIdentity.color}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-display text-3xl leading-none uppercase tracking-wide text-white">
+                          {tournamentMvp.player.ign}
+                        </h3>
+                        {tournamentMvp.player.countryCode && (
+                          <CountryFlag code={tournamentMvp.player.countryCode} size="xs" />
+                        )}
+                        {tournamentMvp.player.trait && (
+                          <TraitBadge trait={tournamentMvp.player.trait} size="sm" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-300 flex-wrap mt-1">
+                        <span>{tournamentMvp.player.name}</span>
+                        <span>·</span>
+                        <span className="text-amber-300 font-semibold">
+                          {tournamentMvp.player.signatureAgent}
                         </span>
-                      </span>
+                        <span>·</span>
+                        <span className="inline-flex items-center gap-1.5 text-slate-200">
+                          <TeamLogo teamName={tournamentMvp.player.team} size="xs" />
+                          <span>
+                            {tournamentMvp.player.team} '{tournamentMvp.player.year.toString().slice(2)}
+                          </span>
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 bg-[#11151d] p-2.5 rounded-[3px] border border-white/10 text-center shrink-0">
+                  <div className="grid grid-cols-3 gap-2 bg-[#06090f]/85 p-2.5 rounded-[3px] border border-white/15 text-center shrink-0">
                     <div className="px-2">
                       <span className="text-xs uppercase font-semibold text-slate-400 block">ACS</span>
                       <span className="text-base font-bold text-amber-400 font-mono-vct">
