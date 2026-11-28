@@ -1,17 +1,19 @@
-import React from 'react';
-import { X, Award, Crosshair, CheckCircle, Zap, Shield } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { motion } from 'motion/react';
+import { X, Trophy, CheckCircle, Shield, Calendar } from 'lucide-react';
 import { Player, Lineup, Role } from '../types';
 import { playLockSound, playSelectSound } from '../utils/audio';
 import { isPlayerInLineup } from '../utils/runRules';
 import { TeamLogo } from './TeamLogo';
 import { RoleEmblem } from './RoleEmblem';
 import { TraitBadge } from './TraitBadge';
-import { PlayerAvatar } from './PlayerAvatar';
 import { CountryFlag } from './CountryFlag';
 import { ROLE_COLORS, ROLE_NAMES_PT } from '../data/roleIcons';
-import { AGENT_FULL_PORTRAITS } from '../data/agentIcons';
+import { AGENT_FULL_PORTRAITS, AGENT_ICONS } from '../data/agentIcons';
+import { getPlayerPhotoUrl } from '../data/playerPhotos';
 import { getTeamLogoData } from '../data/teamLogos';
-import { Card, PrimaryButton, SecondaryButton } from './ui';
+import { Card } from './ui';
 
 interface PlayerModalProps {
   player: Player | null;
@@ -26,11 +28,28 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
   onClose,
   onAssignToRole,
 }) => {
-  if (!player) return null;
+  const [photoError, setPhotoError] = useState(false);
+
+  useEffect(() => {
+    setPhotoError(false);
+  }, [player?.id]);
+
+  useEffect(() => {
+    if (!player) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [player, onClose]);
+
+  if (!player || typeof document === 'undefined') return null;
 
   // Determine compatible slots
   const availableSlots: Role[] = [];
-  const isCurrentlyIn = Object.entries(lineup).find(([_, p]) => p?.id === player.id)?.[0] as Role | undefined;
+  const isCurrentlyIn = Object.entries(lineup).find(([_, p]) => p?.id === player.id)?.[0] as
+    | Role
+    | undefined;
   const isAnotherEditionIn = !isCurrentlyIn && isPlayerInLineup(player, lineup);
 
   const compatibleRoles: Role[] = Array.from(
@@ -59,271 +78,355 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
     }
   }
 
+  const photoUrl = getPlayerPhotoUrl(player.ign);
   const agentPortrait = player.signatureAgent
     ? AGENT_FULL_PORTRAITS[player.signatureAgent]
     : null;
-  const teamAccent = getTeamLogoData(player.team)?.primaryColor || ROLE_COLORS[player.primaryRole] || '#ff4655';
+  const agentIcon = player.signatureAgent ? AGENT_ICONS[player.signatureAgent] : null;
+  const teamAccent =
+    getTeamLogoData(player.team)?.primaryColor || ROLE_COLORS[player.primaryRole] || '#ff4655';
+  const roleColor = ROLE_COLORS[player.primaryRole] || '#ff4655';
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <Card variant="modal" padding="none" className="w-full max-w-lg text-white animate-popIn overflow-hidden">
-        {/* Top Team Accent Line */}
-        <div className="h-[2px] w-full" style={{ backgroundColor: teamAccent }} aria-hidden />
+  const attributes = [
+    { label: 'Consistência', value: player.consistency, bar: '#38bdf8', text: 'text-sky-300' },
+    { label: 'Clutch', value: player.clutch, bar: '#e2b714', text: 'text-amber-300' },
+    { label: 'Sinergia', value: player.synergy, bar: '#10b981', text: 'text-emerald-300' },
+    { label: 'Flexibilidade', value: player.flexibility, bar: '#a855f7', text: 'text-purple-300' },
+  ];
 
-        {/* Broadcast Hero Header with Crisp Agent Artwork */}
-        <div
-          className="relative overflow-hidden px-6 pt-5 pb-5 border-b border-white/10"
-          style={{
-            background: `linear-gradient(100deg, ${teamAccent}22 0%, rgba(7,11,18,0.92) 60%, rgba(7,11,18,0.85) 100%)`,
-          }}
+  return createPortal(
+    <div
+      onClick={() => {
+        playSelectSound();
+        onClose();
+      }}
+      className="fixed inset-0 z-[75] bg-black/82 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-xl my-auto"
+      >
+        <Card
+          variant="modal"
+          padding="none"
+          className="w-full text-white overflow-hidden border-white/15 bg-[#090d16] shadow-[0_24px_70px_-15px_rgba(0,0,0,0.9)]"
         >
-          {agentPortrait && (
-            <img
-              src={agentPortrait}
-              alt=""
-              aria-hidden="true"
-              referrerPolicy="no-referrer"
-              className="pointer-events-none select-none absolute right-[-4%] top-[-16%] h-[185%] w-auto max-w-none object-contain opacity-50"
+          {/* Top Team Accent Strip */}
+          <div className="h-[3px] w-full" style={{ backgroundColor: teamAccent }} aria-hidden />
+
+          {/* VCT Broadcast Hero Banner: [Flush Photo] | [Crisp Info + Agent Backdrop] */}
+          <div className="relative flex items-stretch min-h-[126px] sm:min-h-[138px] border-b border-white/10 overflow-hidden bg-[#060911]">
+            {/* Left 3px Team Edge */}
+            <div
+              className="absolute inset-y-0 left-0 w-[3px] z-30"
+              style={{ backgroundColor: teamAccent }}
+              aria-hidden
             />
-          )}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(90deg, rgba(7,11,18,0.92) 0%, rgba(7,11,18,0.68) 58%, rgba(7,11,18,0.28) 100%)',
-            }}
-            aria-hidden
-          />
 
-          {/* Close button */}
-          <button
-            onClick={() => {
-              playSelectSound();
-              onClose();
-            }}
-            className="relative z-20 float-right p-1.5 rounded-[3px] text-slate-300 hover:text-white bg-[#06090f]/80 hover:bg-[#06090f] border border-white/15 transition-colors cursor-pointer"
-            aria-label="Fechar"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          {/* Player Header */}
-          <div className="relative z-10 flex items-center gap-4">
-            <div className="relative shrink-0">
-              <PlayerAvatar player={player} size="xl" teamColor={teamAccent} />
-              <div className="absolute -bottom-1.5 -right-1.5 rounded-[2px] bg-[#06090f] p-0.5 border border-white/20">
-                <RoleEmblem role={player.primaryRole} size="xs" />
-              </div>
+            {/* Flush Player Photo Square */}
+            <div
+              className="relative w-[108px] sm:w-[126px] shrink-0 border-r border-white/12 overflow-hidden flex items-center justify-center"
+              style={{
+                background: `radial-gradient(circle at 50% 25%, ${teamAccent}45 0%, #070b12 88%)`,
+              }}
+            >
+              {photoUrl && !photoError ? (
+                <img
+                  src={photoUrl}
+                  alt={player.ign}
+                  onError={() => setPhotoError(true)}
+                  className="w-full h-full object-cover object-top select-none"
+                />
+              ) : agentIcon ? (
+                <img
+                  src={agentIcon}
+                  alt={player.signatureAgent}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover p-2 select-none"
+                />
+              ) : (
+                <RoleEmblem role={player.primaryRole} size="lg" showBackground={false} />
+              )}
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-[#060911]/85 to-transparent"
+                aria-hidden
+              />
             </div>
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-[2px] bg-[#06090f]/85 text-slate-200 font-semibold border border-white/12">
-                  <CountryFlag code={player.countryCode} country={player.country} size="xs" />
-                  {player.country}
+            {/* Right Banner Content over Crisp Agent Artwork ("Boneco no fundo", Zero Blur) */}
+            <div className="relative flex-1 min-w-0 px-4 sm:px-5 py-3.5 flex flex-col justify-center overflow-hidden">
+              {agentPortrait && (
+                <img
+                  src={agentPortrait}
+                  alt=""
+                  aria-hidden="true"
+                  referrerPolicy="no-referrer"
+                  className="pointer-events-none select-none absolute right-[-6%] top-[-16%] h-[190%] w-auto max-w-none object-contain opacity-55"
+                />
+              )}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background: `linear-gradient(90deg, rgba(6,9,17,0.95) 0%, rgba(6,9,17,0.74) 58%, ${teamAccent}22 100%)`,
+                }}
+                aria-hidden
+              />
+
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={() => {
+                  playSelectSound();
+                  onClose();
+                }}
+                className="absolute top-3 right-3 z-20 p-1.5 rounded-[3px] text-slate-300 hover:text-white bg-[#060911]/85 hover:bg-[#101624] border border-white/15 transition-colors cursor-pointer"
+                aria-label="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="relative z-10 pr-8 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-mono-vct px-2 py-0.5 rounded-[2px] bg-[#060911]/90 text-slate-200 font-semibold border border-white/12">
+                    <CountryFlag code={player.countryCode} country={player.country} size="xs" />
+                    <span>{player.country}</span>
+                  </span>
+                  {player.isChampionsWinner && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono-vct px-2 py-0.5 rounded-[2px] bg-[#e2b714]/20 text-[#fde047] border border-[#e2b714]/45 font-bold uppercase">
+                      <Trophy className="w-3 h-3 text-[#e2b714]" />
+                      <span>Campeão</span>
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="text-4xl sm:text-[42px] font-display font-bold uppercase text-white tracking-wide leading-[0.9] truncate drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                  {player.ign}
+                </h3>
+
+                <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-200 flex-wrap">
+                  <span className="text-slate-300">{player.name}</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="inline-flex items-center gap-1.5 text-white font-semibold">
+                    <TeamLogo teamName={player.team} size="xs" />
+                    <span>
+                      {player.team} '{String(player.year).slice(2)}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="p-4 sm:p-5 space-y-3.5">
+            {/* Compact Role / Agent / Editions Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="rounded-[4px] bg-[#060a12] border border-white/[0.09] px-3 py-2.5">
+                <span className="font-mono-vct text-[10px] uppercase tracking-wider text-slate-400 block mb-1">
+                  Função Principal
                 </span>
-                {player.isChampionsWinner && (
-                  <span className="text-xs px-2 py-0.5 rounded-[2px] bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 font-bold">
-                    <Award className="w-3.5 h-3.5 text-amber-400" /> Campeão
+                <div className="flex items-center gap-1.5">
+                  <RoleEmblem role={player.primaryRole} size="xs" showBackground={false} />
+                  <span className="font-display text-lg leading-none uppercase tracking-wide" style={{ color: roleColor }}>
+                    {ROLE_NAMES_PT[player.primaryRole] || player.primaryRole}
+                  </span>
+                </div>
+                {player.secondaryRoles.length > 0 && (
+                  <span className="block font-mono-vct text-[10px] text-slate-400 mt-1 truncate">
+                    Alt: {player.secondaryRoles.map(r => ROLE_NAMES_PT[r] || r).join(', ')}
                   </span>
                 )}
               </div>
-              <h3 className="text-4xl font-display font-bold uppercase text-white tracking-wide mt-1 leading-none drop-shadow">
-                {player.ign}
-              </h3>
-              <div className="flex items-center gap-2 mt-1 text-xs text-slate-200 flex-wrap">
-                <span>{player.name}</span>
-                <span className="text-slate-500">·</span>
-                <span className="inline-flex items-center gap-1.5 text-white font-medium">
-                  <TeamLogo teamName={player.team} size="xs" />
-                  {player.team} ({player.year})
+
+              <div className="rounded-[4px] bg-[#060a12] border border-white/[0.09] px-3 py-2.5">
+                <span className="font-mono-vct text-[10px] uppercase tracking-wider text-slate-400 block mb-1">
+                  Agente Assinatura
                 </span>
-                <span className="text-slate-500">·</span>
-                <span className="font-bold" style={{ color: ROLE_COLORS[player.primaryRole] }}>
-                  {ROLE_NAMES_PT[player.primaryRole] || player.primaryRole}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6">
-
-        {/* Performance Attributes */}
-        <div className="surface-sub p-4 mb-4 space-y-3">
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-300 font-medium">Overall</span>
-            <span className="text-xs font-mono-vct font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-[2px] border border-amber-500/30">
-              Oculto no draft
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-2 text-xs font-mono-vct border-t border-white/[0.06]">
-            <div>
-              <div className="flex justify-between text-slate-300 mb-1">
-                <span>Consistência</span>
-                <span className="text-white font-bold">{player.consistency}</span>
-              </div>
-              <div className="w-full bg-[#1a212e] rounded-[1px] h-1.5 overflow-hidden">
-                <div className="bg-sky-400 h-full" style={{ width: `${player.consistency}%` }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-slate-300 mb-1">
-                <span>Clutch</span>
-                <span className="text-amber-300 font-bold">{player.clutch}</span>
-              </div>
-              <div className="w-full bg-[#1a212e] rounded-[1px] h-1.5 overflow-hidden">
-                <div className="bg-amber-400 h-full" style={{ width: `${player.clutch}%` }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-slate-300 mb-1">
-                <span>Sinergia</span>
-                <span className="text-emerald-300 font-bold">{player.synergy}</span>
-              </div>
-              <div className="w-full bg-[#1a212e] rounded-[1px] h-1.5 overflow-hidden">
-                <div className="bg-emerald-400 h-full" style={{ width: `${player.synergy}%` }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-slate-300 mb-1">
-                <span>Flexibilidade</span>
-                <span className="text-purple-300 font-bold">{player.flexibility}</span>
-              </div>
-              <div className="w-full bg-[#1a212e] rounded-[1px] h-1.5 overflow-hidden">
-                <div className="bg-purple-400 h-full" style={{ width: `${player.flexibility}%` }} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Special Trait */}
-        {player.trait ? (
-          <div className="mb-4 surface-sub p-3.5 border-amber-500/25">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-mono-vct font-bold text-white uppercase tracking-wider">
-                  Característica
-                </span>
-              </div>
-              <span
-                className="text-xs uppercase px-2 py-0.5 rounded-[2px] font-bold font-mono-vct"
-                style={{
-                  color: player.trait.color,
-                  backgroundColor: player.trait.badgeBg,
-                  border: `1px solid ${player.trait.badgeBorder}`,
-                }}
-              >
-                {player.trait.rarity}
-              </span>
-            </div>
-            <TraitBadge trait={player.trait} size="md" showDescription={true} />
-          </div>
-        ) : (
-          <div className="mb-4 px-3 py-2 rounded-[3px] bg-[#0b0e14] border border-white/[0.07] flex items-center justify-between text-xs text-slate-400">
-            <span>Característica</span>
-            <span>Padrão</span>
-          </div>
-        )}
-
-        {/* Roles & Agent metadata (100% Portuguese) */}
-        <div className="grid grid-cols-2 gap-3 text-xs mb-5">
-          <div className="surface-sub p-3">
-            <span className="text-slate-400 block mb-1 text-xs">Função principal</span>
-            <span className="text-white font-bold text-sm flex items-center gap-1.5">
-              <Crosshair className="w-4 h-4 text-[#ff4655]" />
-              {ROLE_NAMES_PT[player.primaryRole] || player.primaryRole}
-            </span>
-            {player.secondaryRoles.length > 0 && (
-              <span className="text-xs text-slate-300 block mt-1">
-                Secundárias: {player.secondaryRoles.map(r => ROLE_NAMES_PT[r] || r).join(', ')}
-              </span>
-            )}
-          </div>
-
-          <div className="surface-sub p-3">
-            <span className="text-slate-400 block mb-1 text-xs">Agente assinatura</span>
-            <span className="text-amber-300 font-bold text-sm flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-400" />
-              {player.signatureAgent}
-            </span>
-            <span className="text-xs text-slate-300 block mt-1 font-mono-vct">
-              Edições: {player.championsYears.join(', ')}
-            </span>
-          </div>
-        </div>
-
-        {/* Action */}
-        <div>
-          {isCurrentlyIn ? (
-            <div className="space-y-2.5">
-              <div className="w-full py-2 px-3 rounded-[3px] bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-center text-xs font-bold flex items-center justify-center gap-2">
-                <CheckCircle className="w-4 h-4" />
-                Escalado como {ROLE_NAMES_PT[isCurrentlyIn] || isCurrentlyIn}
-              </div>
-              {availableSlots.length > 0 && (
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-xs text-slate-300 block">
-                    Mover {player.ign} para outra vaga:
+                <div className="flex items-center gap-1.5">
+                  {agentIcon && (
+                    <img
+                      src={agentIcon}
+                      alt={player.signatureAgent}
+                      referrerPolicy="no-referrer"
+                      className="w-5 h-5 rounded-[2px] object-cover border border-white/15 shrink-0"
+                    />
+                  )}
+                  <span className="font-display text-lg leading-none uppercase tracking-wide text-[#fde047] truncate">
+                    {player.signatureAgent}
                   </span>
-                  <div className="flex flex-wrap gap-2">
-                    {availableSlots.map(slot => (
-                      <SecondaryButton
-                        key={slot}
-                        size="sm"
-                        onClick={() => {
-                          onAssignToRole(player, slot);
-                          onClose();
-                        }}
-                        className="flex-1"
-                      >
-                        Mover para {ROLE_NAMES_PT[slot] || slot}
-                      </SecondaryButton>
-                    ))}
-                  </div>
                 </div>
-              )}
+                <span className="block font-mono-vct text-[10px] text-slate-400 mt-1">
+                  Especialidade
+                </span>
+              </div>
+
+              <div className="col-span-2 sm:col-span-1 rounded-[4px] bg-[#060a12] border border-white/[0.09] px-3 py-2.5">
+                <span className="font-mono-vct text-[10px] uppercase tracking-wider text-slate-400 block mb-1">
+                  Champions
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                  <span className="font-mono-vct text-xs font-bold text-white truncate">
+                    {player.championsYears.join(' · ')}
+                  </span>
+                </div>
+                <span className="block font-mono-vct text-[10px] text-slate-400 mt-1">
+                  {player.championsYears.length === 1
+                    ? '1 participação'
+                    : `${player.championsYears.length} participações`}
+                </span>
+              </div>
             </div>
-          ) : isAnotherEditionIn ? (
-            <div className="w-full py-2.5 px-3 rounded-[3px] bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-center text-xs font-bold flex items-center justify-center gap-2">
-              <CheckCircle className="w-4 h-4" />
-              {player.ign} já está escalado no seu time (outra edição)
-            </div>
-          ) : availableSlots.length > 0 ? (
-            <div className="space-y-2">
-              <span className="text-xs text-slate-300 block">
-                Escolha a vaga de {player.ign}:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {availableSlots.map(slot => (
-                  <PrimaryButton
-                    key={slot}
-                    size="md"
-                    onClick={() => {
-                      playLockSound();
-                      onAssignToRole(player, slot);
-                      onClose();
-                    }}
-                    className="flex-1"
-                  >
-                    Escalar como {ROLE_NAMES_PT[slot] || slot}
-                  </PrimaryButton>
+
+            {/* Clean Attributes Grid (Without "Overall / Oculto no draft") */}
+            <div className="rounded-[4px] bg-[#060a12] border border-white/[0.09] p-3.5">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs font-mono-vct">
+                {attributes.map(attr => (
+                  <div key={attr.label}>
+                    <div className="flex justify-between items-baseline mb-1">
+                      <span className="text-[11px] uppercase tracking-wider text-slate-300">
+                        {attr.label}
+                      </span>
+                      <span className={`font-bold tabular-nums ${attr.text}`}>{attr.value}</span>
+                    </div>
+                    <div className="w-full bg-[#151c29] rounded-[1px] h-1.5 overflow-hidden">
+                      <div
+                        className="h-full transition-all duration-300"
+                        style={{ width: `${attr.value}%`, backgroundColor: attr.bar }}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
-          ) : (
-            <div className="w-full py-2.5 rounded-[3px] bg-[#0b0e14] border border-white/10 text-slate-400 text-center text-xs">
-              Todas as funções desse jogador já estão ocupadas.
+
+            {/* Trait Section (Full highlight when present, sleek compact bar when standard) */}
+            {player.trait ? (
+              <div
+                className="relative overflow-hidden rounded-[4px] bg-[#060a12] border p-3.5 pl-4"
+                style={{ borderColor: player.trait.badgeBorder }}
+              >
+                <div
+                  className="absolute inset-y-0 left-0 w-[3px]"
+                  style={{ backgroundColor: player.trait.color }}
+                  aria-hidden
+                />
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5" style={{ color: player.trait.color }} />
+                    <span className="text-[11px] font-mono-vct font-bold text-white uppercase tracking-wider">
+                      Característica Especial
+                    </span>
+                  </div>
+                  <span
+                    className="text-[10px] uppercase px-2 py-0.5 rounded-[2px] font-bold font-mono-vct"
+                    style={{
+                      color: player.trait.color,
+                      backgroundColor: player.trait.badgeBg,
+                      border: `1px solid ${player.trait.badgeBorder}`,
+                    }}
+                  >
+                    {player.trait.rarity}
+                  </span>
+                </div>
+                <TraitBadge trait={player.trait} size="md" showDescription={true} />
+              </div>
+            ) : (
+              <div className="px-3 py-2 rounded-[4px] bg-[#060a12] border border-white/[0.07] flex items-center justify-between text-[11px] font-mono-vct text-slate-400">
+                <span className="uppercase tracking-wider">Característica</span>
+                <span className="text-slate-300">Padrão</span>
+              </div>
+            )}
+
+            {/* Action Footer: Clean Uniform Grid for Role Selection */}
+            <div className="pt-1">
+              {isCurrentlyIn ? (
+                <div className="space-y-2.5">
+                  <div className="w-full py-2.5 px-3 rounded-[4px] bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-center text-xs font-mono-vct font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+                    <CheckCircle className="w-4 h-4 shrink-0" />
+                    <span>Escalado como {ROLE_NAMES_PT[isCurrentlyIn] || isCurrentlyIn}</span>
+                  </div>
+                  {availableSlots.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="font-mono-vct text-[11px] uppercase tracking-wider text-slate-400 block">
+                        Mover {player.ign} para outra vaga
+                      </span>
+                      <div
+                        className={`grid gap-2 ${
+                          availableSlots.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+                        }`}
+                      >
+                        {availableSlots.map(slot => (
+                          <button
+                            key={slot}
+                            type="button"
+                            onClick={() => {
+                              playSelectSound();
+                              onAssignToRole(player, slot);
+                              onClose();
+                            }}
+                            className="flex items-center justify-center gap-2 px-3 py-2 rounded-[3px] bg-[#0e1522] hover:bg-[#162033] border border-white/15 hover:border-white/30 text-xs font-mono-vct font-bold uppercase tracking-wider text-white transition-colors cursor-pointer"
+                          >
+                            <RoleEmblem role={slot} size="xs" showBackground={false} />
+                            <span>Mover · {ROLE_NAMES_PT[slot] || slot}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : isAnotherEditionIn ? (
+                <div className="w-full py-2.5 px-3 rounded-[4px] bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-center text-xs font-mono-vct font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  <span>{player.ign} já está escalado no seu time (outra edição)</span>
+                </div>
+              ) : availableSlots.length > 0 ? (
+                <div className="space-y-2">
+                  <span className="font-mono-vct text-[11px] uppercase tracking-wider text-slate-300 block">
+                    Escalar <strong className="text-white">{player.ign}</strong> como:
+                  </span>
+                  <div
+                    className={`grid gap-2 ${
+                      availableSlots.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+                    }`}
+                  >
+                    {availableSlots.map(slot => {
+                      const isPrimary = slot === player.primaryRole;
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => {
+                            playLockSound();
+                            onAssignToRole(player, slot);
+                            onClose();
+                          }}
+                          className={`group relative flex items-center justify-center gap-2 px-3 py-2.5 rounded-[3px] border text-xs font-mono-vct font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.985] ${
+                            isPrimary
+                              ? 'bg-[#ff4655] hover:bg-[#e63947] border-white/20 text-white shadow-md'
+                              : 'bg-[#101624] hover:bg-[#192235] border-white/15 hover:border-[#ff4655]/70 text-slate-100'
+                          }`}
+                        >
+                          <RoleEmblem role={slot} size="xs" showBackground={false} />
+                          <span className="truncate">{ROLE_NAMES_PT[slot] || slot}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full py-2.5 rounded-[4px] bg-[#060a12] border border-white/10 text-slate-400 text-center text-xs font-mono-vct">
+                  Todas as funções compatíveis já estão ocupadas.
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        </div>
-      </Card>
-    </div>
+          </div>
+        </Card>
+      </motion.div>
+    </div>,
+    document.body
   );
 };
